@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+    <data>
+        <variable
+            name="templateViewModel"
+            type="com.ynsuper.slideshowver1.viewmodel.TemplateViewModel" />
+    </data>
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:background="@android:color/transparent"
+
+        android:layout_height="wrap_content">
+
+        <include
+            android:id="@+id/layout_top_bar"
+            layout="@layout/item_layout_edit_top_view"
+            tools:layout_editor_absoluteX="0dp"
+            tools:layout_editor_absoluteY="0dp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            app:layout_constraintTop_toBottomOf="@+id/layout_top_bar"
+            android:id="@+id/recyclerViewTransitions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            android:layout_marginBottom="16dp"
+            tools:listitem="@layout/item_transition" />
+        <TextView
+            android:padding="8dp"
+            android:gravity="center"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:textColor="@color/color_main2"
+            android:text="*Hold item transtion apply all"
+            app:layout_constraintTop_toBottomOf="@+id/recyclerViewTransitions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>/
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>

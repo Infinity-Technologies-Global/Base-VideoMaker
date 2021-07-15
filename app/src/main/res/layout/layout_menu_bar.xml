@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+
+    android:orientation="horizontal">
+
+    <LinearLayout
+        android:id="@+id/layout_menu_background"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="?attr/selectableItemBackground"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:paddingLeft="4dp"
+            android:paddingRight="4dp"
+            android:src="@drawable/ic_config_background" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:padding="4dp"
+            android:text="@string/text_background"
+            android:textColor="@android:color/black"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout__menu_transition"
+        android:layout_width="60dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="?attr/selectableItemBackground"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:src="@drawable/ic_transition" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:padding="4dp"
+            android:text="@string/text_transition"
+            android:textColor="@android:color/black"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_menu_music"
+        android:layout_width="60dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="?attr/selectableItemBackground"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:src="@drawable/ic_icon_material_library_music" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:padding="4dp"
+            android:text="@string/text_music"
+            android:textColor="@android:color/black"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_menu_duration"
+        android:layout_width="60dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="?attr/selectableItemBackground"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+
+
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:src="@drawable/ic_icon_material_speed" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:padding="4dp"
+            android:text="@string/text_duration"
+            android:textColor="@android:color/black"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_menu_sticker"
+        android:layout_width="60dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="?attr/selectableItemBackground"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+
+
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:src="@drawable/ic_icon_material_sticker" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:padding="4dp"
+            android:text="@string/text_sticker"
+            android:textColor="@android:color/black"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_menu_text"
+        android:layout_width="60dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="?attr/selectableItemBackground"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+
+
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:src="@drawable/ic_icon_material_text" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:padding="4dp"
+            android:text="@string/text_edit_text"
+            android:textColor="@android:color/black"
+            android:textSize="10sp" />
+    </LinearLayout>
+</LinearLayout>

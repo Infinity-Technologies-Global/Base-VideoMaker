@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+
+    android:orientation="vertical">
+    <VideoView
+        android:id="@+id/video_slideshow"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_width="match_parent"
+        app:layout_constraintDimensionRatio="16:9"
+        android:background="@color/transparent_60"
+        android:layout_height="0dp"/>
+    <ImageView
+        android:id="@+id/image_thumb"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_width="match_parent"
+        app:layout_constraintDimensionRatio="16:9"
+        android:background="@color/transparent_60"
+        android:layout_height="0dp"/>
+
+
+    <ProgressBar
+        app:layout_constraintTop_toBottomOf="@+id/image_thumb"
+        android:id="@+id/progressBar_export"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        app:layout_constraintTop_toBottomOf="@+id/progressBar_export"
+        android:id="@+id/textViewMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:layout_marginTop="12dp"
+        android:textAlignment="center"
+        android:textColor="?colorAccent" />
+    <androidx.appcompat.widget.AppCompatTextView
+        android:padding="16dp"
+        app:layout_constraintTop_toBottomOf="@+id/textViewMessage"
+        android:text="The video is being exported, or leave the page intact until the video is finished exporting"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

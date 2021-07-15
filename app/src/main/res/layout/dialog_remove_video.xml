@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/space_transparent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/dialog_layout_connectify_success"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:background="@color/white"
+        android:orientation="vertical">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="5dp"
+            android:background="@drawable/linear_green_gradient_connectify" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal">
+
+            <LinearLayout
+                android:id="@+id/layout_text_connectify_success"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/txtDialogTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="15dp"
+                    android:text="Delete"
+                    android:textAllCaps="false"
+                    android:textColor="@color/black"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/txtDialogMessage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:ellipsize="end"
+                    android:gravity="center"
+                    android:padding="16dp"
+                    android:textSize="14sp"
+                    android:text="Are you sure you want to delete this file?"
+                    android:maxLines="1" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:background="@drawable/round_button_cancel"
+                        android:id="@+id/text_cancel"
+                        android:text="Cancel"
+                        android:padding="16dp"
+                        android:layout_margin="16dp"
+                        android:layout_width="0dp"
+                        android:textColor="@color/white"
+                        android:gravity="center"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content" />
+
+                    <TextView
+                        android:width="0dp"
+                        android:layout_weight="1"
+                        android:padding="16dp"
+                        android:background="@drawable/round_button_gradient_main"
+                        android:layout_margin="16dp"
+                        android:text="Confirm"
+                        android:textColor="@color/white"
+                        android:gravity="center"
+                        android:id="@+id/text_comfirm"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@drawable/linear_circle"
+        android:gravity="center">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center">
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="4dp"
+                android:src="@drawable/ic_remove_video" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>

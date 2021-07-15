@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "41918043314",
+    "project_id": "slideshow-maker-8fce7",
+    "storage_bucket": "slideshow-maker-8fce7.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:41918043314:android:db5f06549153b201e125ab",
+        "android_client_info": {
+          "package_name": "com.ynsuper.slideshowver1"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "41918043314-760nnvo26t8s6l6rdfdfs4efnhv06aq9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ynsuper.slideshowver1",
+            "certificate_hash": "d42705988c849bedc8d0aae3ea172fd58454545e"
+          }
+        },
+        {
+          "client_id": "41918043314-q735ou4158m3hdlbh1ssci2hrmno21df.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCc92TaIIItKXL-SWKwGmUp4VDCxGZdmTo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "41918043314-q735ou4158m3hdlbh1ssci2hrmno21df.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

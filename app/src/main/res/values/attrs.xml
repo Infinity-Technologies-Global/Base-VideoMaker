@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <declare-styleable name="HorizontalThumbnailListView">
+        <attr name="selectedGroupBg" format="reference" />
+        <attr name="paddingStartWidth" format="dimension" />
+        <attr name="paddingEndWidth" format="dimension" />
+        <attr name="paddingVerticalHeight" format="dimension" />
+        <attr name="groupPaddingWidth" format="dimension" />
+        <attr name="imageWidth" format="dimension" />
+        <attr name="imageHeight" format="dimension" />
+    </declare-styleable>
+    <declare-styleable name="VideoLayout">
+        <attr name="path_or_url" format="string" />
+        <attr name="loop" format="boolean" />
+        <attr name="sound" format="boolean" />
+        <attr name="video_gravity" format="enum">
+            <enum name="start" value="0" />
+            <enum name="end" value="1" />
+            <enum name="centerCrop" value="2" />
+            <enum name="fitXY" value="3" />
+        </attr>
+    </declare-styleable>
+    <declare-styleable name="StickerView">
+        <attr name="showIcons" format="boolean" />
+        <attr name="showBorder" format="boolean" />
+        <attr name="bringToFrontCurrentSticker" format="boolean" />
+        <attr name="borderColor" format="color" />
+        <attr name="borderAlpha" format="integer" />
+    </declare-styleable>
+    <declare-styleable name="rtl_RecyclerTabLayout">
+        <attr name="rtl_tabIndicatorColor" format="color" />
+        <attr name="rtl_tabIndicatorHeight" format="dimension" />
+
+        <attr name="rtl_tabBackground" format="reference" />
+
+        <attr name="rtl_tabTextAppearance" format="reference" />
+        <attr name="rtl_tabSelectedTextColor" format="color" />
+
+        <attr name="rtl_tabOnScreenLimit" format="integer" />
+        <attr name="rtl_tabMinWidth" format="dimension" />
+        <attr name="rtl_tabMaxWidth" format="dimension" />
+
+        <attr name="rtl_tabPaddingStart" format="dimension" />
+        <attr name="rtl_tabPaddingTop" format="dimension" />
+        <attr name="rtl_tabPaddingEnd" format="dimension" />
+        <attr name="rtl_tabPaddingBottom" format="dimension" />
+        <attr name="rtl_tabPadding" format="dimension" />
+
+        <attr name="rtl_scrollEnabled" format="boolean" />
+
+    </declare-styleable>
+</resources>

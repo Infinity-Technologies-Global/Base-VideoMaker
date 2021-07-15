@@ -1,0 +1,74 @@
+package com.ynsuper.slideshowver1.util;
+
+import android.util.Log;
+
+
+import com.ynsuper.slideshowver1.callback.IUnzipFile;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+
+public class UnzipUtil {
+    private final IUnzipFile iUnZipFile;
+    private String zipFile;
+    private String location;
+
+    public UnzipUtil(String zipFile, String location, IUnzipFile iUnZipFile) {
+        this.zipFile = zipFile;
+        this.location = location;
+        this.iUnZipFile = iUnZipFile;
+
+        dirChecker("");
+    }
+
+    public void unzip() {
+        try {
+            FileInputStream fin = new FileInputStream(zipFile);
+            ZipInputStream zin = new ZipInputStream(fin);
+            ZipEntry ze = null;
+            while ((ze = zin.getNextEntry()) != null) {
+                Log.v("Decompress", "Unzipping " + ze.getName());
+
+                if (ze.isDirectory()) {
+                    dirChecker(ze.getName());
+                } else {
+                    FileOutputStream fout = new FileOutputStream(location + ze.getName());
+
+                    byte[] buffer = new byte[8192];
+                    int len;
+                    while ((len = zin.read(buffer)) != -1) {
+                        fout.write(buffer, 0, len);
+                    }
+                    fout.close();
+
+                    zin.closeEntry();
+
+                }
+
+            }
+            File fdelete = new File(zipFile);
+            if (fdelete.exists()) {
+                if (fdelete.delete()) {
+                    System.out.println("file Deleted :" + zipFile);
+                } else {
+                    System.out.println("file not Deleted :" + zipFile);
+                }
+            }
+            iUnZipFile.unZipSuccess(zipFile);
+            zin.close();
+        } catch (Exception e) {
+            Log.e("Decompress", "unzip", e);
+        }
+
+    }
+
+    private void dirChecker(String dir) {
+        File f = new File(location + dir);
+        if (!f.isDirectory()) {
+            f.mkdirs();
+        }
+    }
+}

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+
+    <include
+        android:id="@+id/layout_top_bar"
+        layout="@layout/item_layout_edit_top_view" />
+
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/labelFillType"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="32dp"
+        android:text="Fill type"
+        android:textAppearance="?textAppearanceOverline"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/checkboxBlur" />
+
+    <RadioGroup
+        android:id="@+id/groupfill"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+
+        android:checkedButton="@id/fitCenter"
+        android:orientation="vertical"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/labelFillType">
+
+
+        <androidx.appcompat.widget.AppCompatRadioButton
+            android:id="@+id/fitCenter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+
+            android:text="Fit Center" />
+
+
+        <androidx.appcompat.widget.AppCompatRadioButton
+            android:id="@+id/fitStart"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:text="Fit Start" />
+
+
+        <androidx.appcompat.widget.AppCompatRadioButton
+            android:id="@+id/fitEnd"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:text="Fit End" />
+
+        <androidx.appcompat.widget.AppCompatRadioButton
+            android:id="@+id/fillCenter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:text="Fill Center" />
+
+
+        <androidx.appcompat.widget.AppCompatRadioButton
+            android:id="@+id/fillStart"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:text="Fill Start" />
+
+
+        <androidx.appcompat.widget.AppCompatRadioButton
+            android:id="@+id/fillEnd"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:text="Fill End" />
+
+    </RadioGroup>
+
+
+    <androidx.appcompat.widget.AppCompatCheckBox
+        android:id="@+id/checkboxBlur"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:checked="true"
+        android:padding="16dp"
+        android:text="Blur background"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/layout_top_bar" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

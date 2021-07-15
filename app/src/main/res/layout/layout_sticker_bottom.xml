@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/layout_option_sticker"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_alignParentBottom="true"
+    android:gravity="center"
+    android:orientation="vertical">
+
+
+    <androidx.viewpager.widget.ViewPager
+        android:id="@+id/sticker_viewpaper"
+        android:layout_width="match_parent"
+        android:layout_height="350dp"
+        android:background="@color/color_main_dark"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/_40sdp"
+        android:background="@drawable/round_menu_bar"
+        android:orientation="horizontal">
+
+        <com.ynsuper.slideshowver1.view.adapter.RecyclerTabLayout
+            android:id="@+id/recycler_tab_layout"
+            rtl_tabBackground="@color/black"
+            rtl_tabIndicatorColor="?attr/colorAccent"
+            rtl_tabIndicatorHeight="2dp"
+            rtl_tabMaxWidth="40dp"
+            rtl_tabMinWidth="40dp"
+            rtl_tabPadding="0dp"
+            rtl_tabPaddingBottom="0dp"
+            rtl_tabPaddingEnd="0dp"
+            rtl_tabPaddingTop="0dp"
+            rtl_tabSelectedTextColor="?android:textColorPrimary"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/_40sdp"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+</LinearLayout>

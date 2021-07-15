@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="150dp"
+    android:orientation="vertical">
+
+    <include
+        android:id="@+id/layout_top_bar"
+        layout="@layout/item_layout_edit_top_view" />
+
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/duration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:text="00:00"
+        android:textColor="?colorOnSurface"
+
+        app:layout_constraintBottom_toBottomOf="@+id/seekBarDuration"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/seekBarDuration" />
+
+    <androidx.appcompat.widget.AppCompatSeekBar
+        android:id="@+id/seekBarDuration"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:padding="16dp"
+        android:thumb="@null"
+        android:progress="20"
+        android:thumbOffset="2dp"
+        android:progressDrawable="@drawable/progress_color"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/duration"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/layout_top_bar" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

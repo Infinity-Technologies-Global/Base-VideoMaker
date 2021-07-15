@@ -1,0 +1,5 @@
+
+include ':tedimagepicker'
+include ':studio'
+include ':app'
+rootProject.name = "SlideShowVer1"

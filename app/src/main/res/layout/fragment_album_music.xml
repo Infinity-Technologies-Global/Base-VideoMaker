@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+
+        <variable
+            name="albumViewModel"
+            type="com.ynsuper.slideshowver1.viewmodel.AlbumMusicViewModel" />
+    </data>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/albumMusicContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerViewAlbum"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:divider="@color/color_main2"
+            android:dividerHeight="1dp"
+            android:scrollbars="none"
+            android:orientation="vertical"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ListView
+            android:id="@+id/list_view_music"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:divider="@color/txt_white_gray"
+            android:dividerHeight="1dp"
+            android:orientation="vertical"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent" />
+
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>
