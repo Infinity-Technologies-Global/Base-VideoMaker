@@ -1,6 +1,5 @@
 package com.ynsuper.slideshowver1.view.custom_view;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
@@ -17,8 +16,6 @@ import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -154,12 +151,12 @@ public class HorizontalThumbnailListView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        Log.d(TAG, "onDraw, padding start: " + mPaddingStartWidth +
-                ", padding end: " + mPaddingEndWidth +
-                ", group padding: " + mGroupPaddingWidth +
-                ", vertical padding: " + mPaddingVerticalHeight +
-                ", image width: " + mImageWidth +
-                " image width: " + mImageHeight);
+//        Log.d(TAG, "onDraw, padding start: " + mPaddingStartWidth +
+//                ", padding end: " + mPaddingEndWidth +
+//                ", group padding: " + mGroupPaddingWidth +
+//                ", vertical padding: " + mPaddingVerticalHeight +
+//                ", image width: " + mImageWidth +
+//                " image width: " + mImageHeight);
 
         drawImageGroup(canvas);
         drawImageUtility(canvas);
@@ -212,28 +209,28 @@ public class HorizontalThumbnailListView extends View {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
 //        mGestureDetectorImage.onTouchEvent(event);
-        mGestureDetectorMusic.onTouchEvent(event);
+//        mGestureDetectorMusic.onTouchEvent(event);
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 mLastX = event.getRawX();
                 mIsScrollFromUser = true;
 
-                if (mAdjustableMusic) {
-                    Log.d(TAG, "Down pos x: " + mLastX +
-                            ", left bound: [" + (mCurItemUtilityGroup.measuredLeft - mGroupPaddingWidth - getScrollX()) +
-                            ", " + (mCurItemUtilityGroup.measuredLeft + mGroupPaddingWidth - getScrollX()) +
-                            "], right bound: [" + (mCurItemUtilityGroup.measuredRight - mGroupPaddingWidth - getScrollX()) +
-                            ", " + (mCurItemUtilityGroup.measuredRight + mGroupPaddingWidth - getScrollX()) + "].");
-                    if (mLastX >= (mCurItemUtilityGroup.measuredLeft - mGroupPaddingWidth - getScrollX()) &&
-                            mLastX <= (mCurItemUtilityGroup.measuredLeft + mGroupPaddingWidth - getScrollX())) {
-                        mHoldScroll = true;
-                        mIsLeft = true;
-                    } else if (mLastX >= (mCurItemUtilityGroup.measuredRight - mGroupPaddingWidth - getScrollX()) &&
-                            mLastX <= (mCurItemUtilityGroup.measuredRight + mGroupPaddingWidth - getScrollX())) {
-                        mHoldScroll = true;
-                        mIsLeft = false;
-                    }
-                }
+//                if (mAdjustableMusic) {
+//                    Log.d(TAG, "Down pos x: " + mLastX +
+//                            ", left bound: [" + (mCurItemUtilityGroup.measuredLeft - mGroupPaddingWidth - getScrollX()) +
+//                            ", " + (mCurItemUtilityGroup.measuredLeft + mGroupPaddingWidth - getScrollX()) +
+//                            "], right bound: [" + (mCurItemUtilityGroup.measuredRight - mGroupPaddingWidth - getScrollX()) +
+//                            ", " + (mCurItemUtilityGroup.measuredRight + mGroupPaddingWidth - getScrollX()) + "].");
+//                    if (mLastX >= (mCurItemUtilityGroup.measuredLeft - mGroupPaddingWidth - getScrollX()) &&
+//                            mLastX <= (mCurItemUtilityGroup.measuredLeft + mGroupPaddingWidth - getScrollX())) {
+//                        mHoldScroll = true;
+//                        mIsLeft = true;
+//                    } else if (mLastX >= (mCurItemUtilityGroup.measuredRight - mGroupPaddingWidth - getScrollX()) &&
+//                            mLastX <= (mCurItemUtilityGroup.measuredRight + mGroupPaddingWidth - getScrollX())) {
+//                        mHoldScroll = true;
+//                        mIsLeft = false;
+//                    }
+//                }
                 break;
             case MotionEvent.ACTION_MOVE:
                 if (mHoldScroll) {
@@ -394,11 +391,6 @@ public class HorizontalThumbnailListView extends View {
     public void setImageGroupListener(ImageGroupListener listener) {
         mImageGroupListener = listener;
     }
-
-    public void setMusicGroupListener(MusicGroupListener listener) {
-        mMusicGroupListener = listener;
-    }
-
 
     /**
      * Given an X-axis position, judge the image group selected at this position according to this position
@@ -701,13 +693,13 @@ public class HorizontalThumbnailListView extends View {
 
         mScaleLinePaint = new Paint();
         mScaleLinePaint.setAntiAlias(true);
-        mScaleLinePaint.setColor(Color.BLACK);
+        mScaleLinePaint.setColor(context.getResources().getColor(R.color.color_text_bottom));
         mScaleLinePaint.setStyle(Paint.Style.FILL);
         mScaleLinePaint.setStrokeWidth(5F);
 
         mTextPaint = new Paint();
         mTextPaint.setAntiAlias(true);
-        mTextPaint.setColor(Color.BLACK);
+        mTextPaint.setColor(context.getResources().getColor(R.color.color_text_bottom));
         mTextPaint.setStyle(Paint.Style.FILL);
         mTextPaint.setTextAlign(Paint.Align.CENTER);
         mTextPaint.setTextSize(25f);
@@ -720,7 +712,6 @@ public class HorizontalThumbnailListView extends View {
         mTextMusicPaint.setTextSize(40f);
 
         initGestureImage();
-        initGestureMusic();
     }
 
     private void initGestureImage() {
@@ -760,42 +751,6 @@ public class HorizontalThumbnailListView extends View {
         });
     }
 
-    private void initGestureMusic() {
-        mGestureDetectorMusic = new GestureDetector(new GestureDetector.OnGestureListener() {
-            @Override
-            public boolean onDown(MotionEvent e) {
-                return true;
-            }
-
-            @Override
-            public void onShowPress(MotionEvent e) {
-
-            }
-
-            @Override
-            public boolean onSingleTapUp(MotionEvent e) {
-                if (mCurItemUtilityGroup != null && mMusicGroupListener != null && e.getY() >= mCurItemUtilityGroup.getCurRightPos() && e.getX() <= mCurItemUtilityGroup.getCurRightPos()) {
-                    mMusicGroupListener.onMusicGroupClicked(mItemUtilityGroupList.indexOf(mCurItemUtilityGroup));
-                }
-                return true;
-            }
-
-            @Override
-            public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-                return true;
-            }
-
-            @Override
-            public void onLongPress(MotionEvent e) {
-
-            }
-
-            @Override
-            public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-                return true;
-            }
-        });
-    }
 
     public void setLittleBox(LittleBox littleBox, VideoComposer composer) {
         this.littleBox = littleBox;
@@ -863,7 +818,6 @@ public class HorizontalThumbnailListView extends View {
         public String textItem;
         private Bitmap image;
         private int typeUtility;
-        public static int TYPE_MUSIC = 1;
         public static int TYPE_STICKER = 2;
         public static int TYPE_TEXT = 3;
 
@@ -1303,7 +1257,7 @@ public class HorizontalThumbnailListView extends View {
                         ", measure left: " + measuredLeft +
                         ", measure right: " + measuredRight +
                         ", progress: " + progress);
-                if (mIsScrollFromUser){
+                if (mIsScrollFromUser) {
                     composer.renderAtProgress(progress);
                 }
                 littleBox.draw();
@@ -1396,6 +1350,7 @@ public class HorizontalThumbnailListView extends View {
             measuredRight = curPos;
 
         }
+
         void shrinkLeft(int size) {
             if (curLeftPos == curRightPos) {
                 Log.e(TAG, "Current image group reach min size, can not adjust!");
@@ -1761,20 +1716,20 @@ public class HorizontalThumbnailListView extends View {
             }
             Bitmap bitmapImageAddMusic = utilityItem.image;
             Drawable drawableAddMusic = new BitmapDrawable(getResources(), bitmapImageAddMusic);
-            int paddingImage = 20;
-            mMusicDstRect = new Rect(curPos + mGroupPaddingWidth + paddingImage,
-                    (int) cusPositionHeight + DEFAULT_PADDING_HEIGHT_ITEM + paddingImage,
-                    curPos + mGroupPaddingWidth + DEFAULT_MUSIC_WIDTH - paddingImage,
-                    cusPositionHeight + DEFAULT_MUSIC_WIDTH + DEFAULT_PADDING_HEIGHT_ITEM - paddingImage);
+//            int paddingImage = 20;
+//            mMusicDstRect = new Rect(curPos + mGroupPaddingWidth + paddingImage,
+//                    (int) cusPositionHeight + DEFAULT_PADDING_HEIGHT_ITEM + paddingImage,
+//                    curPos + mGroupPaddingWidth + DEFAULT_MUSIC_WIDTH - paddingImage,
+//                    cusPositionHeight + DEFAULT_MUSIC_WIDTH + DEFAULT_PADDING_HEIGHT_ITEM - paddingImage);
+//
+//            drawableAddMusic.setBounds(mMusicDstRect);
+//            drawableAddMusic.draw(canvas);
 
-            drawableAddMusic.setBounds(mMusicDstRect);
-            drawableAddMusic.draw(canvas);
-
-            if (utilityItem.typeUtility == UtilityItem.TYPE_MUSIC) {
-                canvas.drawText(textMusicSong, mMusicDstRect.right + DEFAULT_MUSIC_WIDTH, mMusicDstRect.centerY() + mTextMusicPaint.getTextSize() / 4, mTextMusicPaint);
-            } else {
-                canvas.drawText(utilityItem.textItem, mMusicDstRect.right + DEFAULT_MUSIC_WIDTH, mMusicDstRect.centerY() + mTextMusicPaint.getTextSize() / 4, mTextMusicPaint);
-            }
+//            if (utilityItem.typeUtility == UtilityItem.TYPE_MUSIC) {
+//                canvas.drawText(textMusicSong, mMusicDstRect.right + DEFAULT_MUSIC_WIDTH, mMusicDstRect.centerY() + mTextMusicPaint.getTextSize() / 4, mTextMusicPaint);
+//            } else {
+            canvas.drawText(utilityItem.textItem, mMusicDstRect.right + DEFAULT_MUSIC_WIDTH, mMusicDstRect.centerY() + mTextMusicPaint.getTextSize() / 4, mTextMusicPaint);
+//            }
         }
 
 //        private void drawSoundWaveForm(Canvas canvas) {
@@ -1808,9 +1763,9 @@ public class HorizontalThumbnailListView extends View {
         return textMusicSong;
     }
 
-    public void setTextMusicSong(String textMusicSong) {
-        this.textMusicSong = textMusicSong;
-    }
+//    public void setTextMusicSong(String textMusicSong) {
+//        this.textMusicSong = textMusicSong;
+//    }
 
     private String convertTimeToString(int totalSecs) {
         int minutes = (totalSecs % 3600) / 60;

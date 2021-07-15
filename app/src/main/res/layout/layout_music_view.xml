@@ -11,13 +11,13 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
+        android:background="@color/color_main_edit"
         android:layout_height="wrap_content">
 
         <LinearLayout
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/round_menu_bar"
             app:layout_constraintTop_toTopOf="parent">
 
             <ImageView
@@ -32,9 +32,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
+                android:background="@color/color_main_edit"
                 app:layout_constraintTop_toBottomOf="@+id/layout_top_bar"
-                app:tabIndicatorColor="@color/color_main1"
-                app:tabSelectedTextColor="@color/color_main1" />
+                app:tabIndicatorColor="@color/white"
+                app:tabSelectedTextColor="@color/white" />
         </LinearLayout>
 
 
@@ -51,7 +52,6 @@
             android:id="@+id/container_seekbar"
             android:layout_width="match_parent"
             android:layout_height="50dp"
-            android:background="@drawable/container_seekbar_bg"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent">
@@ -60,7 +60,6 @@
                 android:id="@+id/progress_load_music"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:background="@drawable/container_seekbar_bg"
                 android:clickable="true"
                 android:focusable="true"
                 android:padding="8dp"
@@ -73,7 +72,6 @@
                 android:id="@+id/btn_play_music"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:background="@drawable/container_seekbar_bg"
                 android:clickable="true"
                 android:focusable="true"
                 android:padding="16dp"

@@ -23,5 +23,12 @@
     <dimen name="gnt_text_size_small">10sp</dimen>
     <dimen name="gnt_no_margin">0dp</dimen>
     <dimen name="gnt_no_size">0dp</dimen>
+    <dimen name="size56">56dp</dimen>
+    <dimen name="size25">25dp</dimen>
+    <dimen name="size44">44dp</dimen>
+    <dimen name="size58">58dp</dimen>
+    <dimen name="size40">40dp</dimen>
+    <dimen name="size60">60dp</dimen>
+    <dimen name="size30">30dp</dimen>
 
 </resources>

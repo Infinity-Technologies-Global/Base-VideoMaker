@@ -46,7 +46,7 @@ import kotlin.math.abs
 
 
 class VideoComposer(private val context: Context) : StudioDrawable {
-    var videoSize: Size = Size(1920, 1080)
+    var videoSize: Size = Size(1080, 1080)
     private val bitmapCache: BitmapDiskCache = BitmapDiskCache(context)
     private var studioRenderThread: StudioRenderThread? = null
 
@@ -695,5 +695,6 @@ class VideoComposer(private val context: Context) : StudioDrawable {
             }
         }
     }
+
 
 }

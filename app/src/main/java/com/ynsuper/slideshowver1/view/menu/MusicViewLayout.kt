@@ -80,7 +80,7 @@ class MusicViewLayout : BaseCustomConstraintLayout, MusicAdapter.OnSongClickList
         viewpager.adapter = viewPagerAdapter
         tab_layout_music.setupWithViewPager(viewpager)
         categoryListMusic?.let { viewPagerAdapter.setCategoryList(it) }
-
+        image_close_menu.visibility = View.VISIBLE
         image_close_menu.setOnClickListener {
             SoundManager.getInstance(context).stopSound()
             topbarController.clickCloseTopBar()

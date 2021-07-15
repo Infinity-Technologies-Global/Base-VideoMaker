@@ -8,11 +8,13 @@ import android.graphics.Color
 import android.graphics.SurfaceTexture
 import android.net.Uri
 import android.util.Log
+import android.util.Size
 import android.util.SparseArray
 import android.view.TextureView
 import android.view.View
 import android.widget.RelativeLayout
 import android.widget.Toast
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -44,6 +46,7 @@ import com.ynsuper.slideshowver1.view.adapter.SlideAdapter
 import com.ynsuper.slideshowver1.view.adapter.TransitionsAdapter
 import com.ynsuper.slideshowver1.view.custom_view.HorizontalThumbnailListView
 import com.ynsuper.slideshowver1.view.menu.MusicViewLayout
+import com.ynsuper.slideshowver1.view.menu.RatioViewLayout
 import com.ynsuper.slideshowver1.view.menu.TransitionViewLayout
 import com.ynsuper.slideshowver1.view.sticker.QuoteState
 import gun0912.tedimagepicker.builder.TedImagePicker
@@ -71,6 +74,7 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
     private var startScroll: Int = 0
     private var timer: Timer? = null
     private lateinit var musicViewLayout: MusicViewLayout
+    private lateinit var ratioViewLayout: RatioViewLayout
     private lateinit var transitionViewLayout: TransitionViewLayout
     private var audio: AudioEntity? = null
     private lateinit var quoteState: QuoteState
@@ -135,6 +139,9 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
     }
 
     private fun initViewMenuBar() {
+        ratioViewLayout = context.findViewById(R.id.ratio_view_layout)
+        ratioViewLayout.setTopbarController(this)
+
         transitionViewLayout = context.findViewById(R.id.transition_view_layout)
         transitionViewLayout.setTopbarController(this)
 
@@ -280,6 +287,8 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
                 height: Int
             ) {
                 littleBox?.resize(width, height)
+                Log.d("Ynsuper", "Ynsuper resize: " + width + " height: " + height)
+
             }
 
             override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
@@ -296,8 +305,14 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
                 height: Int
             ) {
                 if (surface == null) return
+                Log.d(
+                    "Ynsuper",
+                    "Ynsuper onSurfaceTextureAvailable: " + width + " height: " + height
+                )
                 littleBox = LittleBox(context, surface, width, height)
                 littleBox?.setComposer(videoComposer)
+                littleBox?.resize(width, height)
+
 
 //                littleBox?.playProgress = {
 //                    binding.seekBarProgress.progress = (it * 100f).toInt()
@@ -465,7 +480,7 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
 
     fun setAudio(audioEntity: AudioEntity) {
         this.audio = audioEntity
-        binding.horizontalImageSlide.textMusicSong = SoundManager.getInstance(context).nameAudio
+//        binding.horizontalImageSlide.textMusicSong = SoundManager.getInstance(context).nameAudio
     }
 
     fun loadDataImage(listImage: ArrayList<ImageModel>?) {
@@ -474,7 +489,7 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
 
     @SuppressLint("CheckResult")
     fun loadDataSticker() {
-        Log.d("Ynsuper", "Ynsuper loadDataSticker:" )
+        Log.d("Ynsuper", "Ynsuper loadDataSticker:")
 
         val subscribe = APIService.service.getListStickerModel()
             .subscribeOn(Schedulers.io())
@@ -501,7 +516,16 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
 
     }
 
-    fun selectMenuTemplate() {
+    fun selectMenuRatio() {
+        showScreenSelectRatio()
+    }
+
+    private fun showScreenSelectRatio() {
+        ratioViewLayout.visibility = View.VISIBLE
+        hideMenuBar()
+    }
+
+    fun selectMenuBackground() {
         val sceneIndex = slideAdapter.selectedAt
         if (sceneIndex >= 0) {
             val scene = videoComposer.getScenes()[sceneIndex]
@@ -567,6 +591,11 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
     }
 
     override fun clickSubmitTopBar() {
+        if (ratioViewLayout.visibility == View.VISIBLE) {
+            ratioViewLayout.visibility = View.GONE
+            showMenuBar()
+        }
+
         if (transitionViewLayout.visibility == View.VISIBLE) {
             transitionViewLayout.visibility = View.GONE
             showMenuBar()
@@ -603,8 +632,8 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
                             Log.d(Constant.YNSUPER_TAG, "CategoryListMusic: " + it.getData()!!.size)
                             liveDataCategory.value = it
                         }
-                    },{
-                        Toast.makeText(context, "error: "+ it.message, Toast.LENGTH_SHORT).show()
+                    }, {
+                        Toast.makeText(context, "error: " + it.message, Toast.LENGTH_SHORT).show()
                     }
                 )
 
@@ -624,7 +653,7 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
             return
         }
         loadHorizonSlideImage()
-        loadMusicUtilitySlide()
+//        loadMusicUtilitySlide()
 //        loadMusicUtilityStickerSlide()
 
     }
@@ -647,31 +676,31 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
 
             )
         )
-        binding.horizontalImageSlide!!.newUtilityGroup(utilityItemList)
-        binding.horizontalImageSlide!!.setMusicGroupListener(mMusicGroupListener)
+//        binding.horizontalImageSlide!!.newUtilityGroup(utilityItemList)
+//        binding.horizontalImageSlide!!.setMusicGroupListener(mMusicGroupListener)
 
     }
 
-    private fun loadMusicUtilitySlide() {
-        val imageSize: Int = DensityUtil.dip2px(context, 40F)
-        val utilityItemList: MutableList<HorizontalThumbnailListView.UtilityItem> = ArrayList()
-        val bitmapImageAddMusic =
-            BitmapUtils.getBitmapFromVectorDrawable(context, R.drawable.ic_add_music)
-
-        utilityItemList.add(
-            HorizontalThumbnailListView.UtilityItem(
-                "Add Music",
-                HorizontalThumbnailListView.UtilityItem.TYPE_MUSIC,
-                bitmapImageAddMusic,
-                (imageSize).toInt(),
-                0,
-                (imageSize).toInt(), context.resources.getDrawable(R.drawable.ic_select_bg_music)
-            )
-        )
-        binding.horizontalImageSlide!!.newUtilityGroup(utilityItemList)
-        binding.horizontalImageSlide!!.setMusicGroupListener(mMusicGroupListener)
-
-    }
+//    private fun loadMusicUtilitySlide() {
+//        val imageSize: Int = DensityUtil.dip2px(context, 40F)
+//        val utilityItemList: MutableList<HorizontalThumbnailListView.UtilityItem> = ArrayList()
+//        val bitmapImageAddMusic =
+//            BitmapUtils.getBitmapFromVectorDrawable(context, R.drawable.ic_add_music)
+//
+//        utilityItemList.add(
+//            HorizontalThumbnailListView.UtilityItem(
+//                "Add Music",
+//                HorizontalThumbnailListView.UtilityItem.TYPE_MUSIC,
+//                bitmapImageAddMusic,
+//                (imageSize).toInt(),
+//                0,
+//                (imageSize).toInt(), context.resources.getDrawable(R.drawable.ic_select_bg_music)
+//            )
+//        )
+//        binding.horizontalImageSlide!!.newUtilityGroup(utilityItemList)
+//        binding.horizontalImageSlide!!.setMusicGroupListener(mMusicGroupListener)
+//
+//    }
 
     private fun loadHorizonSlideImage() {
         binding.horizontalImageSlide.clear()
@@ -684,7 +713,7 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
         binding.horizontalImageSlide!!.setEndPaddingWidth(screenWidth / 2 - groupPadding)
         binding.horizontalImageSlide!!.setGroupPaddingWidth(groupPadding)
         binding.horizontalImageSlide!!.setPaddingVerticalHeight(DensityUtil.dip2px(context, 2F))
-        binding.horizontalImageSlide!!.setSelectedGroupBg(context.resources.getDrawable(R.drawable.ic_select_bg))
+//        binding.horizontalImageSlide!!.setSelectedGroupBg(context.resources.getDrawable(R.drawable.ic_select_bg))
         binding.horizontalImageSlide!!.setImageGroupListener(mImageGroupListener)
         var timeInHeader = 0
         for (i in videoComposer.getScenes().listIterator()) {
@@ -992,7 +1021,7 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
     fun selectMusicSong(songName: String) {
         musicViewLayout.visibility = View.GONE
         showMenuBar()
-        binding?.horizontalImageSlide.textMusicSong = songName
+//        binding?.horizontalImageSlide.textMusicSong = songName
         applyMusicToView(SoundManager.getInstance(context).currentUrl)
         showMenuBar()
         binding.playVisualView.updateVisualizer(
@@ -1009,6 +1038,33 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
 
     fun exportVideo(width: Int, height: Int) {
         exportAsVideoFile(width, height)
+    }
+
+    fun changeRatioPreview(width: Int, height: Int) {
+        val layoutParams = binding.textureView.layoutParams as ConstraintLayout.LayoutParams
+        binding.textureView.layoutParams = layoutParams
+        var ratio = 1
+        if (width < height) {
+             ratio = 1080/height
+        }else{
+            ratio = 1080/width
+        }
+
+
+
+        val newSizeVideo = Size(ratio * width, ratio * height)
+
+        if (width < height) {
+            layoutParams.dimensionRatio = "w,${newSizeVideo.width}:${newSizeVideo.height}"
+        } else {
+            layoutParams.dimensionRatio = "H,${newSizeVideo.width}:${newSizeVideo.height}"
+        }
+        Log.d(
+            "Ynsuper",
+            "new Size Video: " + "$width:$height-----" + newSizeVideo.width + ": " + newSizeVideo.height
+        )
+        videoComposer.videoSize = newSizeVideo
+        dispatchDraw()
     }
 
 

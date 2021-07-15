@@ -48,9 +48,9 @@ class SaveVideoBottomSheet : BottomSheetDialogFragment() {
         text_name_top_bar.setText("Resolution")
         image_submit_menu.visibility = View.GONE
 
-        image_close_menu.setOnClickListener {
-            dismiss()
-        }
+//        image_close_menu.setOnClickListener {
+//            dismiss()
+//        }
         text_export.setOnClickListener {
             if (radio_group.checkedRadioButtonId == -1) {
                 Toast.makeText(context, "Please select a resolution!!!", Toast.LENGTH_SHORT).show()

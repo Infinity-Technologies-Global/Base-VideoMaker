@@ -8,6 +8,7 @@ import android.provider.OpenableColumns
 import android.util.Log
 import android.view.View
 import android.widget.RelativeLayout
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.lifecycle.ViewModelProviders
 import com.ynsuper.slideshowver1.R
 import com.ynsuper.slideshowver1.adapter.MusicAdapter
@@ -36,7 +37,7 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
     private lateinit var viewModel: SlideShowViewModel
     private var mViews: ArrayList<View>? = null
     private var mCurrentView: StickerView? = null
-    private var mContentRootView: RelativeLayout? = null
+    private var mContentRootView: ConstraintLayout? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,19 +66,17 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
         super.onSelectedSong(songName)
         Log.e(Constant.YNSUPER_TAG, "onSelectedSong: $songName")
 
-        viewModel.selectMusicSong(songName)
+//        viewModel.selectMusicSong(songName)
     }
 
     private fun initEvent() {
-        layout_menu_background.setOnClickListener { viewModel.selectMenuTemplate() }
-        layout__menu_transition.setOnClickListener {
-            viewModel.selectMenuTransition()
-        }
+        layout_menu_ratio.setOnClickListener { viewModel.selectMenuRatio() }
+        layout_menu_background.setOnClickListener { viewModel.selectMenuBackground() }
+        layout__menu_transition.setOnClickListener { viewModel.selectMenuTransition() }
         layout_menu_music.setOnClickListener { viewModel.selectMenuMusic() }
         layout_menu_duration.setOnClickListener { viewModel.selectMenuSpeed() }
         layout_menu_sticker.setOnClickListener { viewModel.selectMenuSticker() }
         layout_menu_text.setOnClickListener { viewModel.selectMenuText() }
-        image_button_backward.setOnClickListener { viewModel.stopPreview() }
         image_add_image.setOnClickListener { viewModel.showAddImageSheet() }
         text_save_video.setOnClickListener { viewModel.saveVideo() }
     }
@@ -149,6 +148,10 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
 
     override fun onExportVideo(width: Int, height: Int) {
         viewModel?.exportVideo(width,height)
+    }
+
+    fun changeRatioView(width: Int, height: Int) {
+        viewModel?.changeRatioPreview(width,height)
     }
 
 //    override fun onSongDownloadClick(

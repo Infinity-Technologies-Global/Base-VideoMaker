@@ -15,10 +15,12 @@
     <color name="colorPrimary">#23374d</color>
     <color name="colorPrimaryDark">#23374d</color>
     <color name="colorAccent">#1089ff</color>
-    <color name="color_main_edit">#f8f9fc</color>
+    <color name="color_main_edit">#131416</color>
     <color name="color_main1">#fcb045</color>
     <color name="color_main2">#9c1bbb</color>
-    <color name="color_main_dark">#343434</color>
+    <color name="color_main_dark">#ffffff</color>
     <color name="color_download">#17B537</color>
     <color name="grey">#a2a4b5</color>
+    <color name="color_text_bottom">#87888a</color>
+    <color name="color_item_bottom">#ffffff</color>
 </resources>
