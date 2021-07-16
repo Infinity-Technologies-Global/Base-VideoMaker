@@ -66,7 +66,7 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
         super.onSelectedSong(songName)
         Log.e(Constant.YNSUPER_TAG, "onSelectedSong: $songName")
 
-//        viewModel.selectMusicSong(songName)
+        viewModel.selectMusicSong(songName)
     }
 
     private fun initEvent() {

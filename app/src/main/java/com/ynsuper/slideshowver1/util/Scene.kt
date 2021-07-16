@@ -20,7 +20,7 @@ data class Scene (
     var transition: Transition = FadeTransition("fade", 1000L)
     var texture: Texture2d = Texture2d()
     var filter = PackFilter()
-    var cropType: BitmapProcessor.CropType = BitmapProcessor.CropType.FILL_CENTER
+    var cropType: BitmapProcessor.CropType = BitmapProcessor.CropType.FIT_CENTER
 
 
     @GlContext

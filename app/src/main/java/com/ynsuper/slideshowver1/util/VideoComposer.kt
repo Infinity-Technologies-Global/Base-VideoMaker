@@ -159,8 +159,9 @@ class VideoComposer(private val context: Context) : StudioDrawable {
             }
 
             val hash = scene.id
-            val scaledBitmap: Bitmap = if (bitmapCache.contains(hash + cropType.key())) {
+            var scaledBitmap: Bitmap = if (bitmapCache.contains(hash + cropType.key())) {
                 bitmapCache.get(hash + cropType.key())!!
+
             } else {
                 val original = BitmapProcessor.loadSync(scene.originalPath)
                 val bitmapProcessor = BitmapProcessor(original)
@@ -182,6 +183,8 @@ class VideoComposer(private val context: Context) : StudioDrawable {
             }
         }
     }
+
+
 
     fun addSticker(bitmap: Bitmap, height: Int, width: Int, x: Int, y: Int) {
         stickers?.add(Sticker(bitmap, height, width, x, y, 0L, 5000L))
@@ -334,7 +337,7 @@ class VideoComposer(private val context: Context) : StudioDrawable {
         stickerShaderList?.draw(stickerSceneList!!)
     }
 
-    fun drawSticker(bitmap: Bitmap){
+    fun drawSticker(bitmap: Bitmap) {
         postDraw {
             stickerSceneList?.use(GL_TEXTURE_2D) {
                 GLUtils.texImage2D(GL_TEXTURE_2D, 0, bitmap, 0)

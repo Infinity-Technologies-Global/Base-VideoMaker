@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.SurfaceTexture
 import android.net.Uri
+import android.os.Handler
 import android.util.Log
 import android.util.Size
 import android.util.SparseArray
@@ -443,7 +444,9 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
                 isLoading.postValue(false)
                 loadHorizonSlide()
             }
-            .doOnSubscribe { isLoading.postValue(true) }
+            .doOnSubscribe {
+//                isLoading.postValue(true)
+            }
             .subscribeBy(onError = {
                 Toast.makeText(context, "Error while loading slides", Toast.LENGTH_SHORT).show()
             }) {
@@ -607,8 +610,8 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
 
     private fun applyMusicToView(currentUrl: String?) {
         val audio = AudioEntity(path = currentUrl!!)
-        binding.horizontalImageSlide.itemUtilityGroupList.get(0).utilityItemList.get(0).textItem =
-            "Test appy Music"
+//        binding.horizontalImageSlide.itemUtilityGroupList.get(0).utilityItemList.get(0).textItem =
+//            "Test appy Music"
         setAudio(audio)
 
     }
@@ -812,28 +815,32 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
         }
 
     fun onStateChange(state: BackgroundOptionsBottomSheet.OptionState) {
-        if (state.delete) {
-            videoComposer.removeScene(state.id, ::dispatchDraw)
-            slides.find { it.path.md5() == state.id }?.let {
-                val index = slides.indexOf(it)
-                slides.remove(it)
-                slideAdapter.notifyItemRemoved(index)
-            }
+//        if (state.delete) {
+//            videoComposer.removeScene(state.id, ::dispatchDraw)
+//            slides.find { it.path.md5() == state.id }?.let {
+//                val index = slides.indexOf(it)
+//                slides.remove(it)
+//                slideAdapter.notifyItemRemoved(index)
+//            }
+//
+//            dispatchDraw()
+//            return
+//        }
 
-            dispatchDraw()
-            return
-        }
-
-        val scene = videoComposer.getScenes().find { it.id == state.id } ?: return
-        scene.duration = state.duration
-        videoComposer.evaluateDuration()
-        dispatchDraw()
+//        val scene = videoComposer.getScenes().find { it.id == state.id } ?: return
+//        scene.duration = state.duration
+//        videoComposer.evaluateDuration()
+//        dispatchDraw()
 
         videoComposer.updateSceneCropType(state.id, BitmapProcessor.CropType.fromKey(state.crop!!))
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
-            .doOnSubscribe { isLoading.postValue(true) }
-            .doOnSuccess { isLoading.postValue(false) }
+            .doOnSubscribe {
+                isLoading.postValue(true)
+            }
+            .doOnSuccess {
+                isLoading.postValue(false)
+            }
             .subscribeBy(onError = {
                 Toast.makeText(context, "Error while setting crop type", Toast.LENGTH_SHORT).show()
             }) {
@@ -1044,27 +1051,34 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
         val layoutParams = binding.textureView.layoutParams as ConstraintLayout.LayoutParams
         binding.textureView.layoutParams = layoutParams
         var ratio = 1
-        if (width < height) {
-             ratio = 1080/height
+        ratio = if (width > height) {
+            1080/height
         }else{
-            ratio = 1080/width
+            1080/width
         }
 
 
+        var newSizeVideo = videoComposer.videoSize
 
-        val newSizeVideo = Size(ratio * width, ratio * height)
-
-        if (width < height) {
-            layoutParams.dimensionRatio = "w,${newSizeVideo.width}:${newSizeVideo.height}"
+        if (width > height) {
+             newSizeVideo = Size(ratio * width, ratio * height)
+            layoutParams.dimensionRatio = "h,${newSizeVideo.width}:${newSizeVideo.height}"
         } else {
-            layoutParams.dimensionRatio = "H,${newSizeVideo.width}:${newSizeVideo.height}"
+            newSizeVideo = Size(ratio * width, ratio * height)
+            layoutParams.dimensionRatio = "w,${newSizeVideo.width}:${newSizeVideo.height}"
         }
         Log.d(
             "Ynsuper",
             "new Size Video: " + "$width:$height-----" + newSizeVideo.width + ": " + newSizeVideo.height
         )
         videoComposer.videoSize = newSizeVideo
+        // fix bug not redraw
         dispatchDraw()
+        dispatchDraw()
+        dispatchDraw()
+        dispatchDraw()
+
+
     }
 
 

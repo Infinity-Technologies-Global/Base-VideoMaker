@@ -25,6 +25,7 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Rect
 import android.media.ExifInterface
+import android.util.Log
 import com.seanghay.studio.utils.BitmapProcessor.CropType.FILL_CENTER
 import com.seanghay.studio.utils.BitmapProcessor.CropType.FILL_END
 import com.seanghay.studio.utils.BitmapProcessor.CropType.FILL_START
@@ -59,11 +60,11 @@ class BitmapProcessor(private val source: Bitmap) {
         this.scaledHeight = height
     }
 
-    fun proceed(): Single<Bitmap> {
-        return Single.create {
-            it.onSuccess(proceedSync())
-        }
-    }
+//    fun proceed(): Single<Bitmap> {
+//        return Single.create {
+//            it.onSuccess(proceedSync())
+//        }
+//    }
 
     fun proceedSync(): Bitmap {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -86,12 +87,14 @@ class BitmapProcessor(private val source: Bitmap) {
             val colorMatrix = ColorMatrix()
             colorMatrix.setSaturation(.5f)
             val colorFilter = ColorMatrixColorFilter(colorMatrix)
-            bgPaint.alpha = 150
+            bgPaint.alpha = 200
             bgPaint.colorFilter = colorFilter
 
-            val bg = FastBlur.blur(source, 14, false)
-            canvas.drawBitmap(bg, null, backgroundFillRect(), bgPaint)
+            val bg = FastBlur.blur(source, 10, false)
+            //handle background h
+            canvas.drawBitmap(bg, null, backgroundFillRect(), null)
         }
+        Log.d("Ynsuper","proceedSync ${dstRect.left} : ${dstRect.top} : ${dstRect.right}:  ${dstRect.bottom} ")
 
         canvas.drawBitmap(source, null, dstRect, null)
 
@@ -116,6 +119,7 @@ class BitmapProcessor(private val source: Bitmap) {
 
     private fun fillEndRect(): Rect {
         val ratio = width.toFloat() / height.toFloat()
+        Log.d("Ynsuper", "Ratio check fillEndRect: "+ ratio)
         val bottom = (scaledWidth.toFloat() / ratio).toInt()
         val top = scaledHeight - bottom
         return Rect(0, top, scaledWidth, scaledHeight)
@@ -123,6 +127,7 @@ class BitmapProcessor(private val source: Bitmap) {
 
     private fun fillStartRect(): Rect {
         val ratio = width.toFloat() / height.toFloat()
+        Log.d("Ynsuper", "Ratio check fillStartRect: "+ ratio)
         val bottom = (scaledWidth.toFloat() / ratio).toInt()
         val top = 0
         return Rect(0, top, scaledWidth, bottom + top)
@@ -130,6 +135,8 @@ class BitmapProcessor(private val source: Bitmap) {
 
     private fun fillCenterRect(): Rect {
         val ratio = width.toFloat() / height.toFloat()
+        Log.d("Ynsuper", "Ratio check fillCenterRect: "+ ratio)
+
         val bottom = (scaledWidth.toFloat() / ratio).toInt()
         val top = ((scaledHeight - bottom) / 2f).toInt()
         return Rect(0, top, scaledWidth, bottom + top)
@@ -137,6 +144,8 @@ class BitmapProcessor(private val source: Bitmap) {
 
     private fun fitEndRect(): Rect {
         val ratio = width.toFloat() / height.toFloat()
+        Log.d("Ynsuper", "Ratio check fitEndRect: "+ ratio)
+
         val right = (scaledHeight * ratio).toInt()
         val left = scaledWidth - right
         return Rect(left, 0, scaledWidth, scaledHeight)
@@ -144,6 +153,8 @@ class BitmapProcessor(private val source: Bitmap) {
 
     private fun fitCenterRect(): Rect {
         val ratio = width.toFloat() / height.toFloat()
+        Log.d("Ynsuper", "Ratio check fitCenterRect: "+ ratio)
+
         val right = (scaledHeight * ratio).toInt()
         val left = if (scaledWidth > right) ((scaledWidth - right) / 2f).toInt()
         else ((right - scaledWidth) / 2f).toInt()
@@ -152,6 +163,8 @@ class BitmapProcessor(private val source: Bitmap) {
 
     private fun fitStartRect(): Rect {
         val ratio = width.toFloat() / height.toFloat()
+        Log.d("Ynsuper", "Ratio check fitStartRect: "+ ratio)
+
         val right = (scaledHeight * ratio).toInt()
         return Rect(0, 0, right, scaledHeight)
     }
