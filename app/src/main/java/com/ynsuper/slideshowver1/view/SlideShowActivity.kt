@@ -7,14 +7,12 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import android.util.Log
 import android.view.View
-import android.widget.RelativeLayout
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.lifecycle.ViewModelProviders
 import com.ynsuper.slideshowver1.R
 import com.ynsuper.slideshowver1.adapter.MusicAdapter
 import com.ynsuper.slideshowver1.adapter.SoundManager
 import com.ynsuper.slideshowver1.base.BaseActivity
-import com.ynsuper.slideshowver1.bottomsheet.BackgroundOptionsBottomSheet
 import com.ynsuper.slideshowver1.bottomsheet.DurationOptionsBottomSheet
 import com.ynsuper.slideshowver1.callback.SaveStateListener
 import com.ynsuper.slideshowver1.callback.SceneOptionStateListener
@@ -22,6 +20,7 @@ import com.ynsuper.slideshowver1.databinding.ActivitySlideshowBinding
 import com.ynsuper.slideshowver1.model.ImageModel
 import com.ynsuper.slideshowver1.util.Constant
 import com.ynsuper.slideshowver1.util.entity.AudioEntity
+import com.ynsuper.slideshowver1.view.menu.BackgroundOptionsViewLayout
 import com.ynsuper.slideshowver1.view.menu.MusicViewLayout
 import com.ynsuper.slideshowver1.viewmodel.SlideShowViewModel
 import kotlinx.android.synthetic.main.activity_slideshow.*
@@ -124,7 +123,7 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
         viewModel.addMoreScene()
     }
 
-    override fun onBackGroundConfigChange(state: BackgroundOptionsBottomSheet.OptionState) {
+    override fun onBackGroundConfigChange(state: BackgroundOptionsViewLayout.OptionState) {
         viewModel.onBackgroundConfigChage(state)
     }
 
@@ -147,12 +146,13 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
     }
 
     override fun onExportVideo(width: Int, height: Int) {
-        viewModel?.exportVideo(width,height)
+        viewModel?.exportVideo(width, height)
     }
 
     fun changeRatioView(width: Int, height: Int) {
-        viewModel?.changeRatioPreview(width,height)
+        viewModel?.changeRatioPreview(width, height)
     }
+
 
 //    override fun onSongDownloadClick(
 //        url: String?,

@@ -7,7 +7,6 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.SurfaceTexture
 import android.net.Uri
-import android.os.Handler
 import android.util.Log
 import android.util.Size
 import android.util.SparseArray
@@ -29,7 +28,6 @@ import com.ynsuper.slideshowver1.adapter.SoundManager
 import com.ynsuper.slideshowver1.base.BaseViewModel
 import com.ynsuper.slideshowver1.bottomsheet.*
 import com.ynsuper.slideshowver1.callback.*
-import com.ynsuper.slideshowver1.dao.md5
 import com.ynsuper.slideshowver1.database.AppDatabase
 import com.ynsuper.slideshowver1.databinding.ActivitySlideshowBinding
 import com.ynsuper.slideshowver1.model.AlbumMusicModel
@@ -46,6 +44,7 @@ import com.ynsuper.slideshowver1.view.StickerView
 import com.ynsuper.slideshowver1.view.adapter.SlideAdapter
 import com.ynsuper.slideshowver1.view.adapter.TransitionsAdapter
 import com.ynsuper.slideshowver1.view.custom_view.HorizontalThumbnailListView
+import com.ynsuper.slideshowver1.view.menu.BackgroundOptionsViewLayout
 import com.ynsuper.slideshowver1.view.menu.MusicViewLayout
 import com.ynsuper.slideshowver1.view.menu.RatioViewLayout
 import com.ynsuper.slideshowver1.view.menu.TransitionViewLayout
@@ -77,6 +76,7 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
     private lateinit var musicViewLayout: MusicViewLayout
     private lateinit var ratioViewLayout: RatioViewLayout
     private lateinit var transitionViewLayout: TransitionViewLayout
+    private lateinit var backgroundViewLayout: BackgroundOptionsViewLayout
     private var audio: AudioEntity? = null
     private lateinit var quoteState: QuoteState
     private lateinit var allTransition: List<Transition>
@@ -140,6 +140,9 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
     }
 
     private fun initViewMenuBar() {
+        backgroundViewLayout = context.findViewById(R.id.background_view_layout)
+        backgroundViewLayout.setTopbarController(this)
+
         ratioViewLayout = context.findViewById(R.id.ratio_view_layout)
         ratioViewLayout.setTopbarController(this)
 
@@ -227,7 +230,7 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
             (it.itemAnimator as SimpleItemAnimator).supportsChangeAnimations = false
         }
 
-        dispatchUpdates()
+//        dispatchUpdates()
 
         slideAdapter.selectionChange = {
             selectionScene()
@@ -435,7 +438,9 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
 
         Single.just(paths)
             .map {
-                it.map { item -> item.path to BitmapProcessor.loadSync(item.path) }
+                it.map { item -> item.path to BitmapProcessor.loadSync(
+                    item.path
+                ) }
             }
             .toObservable().switchMap { videoComposer.setScenes(it).toObservable() }
             .subscribeOn(Schedulers.io())
@@ -445,7 +450,7 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
                 loadHorizonSlide()
             }
             .doOnSubscribe {
-//                isLoading.postValue(true)
+                isLoading.postValue(true)
             }
             .subscribeBy(onError = {
                 Toast.makeText(context, "Error while loading slides", Toast.LENGTH_SHORT).show()
@@ -520,10 +525,6 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
     }
 
     fun selectMenuRatio() {
-        showScreenSelectRatio()
-    }
-
-    private fun showScreenSelectRatio() {
         ratioViewLayout.visibility = View.VISIBLE
         hideMenuBar()
     }
@@ -533,18 +534,17 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
         if (sceneIndex >= 0) {
             val scene = videoComposer.getScenes()[sceneIndex]
 
-            val state = BackgroundOptionsBottomSheet.OptionState(
+            val state = BackgroundOptionsViewLayout.OptionState(
                 id = scene.id,
-                duration = scene.duration,
+                progressBlur = scene.progressBlur,
                 crop = scene.cropType.key()
             )
 
-            BackgroundOptionsBottomSheet
-                .newInstance(state)
-                .show(
-                    context.supportFragmentManager,
-                    "scene-options"
-                )
+            backgroundViewLayout.visibility = View.VISIBLE
+            backgroundViewLayout.setState(state)
+            hideMenuBar()
+        }else{
+            Toast.makeText(context,context.getString(R.string.text_move_image_to_edit), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -594,6 +594,12 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
     }
 
     override fun clickSubmitTopBar() {
+
+        if (backgroundViewLayout.visibility == View.VISIBLE) {
+            backgroundViewLayout.visibility = View.GONE
+            showMenuBar()
+        }
+
         if (ratioViewLayout.visibility == View.VISIBLE) {
             ratioViewLayout.visibility = View.GONE
             showMenuBar()
@@ -814,32 +820,21 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
             }
         }
 
-    fun onStateChange(state: BackgroundOptionsBottomSheet.OptionState) {
-//        if (state.delete) {
-//            videoComposer.removeScene(state.id, ::dispatchDraw)
-//            slides.find { it.path.md5() == state.id }?.let {
-//                val index = slides.indexOf(it)
-//                slides.remove(it)
-//                slideAdapter.notifyItemRemoved(index)
-//            }
-//
-//            dispatchDraw()
-//            return
-//        }
+    fun onStateChange(state: BackgroundOptionsViewLayout.OptionState) {
 
-//        val scene = videoComposer.getScenes().find { it.id == state.id } ?: return
-//        scene.duration = state.duration
-//        videoComposer.evaluateDuration()
-//        dispatchDraw()
-
-        videoComposer.updateSceneCropType(state.id, BitmapProcessor.CropType.fromKey(state.crop!!))
+        videoComposer.updateSceneCropType(state.id,state.blur,
+            state.progressBlur,state.color,
+            BitmapProcessor.CropType.fromKey(state.crop!!))
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
+            .doOnSuccess {
+
+            }
             .doOnSubscribe {
-                isLoading.postValue(true)
+//                isLoading.postValue(true)
             }
             .doOnSuccess {
-                isLoading.postValue(false)
+//                isLoading.postValue(false)
             }
             .subscribeBy(onError = {
                 Toast.makeText(context, "Error while setting crop type", Toast.LENGTH_SHORT).show()
@@ -894,7 +889,7 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
 
     }
 
-    fun onBackgroundConfigChage(state: BackgroundOptionsBottomSheet.OptionState) {
+    fun onBackgroundConfigChage(state: BackgroundOptionsViewLayout.OptionState) {
         onStateChange(state)
 
     }

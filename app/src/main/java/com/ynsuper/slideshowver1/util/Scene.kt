@@ -16,6 +16,7 @@ data class Scene (
     var originalPath: String
 ) {
 
+    val progressBlur: Int = 14
     var duration: Long = 4000L
     var transition: Transition = FadeTransition("fade", 1000L)
     var texture: Texture2d = Texture2d()

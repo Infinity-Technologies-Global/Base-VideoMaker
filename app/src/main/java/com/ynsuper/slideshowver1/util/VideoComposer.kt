@@ -142,6 +142,9 @@ class VideoComposer(private val context: Context) : StudioDrawable {
 
     fun updateSceneCropType(
         id: String,
+        isBlur : Boolean,
+        progressBlur : Int,
+        colorBackgroud : Int,
         cropType: BitmapProcessor.CropType
     ): Single<Bitmap> {
         return Single.create {
@@ -153,10 +156,10 @@ class VideoComposer(private val context: Context) : StudioDrawable {
                 return@create
             }
 
-            if (scene.cropType == cropType) {
-                it.onSuccess(scene.bitmap)
-                return@create
-            }
+//            if (scene.cropType == cropType) {
+//                it.onSuccess(scene.bitmap)
+//                return@create
+//            }
 
             val hash = scene.id
             var scaledBitmap: Bitmap = if (bitmapCache.contains(hash + cropType.key())) {
@@ -164,7 +167,7 @@ class VideoComposer(private val context: Context) : StudioDrawable {
 
             } else {
                 val original = BitmapProcessor.loadSync(scene.originalPath)
-                val bitmapProcessor = BitmapProcessor(original)
+                val bitmapProcessor = BitmapProcessor(original, isBlur, progressBlur,colorBackgroud)
                 bitmapProcessor.crop(videoSize.width, videoSize.height)
                 bitmapProcessor.cropType(cropType)
                 val bmp = bitmapProcessor.proceedSync()
@@ -209,7 +212,7 @@ class VideoComposer(private val context: Context) : StudioDrawable {
                 val scaledBitmap: Bitmap = if (bitmapCache.contains(hash + cropType.key())) {
                     bitmapCache.get(hash + cropType.key())!!
                 } else {
-                    val bitmapProcessor = BitmapProcessor(bitmap)
+                    val bitmapProcessor = BitmapProcessor(bitmap,true,14,0)
                     bitmapProcessor.crop(videoSize.width, videoSize.height)
                     bitmapProcessor.cropType(cropType)
                     val bmp = bitmapProcessor.proceedSync()

@@ -35,7 +35,12 @@ import com.seanghay.studio.utils.BitmapProcessor.CropType.FIT_START
 import io.reactivex.Single
 import java.io.IOException
 
-class BitmapProcessor(private val source: Bitmap) {
+class BitmapProcessor(
+    private val source: Bitmap,
+    val isBlur: Boolean,
+    val progressBlur: Int,
+    val colorBackgroud: Int
+) {
 
     private val width: Int = source.width
     private val height: Int = source.height
@@ -87,12 +92,18 @@ class BitmapProcessor(private val source: Bitmap) {
             val colorMatrix = ColorMatrix()
             colorMatrix.setSaturation(.5f)
             val colorFilter = ColorMatrixColorFilter(colorMatrix)
+            bgPaint.color = colorBackgroud
             bgPaint.alpha = 200
             bgPaint.colorFilter = colorFilter
-
-            val bg = FastBlur.blur(source, 10, false)
-            //handle background h
-            canvas.drawBitmap(bg, null, backgroundFillRect(), null)
+            if (isBlur){
+                Log.d("Ynsuper","Progress Blur: "+ progressBlur)
+                val bg = FastBlur.blur(source, progressBlur, false)
+                canvas.drawBitmap(bg, null, backgroundFillRect(), null)
+            }else{
+                val bg = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+                canvas.drawBitmap(bg, null, backgroundFillRect(), bgPaint)
+            }
+            //handle background
         }
         Log.d("Ynsuper","proceedSync ${dstRect.left} : ${dstRect.top} : ${dstRect.right}:  ${dstRect.bottom} ")
 
@@ -218,7 +229,7 @@ class BitmapProcessor(private val source: Bitmap) {
             return Bitmap.createBitmap(b, 0, 0, b.width, b.height, matrix, true)
         }
 
-        fun load(filePath: String): Single<Bitmap> {
+        fun load(filePath: String, isBlur: Boolean, progressBlur: Float, colorBackgroud: Int): Single<Bitmap> {
             return Single.create {
                 it.onSuccess(loadSync(filePath))
             }

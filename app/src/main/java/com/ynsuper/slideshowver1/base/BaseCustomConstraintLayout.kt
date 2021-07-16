@@ -31,6 +31,8 @@ open class BaseCustomConstraintLayout : ConstraintLayout {
         init(context)
     }
 
+
+
     fun init(context: Context?) {
         this.mContext  = context
         setBackgroundColor(Color.WHITE)

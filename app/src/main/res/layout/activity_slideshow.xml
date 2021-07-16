@@ -88,16 +88,17 @@
         <com.ynsuper.slideshowver1.view.custom_view.PlayerVisualizerView
             android:id="@+id/play_visual_view"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="40dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/rl_content_root" />
+            app:layout_constraintTop_toBottomOf="@id/relative_controller" />
 
         <RelativeLayout
+            android:id="@+id/relative_controller"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/transparent_60"
-            app:layout_constraintBottom_toBottomOf="@id/rl_content_root">
+            app:layout_constraintTop_toBottomOf="@id/rl_content_root">
 
 
             <androidx.appcompat.widget.AppCompatImageButton
@@ -301,13 +302,18 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/black"
-            android:layout_marginBottom="16dp"
+
             android:orientation="vertical"
 
             app:layout_constraintBottom_toTopOf="@+id/horizontal_menu">
 
             <com.ynsuper.slideshowver1.view.menu.RatioViewLayout
                 android:id="@+id/ratio_view_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+            <com.ynsuper.slideshowver1.view.menu.BackgroundOptionsViewLayout
+                android:id="@+id/background_view_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:visibility="gone" />

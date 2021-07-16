@@ -49,4 +49,9 @@
     <string name="term_use">Term of use</string>
     <string name="item1"><b>16,666VND</b>/per year \n Month Save 86%</string>
     <string name="text_ratio">Ratio</string>
+    <string name="text_move_image_to_edit">Swipe to specific image to edit</string>
+    <string name="blur_background">Blur background</string>
+    <string name="fill_type">Fill type</string>
+    <string name="background_color">Background Color</string>
+    <string name="none">None</string>
 </resources>

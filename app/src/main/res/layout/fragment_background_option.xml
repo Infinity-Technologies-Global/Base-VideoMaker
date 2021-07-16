@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@color/color_main_edit"
     android:orientation="vertical">
 
 
@@ -12,24 +13,56 @@
 
 
     <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/labelSelectBackgroundColor"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:text="@string/background_color"
+        android:textColor="@color/white"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/checkboxBlur" />
+
+
+    <LinearLayout
+        android:id="@+id/layout_list_text_color"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/_40sdp"
+        android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@+id/labelSelectBackgroundColor"
+        android:orientation="vertical">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycleBackgroundColor"
+            android:layout_width="match_parent"
+            android:layout_gravity="center"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
+
+
+    <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/labelFillType"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="32dp"
-        android:text="Fill type"
-        android:textAppearance="?textAppearanceOverline"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:text="@string/fill_type"
+        android:textColor="@color/white"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/checkboxBlur" />
+        app:layout_constraintTop_toBottomOf="@id/layout_list_text_color" />
+
 
     <RadioGroup
         android:id="@+id/groupfill"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-
+        android:layout_margin="8dp"
+        android:layout_marginBottom="16dp"
         android:checkedButton="@id/fitCenter"
-        android:orientation="vertical"
+        android:gravity="center"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/labelFillType">
@@ -37,50 +70,83 @@
 
         <androidx.appcompat.widget.AppCompatRadioButton
             android:id="@+id/fitCenter"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/rbtn_selector"
+            android:button="@null"
             android:checked="true"
-            android:text="Fit Center" />
-
-
-        <androidx.appcompat.widget.AppCompatRadioButton
-            android:id="@+id/fitStart"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
-            android:text="Fit Start" />
-
-
-        <androidx.appcompat.widget.AppCompatRadioButton
-            android:id="@+id/fitEnd"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
-            android:text="Fit End" />
+            android:gravity="center"
+            android:padding="4dp"
+            android:text="Fit Center"
+            android:textColor="@color/white"
+            android:textSize="10sp" />
 
         <androidx.appcompat.widget.AppCompatRadioButton
             android:id="@+id/fillCenter"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
-            android:text="Fill Center" />
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/rbtn_selector"
+            android:button="@null"
+            android:gravity="center"
+            android:padding="4dp"
+            android:text="Fill Center"
+            android:textColor="@color/white"
+            android:textSize="10sp" />
 
+        <androidx.appcompat.widget.AppCompatRadioButton
+            android:id="@+id/fitStart"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/rbtn_selector"
+            android:button="@null"
+            android:gravity="center"
+            android:padding="4dp"
+            android:text="Fit Start"
+            android:textColor="@color/white"
+            android:textSize="10sp" />
 
         <androidx.appcompat.widget.AppCompatRadioButton
             android:id="@+id/fillStart"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
-            android:text="Fill Start" />
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/rbtn_selector"
+            android:button="@null"
+            android:gravity="center"
+            android:padding="4dp"
+            android:text="Fill Start"
+            android:textColor="@color/white"
+            android:textSize="10sp" />
+
+        <androidx.appcompat.widget.AppCompatRadioButton
+            android:id="@+id/fitEnd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/rbtn_selector"
+            android:button="@null"
+            android:gravity="center"
+            android:padding="4dp"
+            android:text="Fit End"
+            android:textColor="@color/white"
+            android:textSize="10sp" />
 
 
         <androidx.appcompat.widget.AppCompatRadioButton
             android:id="@+id/fillEnd"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
-            android:text="Fill End" />
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/rbtn_selector"
+            android:button="@null"
+            android:gravity="center"
+            android:padding="4dp"
+            android:text="Fill End"
+            android:textColor="@color/white"
+            android:textSize="10sp" />
 
     </RadioGroup>
 
@@ -90,10 +156,26 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:checked="true"
-        android:padding="16dp"
-        android:text="Blur background"
+        android:padding="8dp"
+        android:text="@string/blur_background"
+        android:textColor="@color/white"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/layout_top_bar" />
+
+    <SeekBar
+        android:id="@+id/seekBarBlur"
+        android:layout_width="0dp"
+        android:padding="8dp"
+        android:layout_height="wrap_content"
+        android:progress="10"
+        android:max="20"
+        android:min="1"
+        android:backgroundTint="@color/color_text_bottom"
+        android:progressBackgroundTint="@color/color_text_bottom"
+        app:layout_constraintBottom_toBottomOf="@+id/checkboxBlur"
+        app:layout_constraintEnd_toStartOf="@+id/checkboxBlur"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/checkboxBlur" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
