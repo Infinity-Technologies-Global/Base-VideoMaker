@@ -185,6 +185,9 @@ class VideoComposer(private val context: Context) : StudioDrawable {
             }
 
             scene.bitmap.recycle()
+            scene.currentColor = colorBackgroud
+            scene.isBlur = isBlur
+            scene.progressBlur = progressBlur
             scene.bitmap = scaledBitmap
             scene.cropType = cropType
             it.onSuccess(scaledBitmap)

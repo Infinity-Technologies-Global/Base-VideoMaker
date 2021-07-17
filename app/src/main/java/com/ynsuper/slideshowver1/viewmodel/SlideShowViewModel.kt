@@ -536,6 +536,8 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
 
             val state = BackgroundOptionsViewLayout.OptionState(
                 id = scene.id,
+                blur = scene.isBlur,
+                color = scene.currentColor,
                 progressBlur = scene.progressBlur,
                 crop = scene.cropType.key()
             )

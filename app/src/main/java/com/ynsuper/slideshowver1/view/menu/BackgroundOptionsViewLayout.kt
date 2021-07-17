@@ -1,11 +1,11 @@
 package com.ynsuper.slideshowver1.view.menu
 
 import android.content.Context
+import android.os.Handler
 import android.os.Parcel
 import android.os.Parcelable
 import android.util.AttributeSet
 import android.widget.SeekBar
-
 import androidx.annotation.IdRes
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.ynsuper.slideshowver1.R
@@ -16,7 +16,6 @@ import com.ynsuper.slideshowver1.callback.TopBarController
 import com.ynsuper.slideshowver1.util.Constants
 import com.ynsuper.slideshowver1.view.SlideShowActivity
 import kotlinx.android.synthetic.main.fragment_background_option.view.*
-import kotlinx.android.synthetic.main.fragment_duration_option.view.*
 import kotlinx.android.synthetic.main.item_layout_edit_top_view.view.*
 
 class BackgroundOptionsViewLayout : BaseCustomConstraintLayout {
@@ -28,7 +27,7 @@ class BackgroundOptionsViewLayout : BaseCustomConstraintLayout {
     constructor(context: Context?) : super(context) {
         init(context)
         setLayoutInflate(R.layout.fragment_background_option)
-        initView()
+
     }
 
     constructor(context: Context?, attrs: AttributeSet?) : super(
@@ -37,7 +36,7 @@ class BackgroundOptionsViewLayout : BaseCustomConstraintLayout {
     ) {
         init(context)
         setLayoutInflate(R.layout.fragment_background_option)
-        initView()
+
     }
 
     constructor(
@@ -47,22 +46,36 @@ class BackgroundOptionsViewLayout : BaseCustomConstraintLayout {
     ) : super(context, attrs, defStyleAttr) {
         init(context)
         setLayoutInflate(R.layout.fragment_background_option)
-        initView()
+
     }
 
 
     private fun initView() {
         listener = context as SlideShowActivity
         setTopBarName(context.getString(R.string.text_background))
-        setState()
         setColorTextAdapter()
+
+        checkboxBlur.isChecked = state?.blur == true
+        seekBarBlur.progress = state?.progressBlur!!
+        for (i in 0 until Constants.getColorText().size - 1) {
+            if (state?.color == context.resources.getColor(Constants.getColorText()[i].idColor)) {
+                colorTextAdapter.selectedPosition = i
+                colorTextAdapter.notifyDataSetChanged()
+                break
+            }
+        }
+
+
 
         checkboxBlur.setOnCheckedChangeListener { buttonView, isChecked ->
             saveState()
         }
-        seekBarBlur.setOnSeekBarChangeListener(object :SeekBar.OnSeekBarChangeListener{
+        seekBarBlur.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 state?.progressBlur = progress
+                Handler().post(Runnable {
+                    saveState()
+                })
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar?) {
@@ -90,7 +103,7 @@ class BackgroundOptionsViewLayout : BaseCustomConstraintLayout {
             Constants.getColorText(),
             context
         ) { view, position ->
-            state?.color =  resources.getColor(Constants.getColorText().get(position).getIdColor())
+            state?.color = resources.getColor(Constants.getColorText().get(position).getIdColor())
             saveState()
         }
         recycleBackgroundColor.setAdapter(colorTextAdapter)
@@ -149,8 +162,10 @@ class BackgroundOptionsViewLayout : BaseCustomConstraintLayout {
     fun setState(state: OptionState) {
         this.state = state
         setState()
+        initView()
     }
-    fun setTopBarName(name: String){
+
+    fun setTopBarName(name: String) {
         text_name_top_bar.text = name
     }
 

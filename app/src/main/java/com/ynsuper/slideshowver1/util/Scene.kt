@@ -1,6 +1,7 @@
 package com.ynsuper.slideshowver1.util
 
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.opengl.GLES20
 import android.opengl.GLUtils
 import com.seanghay.studio.gles.annotation.GlContext
@@ -16,7 +17,9 @@ data class Scene (
     var originalPath: String
 ) {
 
-    val progressBlur: Int = 14
+    var isBlur : Boolean = true
+    var currentColor : Int = Color.BLACK
+    var progressBlur: Int = 14
     var duration: Long = 4000L
     var transition: Transition = FadeTransition("fade", 1000L)
     var texture: Texture2d = Texture2d()
