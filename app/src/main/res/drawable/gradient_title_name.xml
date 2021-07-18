@@ -3,7 +3,7 @@
     <gradient
         android:angle="0"
         android:endColor="#28FFFFFF"
-        android:startColor="@color/color_main1" />
+        android:startColor="@color/color_button_select" />
     <corners android:radius="0dp" />
 
 </shape>

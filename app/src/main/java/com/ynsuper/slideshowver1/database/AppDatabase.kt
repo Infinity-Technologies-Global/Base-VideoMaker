@@ -11,7 +11,7 @@ import com.ynsuper.slideshowver1.util.entity.SlideEntity
 import com.ynsuper.slideshowver1.util.entity.StoryEntity
 
 
-@Database(version = 3,
+@Database(version = 1,
     exportSchema = false,
     entities = [SlideEntity::class, AudioEntity::class, StoryEntity::class])
 abstract class AppDatabase : RoomDatabase() {

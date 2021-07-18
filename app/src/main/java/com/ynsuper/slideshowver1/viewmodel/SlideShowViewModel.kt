@@ -26,7 +26,10 @@ import com.seanghay.studio.utils.BitmapProcessor
 import com.ynsuper.slideshowver1.R
 import com.ynsuper.slideshowver1.adapter.SoundManager
 import com.ynsuper.slideshowver1.base.BaseViewModel
-import com.ynsuper.slideshowver1.bottomsheet.*
+import com.ynsuper.slideshowver1.bottomsheet.AddImageGroupBottomSheet
+import com.ynsuper.slideshowver1.bottomsheet.DurationOptionsBottomSheet
+import com.ynsuper.slideshowver1.bottomsheet.SaveVideoBottomSheet
+import com.ynsuper.slideshowver1.bottomsheet.StickerBottomSheet
 import com.ynsuper.slideshowver1.callback.*
 import com.ynsuper.slideshowver1.database.AppDatabase
 import com.ynsuper.slideshowver1.databinding.ActivitySlideshowBinding
@@ -438,9 +441,11 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
 
         Single.just(paths)
             .map {
-                it.map { item -> item.path to BitmapProcessor.loadSync(
-                    item.path
-                ) }
+                it.map { item ->
+                    item.path to BitmapProcessor.loadSync(
+                        item.path
+                    )
+                }
             }
             .toObservable().switchMap { videoComposer.setScenes(it).toObservable() }
             .subscribeOn(Schedulers.io())
@@ -475,7 +480,10 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
                     val compressedFile = compressor.setQuality(70)
                         .setCompressFormat(Bitmap.CompressFormat.JPEG)
                         .compressToFile(file, "photos-${UUID.randomUUID()}.jpg")
-                    SlideEntity(compressedFile.path)
+                    SlideEntity(
+                        createdAt =  System.currentTimeMillis(),
+                        path = compressedFile.path
+                    )
                 }
             }.subscribeBy {
                 slides.addAll(it)
@@ -545,8 +553,12 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
             backgroundViewLayout.visibility = View.VISIBLE
             backgroundViewLayout.setState(state)
             hideMenuBar()
-        }else{
-            Toast.makeText(context,context.getString(R.string.text_move_image_to_edit), Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(
+                context,
+                context.getString(R.string.text_move_image_to_edit),
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
@@ -824,9 +836,11 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
 
     fun onStateChange(state: BackgroundOptionsViewLayout.OptionState) {
 
-        videoComposer.updateSceneCropType(state.id,state.blur,
-            state.progressBlur,state.color,
-            BitmapProcessor.CropType.fromKey(state.crop!!))
+        videoComposer.updateSceneCropType(
+            state.id, state.blur,
+            state.progressBlur, state.color,
+            BitmapProcessor.CropType.fromKey(state.crop!!)
+        )
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .doOnSuccess {
@@ -971,6 +985,14 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
         return "%.2f".format(value * 100f)
     }
 
+    fun saveDraft() {
+        if (slides.isEmpty()) return
+        appDatabase.slideDao().upsert(*slides.toTypedArray())
+        if (audio != null) appDatabase.audioDao().upsert(audio!!)
+        Toast.makeText(context, "Draft Saved", Toast.LENGTH_SHORT).show()
+
+    }
+
     private fun saveAsStory(path: String) {
         val storyEntity = StoryEntity(
             title = "My SlideShow",
@@ -1049,16 +1071,16 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
         binding.textureView.layoutParams = layoutParams
         var ratio = 1
         ratio = if (width > height) {
-            1080/height
-        }else{
-            1080/width
+            1080 / height
+        } else {
+            1080 / width
         }
 
 
         var newSizeVideo = videoComposer.videoSize
 
         if (width > height) {
-             newSizeVideo = Size(ratio * width, ratio * height)
+            newSizeVideo = Size(ratio * width, ratio * height)
             layoutParams.dimensionRatio = "h,${newSizeVideo.width}:${newSizeVideo.height}"
         } else {
             newSizeVideo = Size(ratio * width, ratio * height)

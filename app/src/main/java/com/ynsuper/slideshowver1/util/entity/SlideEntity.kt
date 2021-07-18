@@ -7,5 +7,8 @@ import androidx.room.PrimaryKey
 data class SlideEntity(
     var path: String,
     @PrimaryKey(autoGenerate = true)
-    var id: Int? = null
+    var id: Int? = null,
+    var createdAt: Long
+
+
 )

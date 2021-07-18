@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.ynsuper.slideshowver1.R
+import com.ynsuper.slideshowver1.util.entity.SlideEntity
 import com.ynsuper.slideshowver1.util.entity.StoryEntity
 import kotlinx.android.synthetic.main.item_video.view.*
 import java.text.SimpleDateFormat
@@ -17,14 +18,13 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 
-class StoryListAdapter(
-    var items: List<StoryEntity> = emptyList()
-) : RecyclerView.Adapter<StoryListAdapter.ViewHolder>() {
+class DraftListAdapter(
+    var items: List<SlideEntity> = emptyList()
+) : RecyclerView.Adapter<DraftListAdapter.ViewHolder>() {
 
 
-    var onItemClicked: (StoryEntity) -> Unit = {}
-    var onSharedClick: (StoryEntity) -> Unit = {}
-    var onDeleteClick: (StoryEntity) -> Unit = {}
+    var onItemClicked: (SlideEntity) -> Unit = {}
+    var onDeleteClick: (SlideEntity) -> Unit = {}
 
 
     private val retriver = MediaMetadataRetriever()
@@ -45,15 +45,15 @@ class StoryListAdapter(
         holder.bind(items[position])
     }
 
-    fun patch(items: List<StoryEntity>) {
+    fun patch(items: List<SlideEntity>) {
 
         val callback = object : DiffUtil.Callback() {
             override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-                return this@StoryListAdapter.items[oldItemPosition].id == items[newItemPosition].id
+                return this@DraftListAdapter.items[oldItemPosition].id == items[newItemPosition].id
             }
 
             override fun getOldListSize(): Int {
-                return this@StoryListAdapter.items.size
+                return this@DraftListAdapter.items.size
             }
 
             override fun getNewListSize(): Int {
@@ -61,7 +61,7 @@ class StoryListAdapter(
             }
 
             override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-                return this@StoryListAdapter.items[oldItemPosition] == items[newItemPosition]
+                return this@DraftListAdapter.items[oldItemPosition] == items[newItemPosition]
             }
         }
 
@@ -79,7 +79,6 @@ class StoryListAdapter(
 
             itemView.setOnClickListener {
                 onItemClicked(items[adapterPosition])
-
             }
 
             itemView.more.setOnClickListener {
@@ -90,16 +89,7 @@ class StoryListAdapter(
                 onItemClicked(items[adapterPosition])
             }
             popupMenu.setOnMenuItemClickListener {
-                if (it.itemId == R.id.rename) {
-
-                }
-                if (it.itemId == R.id.share) {
-
-                    val item = items[adapterPosition]
-                    onSharedClick(item)
-                    true
-
-                } else if (it.itemId == R.id.delete) {
+                if (it.itemId == R.id.delete) {
                     val item = items[adapterPosition]
                     onDeleteClick(item)
                     true
@@ -107,12 +97,11 @@ class StoryListAdapter(
             }
         }
 
-        fun bind(item: StoryEntity) {
+        fun bind(item: SlideEntity) {
             val relativeTime = DateUtils.getRelativeTimeSpanString(item.createdAt).toString()
-            retriver.setDataSource(item.path)
-            val duration =
-                retriver.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION).toLong()
-            itemView.title.text = item.title
+//            retriver.setDataSource(item.path)
+//            val duration = item.duration
+            itemView.title.text = relativeTime
 //            itemView.title.text = SpannableStringBuilder(item.title)
 //                .append(" \n")
 //                .scale(.8f) {
@@ -121,7 +110,7 @@ class StoryListAdapter(
 //                    }
 //                }
 
-            itemView.subtitle.text = formatDuration(duration)
+//            itemView.subtitle.text = formatDuration(duration)
 //            itemView.subtitle.setText(
 //                SpannableStringBuilder(formatDate(item.createdAt) + " \n")
 //                    .color(Color.BLACK) { append(formatDuration(duration)) }

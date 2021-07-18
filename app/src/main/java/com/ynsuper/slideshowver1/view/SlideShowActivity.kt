@@ -77,7 +77,8 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
         layout_menu_sticker.setOnClickListener { viewModel.selectMenuSticker() }
         layout_menu_text.setOnClickListener { viewModel.selectMenuText() }
         image_add_image.setOnClickListener { viewModel.showAddImageSheet() }
-        text_save_video.setOnClickListener { viewModel.saveVideo() }
+        image_save_draft.setOnClickListener { viewModel.saveDraft() }
+        image_save_video.setOnClickListener { viewModel.saveVideo() }
     }
 
 
