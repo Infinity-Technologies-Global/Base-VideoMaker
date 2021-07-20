@@ -1099,7 +1099,7 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
         binding.rlContentRoot.addView(sticker, lp)
 
         // when apply
-        videoComposer.applyQuoteBitmap(bitmap!!, sticker)
+//        videoComposer.applyStickerBitmap(bitmap!!, sticker)
 
 
     }

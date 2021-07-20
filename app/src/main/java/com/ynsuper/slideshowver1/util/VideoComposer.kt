@@ -10,6 +10,7 @@ import android.util.Size
 import android.util.SparseArray
 import android.view.TextureView
 import android.view.animation.AnticipateOvershootInterpolator
+import androidx.core.util.contains
 import androidx.core.util.set
 import androidx.lifecycle.MutableLiveData
 import com.seanghay.studio.core.StudioDrawable
@@ -56,6 +57,7 @@ class VideoComposer(private val context: Context) : StudioDrawable {
     private var isReleased = false
     private var isSetup = false
 
+
     // Transitions
     private val transitions = TransitionStore.getAllTransitions()
 
@@ -70,16 +72,14 @@ class VideoComposer(private val context: Context) : StudioDrawable {
     private val blankTexture = Texture2d()
     private var durations = longArrayOf()
 
-    val stickers: ArrayList<Sticker>? = null
-    val textBubbles: ArrayList<Sticker>? = null
+    var watermarkBitmap = watermarkBitmap()
+
+    private val watermarkShader = TextureShader()
+    private val watermarkTexture = Texture2d()
 
     // Quotes
     private val quoteShader = AlphaOverlayTextureShader()
     private val quoteTexture = Texture2d()
-
-    // list Sticker
-    private var stickerSceneList: Texture2d? = null
-    private var stickerShaderList: TextureShader? = null
 
     // Slide Quotes
     private val slideQuoteShader = AlphaOverlayTextureShader()
@@ -102,6 +102,7 @@ class VideoComposer(private val context: Context) : StudioDrawable {
 
 
     var duration: MutableLiveData<Long> = MutableLiveData()
+
 
     // Filters
     private val filterShader = PackFilterShader()
@@ -200,14 +201,6 @@ class VideoComposer(private val context: Context) : StudioDrawable {
 
 
 
-    fun addSticker(bitmap: Bitmap, height: Int, width: Int, x: Int, y: Int) {
-        stickers?.add(Sticker(bitmap, height, width, x, y, 0L, 5000L))
-        render()
-    }
-
-    private fun render() {
-
-    }
 
     fun setScenes(bitmaps: List<Pair<String, Bitmap>>): Single<Boolean> {
         return Single.create<Boolean> {
@@ -260,10 +253,7 @@ class VideoComposer(private val context: Context) : StudioDrawable {
         textureShaders.forEach { it.value.setup() }
         setupToneCurve()
         setupBlackTexture()
-
-        // for test
-//        setupForListStickerShader()
-
+        setupWatermarkShader()
         setupQuoteShader()
         setupFilters()
         setupFrameBuffer()
@@ -332,30 +322,12 @@ class VideoComposer(private val context: Context) : StudioDrawable {
         blankTexture.configure(GL_TEXTURE_2D)
     }
 
-    fun setupStickerShader() {
-        val quoteBitmap = TextBitmap.quoteBitmap(
-            context,
-            ""
-        )
-        stickerShaderList = TextureShader()
-        stickerSceneList = Texture2d()
-//        stickerShaderList?.setup()
-        stickerSceneList?.initialize()
-        stickerSceneList?.use(GL_TEXTURE_2D) {
-            stickerSceneList?.configure(GL_TEXTURE_2D)
-            GLUtils.texImage2D(GL_TEXTURE_2D, 0, quoteBitmap, 0)
-        }
-//        stickerShaderList?.setup()
-
-        stickerShaderList?.mvpMatrix = mvpMatrix
-        stickerShaderList?.draw(stickerSceneList!!)
-    }
-
-    fun drawSticker(bitmap: Bitmap) {
-        postDraw {
-            stickerSceneList?.use(GL_TEXTURE_2D) {
-                GLUtils.texImage2D(GL_TEXTURE_2D, 0, bitmap, 0)
-            }
+    private fun setupWatermarkShader() {
+        watermarkShader.setup()
+        watermarkTexture.initialize()
+        watermarkTexture.use(GL_TEXTURE_2D) {
+            watermarkTexture.configure(GL_TEXTURE_2D)
+            GLUtils.texImage2D(GL_TEXTURE_2D, 0, watermarkBitmap, 0)
         }
     }
 
@@ -420,11 +392,11 @@ class VideoComposer(private val context: Context) : StudioDrawable {
             }
         }
 
-        override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
+        override fun onSurfaceTextureUpdated(surfaceTexture: SurfaceTexture?) {
 
         }
 
-        override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+        override fun onSurfaceTextureDestroyed(surfaceTexture: SurfaceTexture?): Boolean {
             release()
             return false
         }
@@ -503,11 +475,11 @@ class VideoComposer(private val context: Context) : StudioDrawable {
 
         filterShader.applyPackFilter(nextScene?.filter ?: defaultPack)
         filterFrameBuffer.use {
-            textureShader.draw(fromFrameBuffer.asTexture(), toFrameBuffer.asTexture())
+            textureShader.draw(fromFrameBuffer.toTexture(), toFrameBuffer.toTexture())
         }
 
         applyFilterPack(defaultFilterPack, false)
-        filterShader.draw(filterFrameBuffer.asTexture())
+        filterShader.draw(filterFrameBuffer.toTexture())
 
         quoteShader.mvpMatrix = mvpMatrix
         quoteShader.draw(quoteTexture)
@@ -519,23 +491,13 @@ class VideoComposer(private val context: Context) : StudioDrawable {
         slideQuoteShader.translateX = -interpolator.getInterpolation(kenburns.getValue(offset))
         slideQuoteShader.setMatrix(mvpMatrix)
 
-
-//        if (slideQuotesTextures.contains(seekIndex)) {
-//            val tex = slideQuotesTextures[seekIndex]
-//            slideQuoteShader.draw(tex)
-//        }
-
-        // TODO for test
-        stickerShaderList?.let {
-//            for(item in it){
-//                item.mvpMatrix = mvpMatrix
-//                item.draw(stickerSceneList?.get(0)!!)
-            it.mvpMatrix = mvpMatrix
-            it.draw(stickerSceneList!!)
-//            }
-        } ?: run {
-            Log.d(Constant.TUANICTU97_TAG, "stickerShaderList is null")
+        if (slideQuotesTextures.contains(seekIndex)) {
+            val tex = slideQuotesTextures[seekIndex]
+            slideQuoteShader.draw(tex)
         }
+
+        watermarkShader.mvpMatrix = mvpMatrix
+        watermarkShader.draw(watermarkTexture)
 
 //        toneCurveFilterShader.mvpMatrix = mvpMatrix
 //        toneCurveFilterShader.draw(toneCurveFrameBuffer.asTexture())
@@ -599,33 +561,6 @@ class VideoComposer(private val context: Context) : StudioDrawable {
         return (seekAt - last) / scenes[index].duration.toFloat()
     }
 
-    private fun forTestStickerBitmap(): Bitmap {
-        val margin = 20
-        val w = videoSize.width
-        val h = videoSize.height
-
-        val icon = BitmapFactory.decodeResource(context.resources, R.drawable.sticker)
-        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-
-        val iconRatio = icon.width.toFloat() / icon.height.toFloat()
-        val dstWidth = (w.toFloat() / 5f).toInt()
-        val dstHeight = (dstWidth / iconRatio).toInt()
-
-        val left = w - dstWidth
-        val top = h - dstHeight
-        val dstRect = Rect(left - margin, top - margin, w - margin, h - margin)
-
-        val cx: Float = ((canvas.width - icon.width) / 2).toFloat()
-
-        val cy: Float = ((canvas.height - icon.height) / 2).toFloat()
-
-        Log.d("tuanictu97", "cx: ${cx} cy: ${cy}")
-//        canvas.drawBitmap(icon, null, dstRect, null)
-        canvas.drawBitmap(icon, cx, cy, null)
-        return bitmap
-    }
-
     private fun watermarkBitmap(): Bitmap {
         val margin = 20
         val w = videoSize.width
@@ -646,47 +581,14 @@ class VideoComposer(private val context: Context) : StudioDrawable {
         return bitmap
     }
 
-    fun applyQuoteBitmap(
-        bitmap: Bitmap,
-        sticker: StickerView
-    ) {
+    fun applyQuoteBitmap(bitmap: Bitmap) {
         postDraw {
             quoteTexture.use(GL_TEXTURE_2D) {
-                GLUtils.texImage2D(GL_TEXTURE_2D, 0, handleBitmap(bitmap, sticker), 0)
+                GLUtils.texImage2D(GL_TEXTURE_2D, 0, bitmap, 0)
             }
         }
     }
 
-//    fun save(bitmap: Bitmap) {
-//        val texture2d = Texture2d()
-//        val textureShader = TextureShader()
-//        textureShader.setup()
-//        texture2d.initialize()
-//        postDraw {
-//            texture2d.use(GL_TEXTURE_2D) {
-//                texture2d.configure(GL_TEXTURE_2D)
-//                GLUtils.texImage2D(GL_TEXTURE_2D, 0, bitmap), 0)
-//            }
-//        }
-//        textureShader.mvpMatrix = mvpMatrix
-//        textureShader.draw(texture2d)
-//    }
-
-    private fun handleBitmap(
-        bitmap: Bitmap,
-        sticker: StickerView
-    ): Bitmap? {
-        val workingBitmap: Bitmap = Bitmap.createBitmap(bitmap)
-        val mutableBitmap = workingBitmap.copy(Bitmap.Config.ARGB_8888, true)
-        val canvas = Canvas(mutableBitmap)
-
-        val rect = Rect()
-        sticker.getGlobalVisibleRect(rect)
-
-//        val dstRect = Rect(sticker., sticker.top, sticker.right, sticker.bottom)
-        canvas.drawBitmap(bitmap, null, rect, null)
-        return bitmap
-    }
 
     fun setQuoteAt(at: Int, bitmap: Bitmap) {
         val texture = slideQuotesTextures.get(at)
