@@ -16,6 +16,7 @@ import android.view.View
 import android.widget.RelativeLayout
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.util.set
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -82,7 +83,6 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
     private lateinit var transitionViewLayout: TransitionViewLayout
     private lateinit var backgroundViewLayout: BackgroundOptionsViewLayout
     private var audio: AudioEntity? = null
-    private lateinit var quoteState: QuoteState
     private lateinit var allTransition: List<Transition>
     private lateinit var binding: ActivitySlideshowBinding
     private lateinit var appDatabase: AppDatabase
@@ -95,10 +95,10 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
     private val slides = arrayListOf<SlideEntity>()
     private val slideAdapter: SlideAdapter = SlideAdapter(slides)
     private var littleBox: LittleBox? = null
-    private val quoteStatePool = SparseArray<QuoteState>()
     private val compositeDisposable: CompositeDisposable = CompositeDisposable()
     private var mCurClipIndex = 0
-
+    private val quoteStatePool = SparseArray<QuoteState>()
+    private lateinit var quoteState: QuoteState
 
     var liveDataCategory = MutableLiveData<AlbumMusicModel>()
     val changeCategoryMusicList = Observer<AlbumMusicModel> { values ->
@@ -615,7 +615,8 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
     }
 
     fun selectMenuText() {
-
+        TextQuoteViewLayout.newInstance(quoteState)
+            .show(context.supportFragmentManager, "quote")
     }
 
     private fun hideMenuBar() {
@@ -1099,7 +1100,7 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
         binding.rlContentRoot.addView(sticker, lp)
 
         // when apply
-//        videoComposer.applyStickerBitmap(bitmap!!, sticker)
+        videoComposer.applyStickerBitmap(bitmap!!, sticker)
 
 
     }
@@ -1158,6 +1159,29 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
         dispatchDraw()
 
 
+    }
+
+    fun loadTextQuote() {
+        quoteState = QuoteState(
+            text = "Hello, World!",
+            textColor = Color.BLACK,
+            textSize = 18f.dip(context.resources),
+            scaleFactor = 1f,
+            fontFamily = null
+        )
+    }
+
+    fun newQuoteState(quoteState: QuoteState) {
+        quoteStatePool[slideAdapter.selectedAt] = quoteState
+        this.quoteState = quoteState
+        dispatchDraw()
+    }
+
+    fun onReceiverQuoteBitMap(bitmap: Bitmap) {
+        if (slideAdapter.selectedAt != -1) {
+            videoComposer.setQuoteAt(slideAdapter.selectedAt, bitmap)
+        } else videoComposer.applyQuoteBitmap(bitmap)
+        dispatchDraw()
     }
 
 

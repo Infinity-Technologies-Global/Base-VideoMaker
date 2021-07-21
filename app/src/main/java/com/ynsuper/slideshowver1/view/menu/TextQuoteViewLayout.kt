@@ -1,4 +1,4 @@
-package com.ynsuper.slideshowver1.bottomsheet
+package com.ynsuper.slideshowver1.view.menu
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -14,7 +14,6 @@ import androidx.annotation.Px
 import androidx.appcompat.app.AppCompatDialogFragment
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.DialogFragment
-
 import com.skydoves.colorpickerview.ColorEnvelope
 import com.skydoves.colorpickerview.ColorPickerDialog
 import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
@@ -22,13 +21,14 @@ import com.ynsuper.slideshowver1.R
 import com.ynsuper.slideshowver1.view.FontLoader
 import com.ynsuper.slideshowver1.view.adapter.FontFamilyAdapter
 import com.ynsuper.slideshowver1.view.sticker.QuoteState
+import com.ynsuper.slideshowver1.viewmodel.SlideShowViewModel
 import kotlinx.android.synthetic.main.dialog_quote.*
+import kotlinx.android.synthetic.main.fragment_duration_option.view.*
+import kotlinx.android.synthetic.main.item_layout_edit_top_view.view.*
 import java.lang.NullPointerException
 import kotlin.math.roundToInt
 
-
-class QuoteDialogFragment : AppCompatDialogFragment() {
-
+class TextQuoteViewLayout : AppCompatDialogFragment() {
     private var listener: QuoteListener? = null
 
     private var state: QuoteState? = null
@@ -42,6 +42,7 @@ class QuoteDialogFragment : AppCompatDialogFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setStyle(DialogFragment.STYLE_NORMAL, R.style.FullScreenDialogStyle)
     }
 
     override fun onCreateView(
@@ -49,16 +50,19 @@ class QuoteDialogFragment : AppCompatDialogFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.dialog_quote, container, false)
+        return inflater.inflate(R.layout.layout_text_quote, container, false)
     }
 
     private var bgColor = Color.WHITE
 
     private var currentFont: FontLoader.FontFamily? = null
 
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         state = arguments?.getParcelable(KEY_STATE) ?: throw NullPointerException("State was null")
+
+
 
         toolbar.inflateMenu(R.menu.quote)
         toolbar.setNavigationOnClickListener { dismiss() }
@@ -84,6 +88,7 @@ class QuoteDialogFragment : AppCompatDialogFragment() {
         chooseColor.setOnClickListener {
             showColorPicker()
         }
+
 
         editText.addTextChangedListener {
             preview.setText(it.toString())
@@ -123,6 +128,7 @@ class QuoteDialogFragment : AppCompatDialogFragment() {
         listener?.newQuoteState(QuoteState.from(preview, currentFont))
         dismiss()
     }
+
 
 
     private fun toggleBg() {
@@ -194,10 +200,10 @@ class QuoteDialogFragment : AppCompatDialogFragment() {
         private const val KEY_STATE = "quote-state"
 
         @JvmStatic
-        fun newInstance(state: QuoteState): QuoteDialogFragment {
+        fun newInstance(state: QuoteState): TextQuoteViewLayout {
             val args = Bundle()
             args.putParcelable(KEY_STATE, state)
-            return QuoteDialogFragment().also {
+            return TextQuoteViewLayout().also {
                 it.arguments = args
             }
         }

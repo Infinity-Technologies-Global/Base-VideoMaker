@@ -5,7 +5,6 @@ import android.graphics.*
 import android.opengl.GLES20.*
 import android.opengl.GLUtils
 import android.opengl.Matrix
-import android.util.Log
 import android.util.Size
 import android.util.SparseArray
 import android.view.TextureView
@@ -31,7 +30,6 @@ import com.seanghay.studio.gles.shader.filter.tonecurve.ToneCurve
 import com.seanghay.studio.gles.shader.filter.tonecurve.ToneCurveFilterShader
 import com.seanghay.studio.gles.transition.TransitionStore
 import com.seanghay.studio.gles.transition.TransitionalTextureShader
-import com.seanghay.studio.model.Sticker
 import com.seanghay.studio.utils.BitmapDiskCache
 import com.seanghay.studio.utils.BitmapProcessor
 import com.seanghay.studio.utils.clamp
@@ -47,6 +45,7 @@ import kotlin.math.abs
 
 
 class VideoComposer(private val context: Context) : StudioDrawable {
+    private var enableSticker: Boolean = false
     var videoSize: Size = Size(1080, 1080)
     private val bitmapCache: BitmapDiskCache = BitmapDiskCache(context)
     private var studioRenderThread: StudioRenderThread? = null
@@ -76,6 +75,10 @@ class VideoComposer(private val context: Context) : StudioDrawable {
 
     private val watermarkShader = TextureShader()
     private val watermarkTexture = Texture2d()
+
+
+    private val stickerShader = TextureShader()
+    private val stickerTexture = Texture2d()
 
     // Quotes
     private val quoteShader = AlphaOverlayTextureShader()
@@ -254,6 +257,7 @@ class VideoComposer(private val context: Context) : StudioDrawable {
         setupToneCurve()
         setupBlackTexture()
         setupWatermarkShader()
+        setupStickerShader()
         setupQuoteShader()
         setupFilters()
         setupFrameBuffer()
@@ -330,6 +334,13 @@ class VideoComposer(private val context: Context) : StudioDrawable {
             GLUtils.texImage2D(GL_TEXTURE_2D, 0, watermarkBitmap, 0)
         }
     }
+
+
+    private fun setupStickerShader() {
+//        stickerShader.setup()
+//        stickerTexture.configure(GL_TEXTURE_2D)
+    }
+
 
     private fun setupQuoteShader() {
         val quoteBitmap = TextBitmap.quoteBitmap(
@@ -491,13 +502,22 @@ class VideoComposer(private val context: Context) : StudioDrawable {
         slideQuoteShader.translateX = -interpolator.getInterpolation(kenburns.getValue(offset))
         slideQuoteShader.setMatrix(mvpMatrix)
 
+
+
         if (slideQuotesTextures.contains(seekIndex)) {
             val tex = slideQuotesTextures[seekIndex]
             slideQuoteShader.draw(tex)
         }
-
+        if (enableSticker){
+            stickerShader.mvpMatrix = mvpMatrix
+            stickerShader.draw(stickerTexture)
+        }
         watermarkShader.mvpMatrix = mvpMatrix
         watermarkShader.draw(watermarkTexture)
+
+
+
+
 
 //        toneCurveFilterShader.mvpMatrix = mvpMatrix
 //        toneCurveFilterShader.draw(toneCurveFrameBuffer.asTexture())
@@ -615,5 +635,26 @@ class VideoComposer(private val context: Context) : StudioDrawable {
         }
     }
 
+    fun applyStickerBitmap(bitmap: Bitmap, sticker: StickerView) {
+        enableSticker = true
+        stickerTexture.use(GL_TEXTURE_2D) {
+            stickerTexture.configure(GL_TEXTURE_2D)
+            GLUtils.texImage2D(GL_TEXTURE_2D, 0, handleStickerBitmap(bitmap,sticker), 0)
+        }
+    }
 
+    private fun handleStickerBitmap(bitmap: Bitmap, sticker: StickerView): Bitmap {
+        val margin = 50
+        val w = bitmap.width
+        val h = bitmap.height
+        val newBMP: Bitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        val canvas = Canvas(newBMP)
+
+        val left = w - sticker.width
+        val top = h - sticker.height
+        val dstRect = Rect(left - margin, top - margin, w - margin, h - margin)
+        canvas.drawBitmap(newBMP, null, dstRect, null)
+
+        return newBMP
+    }
 }

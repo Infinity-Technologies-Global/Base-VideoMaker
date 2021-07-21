@@ -6,8 +6,10 @@ import android.graphics.Bitmap
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.util.Log
+import android.util.SparseArray
 import android.view.View
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.util.set
 import androidx.lifecycle.ViewModelProviders
 import com.ynsuper.slideshowver1.R
 import com.ynsuper.slideshowver1.adapter.MusicAdapter
@@ -22,6 +24,8 @@ import com.ynsuper.slideshowver1.util.entity.AudioEntity
 import com.ynsuper.slideshowver1.view.menu.BackgroundOptionsViewLayout
 import com.ynsuper.slideshowver1.view.menu.DurationViewLayout
 import com.ynsuper.slideshowver1.view.menu.MusicViewLayout
+import com.ynsuper.slideshowver1.view.menu.TextQuoteViewLayout
+import com.ynsuper.slideshowver1.view.sticker.QuoteState
 import com.ynsuper.slideshowver1.viewmodel.SlideShowViewModel
 import kotlinx.android.synthetic.main.activity_slideshow.*
 import kotlinx.android.synthetic.main.layout_menu_bar.*
@@ -31,9 +35,13 @@ import java.io.FileOutputStream
 import java.util.*
 
 class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
-    MusicAdapter.OnSongClickListener, MusicViewLayout.OnSelectedSongListener, SaveStateListener {
+    MusicAdapter.OnSongClickListener, MusicViewLayout.OnSelectedSongListener, SaveStateListener,
+    TextQuoteViewLayout.QuoteListener {
     private val binding by binding<ActivitySlideshowBinding>(R.layout.activity_slideshow)
     private lateinit var viewModel: SlideShowViewModel
+    private val quoteStatePool = SparseArray<QuoteState>()
+    private lateinit var quoteState: QuoteState
+
     private var mViews: ArrayList<View>? = null
     private var mCurrentView: StickerView? = null
     private var mContentRootView: ConstraintLayout? = null
@@ -45,6 +53,7 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
     }
 
     private fun initView() {
+
         binding.apply {
             lifecycleOwner = this@SlideShowActivity
             viewModel =
@@ -53,6 +62,7 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
             viewModel.setBinding(binding)
             viewModel.initDataBase(this@SlideShowActivity)
             viewModel.loadDataImage(intent.getParcelableArrayListExtra<ImageModel>(Constant.EXTRA_ARRAY_IMAGE))
+            viewModel.loadTextQuote()
             viewModel.loadDataMusic()
 
             mContentRootView = binding.rlContentRoot
@@ -60,6 +70,8 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
 
         }
     }
+
+
 
     override fun onSelectedSong(songName: String) {
         super.onSelectedSong(songName)
@@ -155,6 +167,13 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
         viewModel?.changeRatioPreview(width, height)
     }
 
+    override fun newQuoteState(quoteState: QuoteState) {
+        viewModel.newQuoteState(quoteState)
+    }
+
+    override fun onReceiveQuoteBitmap(bitmap: Bitmap) {
+        viewModel.onReceiverQuoteBitMap(bitmap)
+    }
 
 //    override fun onSongDownloadClick(
 //        url: String?,
