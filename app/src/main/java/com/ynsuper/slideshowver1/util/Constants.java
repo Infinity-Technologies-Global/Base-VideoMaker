@@ -22,6 +22,7 @@ public interface Constants {
     String PATH_SAVE_FILE_VIDEO = Environment.getExternalStorageDirectory()
             .toString() + "/Android/Slideshow/" + BuildConfig.APPLICATION_ID + "/Videos";
 
+     String PATH_DOWNLOAD_FILTER_FROM_CLOUD = Environment.getExternalStorageDirectory().toString() + "/Android/Slideshow/" + BuildConfig.APPLICATION_ID + "/Filter";
     public static ArrayList<Color> getColorText() {
 
         ArrayList<Color> colors = new ArrayList<>();

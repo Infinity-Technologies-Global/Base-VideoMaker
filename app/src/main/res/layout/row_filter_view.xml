@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/wrapFilterItem"
+    android:layout_width="80dp"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="3dp"
+    android:layout_marginEnd="3dp">
+
+
+    <com.github.siyamed.shapeimageview.RoundedImageView
+        android:id="@+id/imgFilterView"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:background="@drawable/grey_border_layout"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:siRadius="5dp" />
+
+    <com.github.siyamed.shapeimageview.RoundedImageView
+        android:id="@+id/image_back_filter"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:background="@drawable/white_border_back"
+        android:padding="16dp"
+        android:src="@drawable/ic_back_24"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@+id/imgFilterView"
+        app:layout_constraintLeft_toLeftOf="@+id/imgFilterView"
+        app:layout_constraintRight_toRightOf="@+id/imgFilterView"
+        app:layout_constraintTop_toTopOf="@+id/imgFilterView"
+        app:siRadius="5dp" />
+
+    <TextView
+        android:id="@+id/text_pro"
+        android:layout_width="80dp"
+        android:layout_height="wrap_content"
+        android:background="@drawable/gradient_pro"
+        android:gravity="center"
+        android:text="@string/text_pro"
+        android:textAllCaps="true"
+        android:textColor="@android:color/white"
+        android:textSize="10sp"
+        android:visibility="gone"
+
+        app:layout_constraintRight_toRightOf="@+id/imgFilterView"
+        app:layout_constraintTop_toTopOf="@+id/imgFilterView" />
+
+    <TextView
+        android:id="@+id/txtFilterName"
+        android:layout_width="80dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="4dp"
+        android:textColor="@color/color_white"
+        android:textSize="8dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/imgFilterView"
+        tools:text="Original" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

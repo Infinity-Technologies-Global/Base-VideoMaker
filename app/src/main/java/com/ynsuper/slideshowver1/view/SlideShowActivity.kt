@@ -6,15 +6,16 @@ import android.graphics.Bitmap
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.util.Log
-import android.util.SparseArray
 import android.view.View
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.util.set
 import androidx.lifecycle.ViewModelProviders
+import com.seanghay.studio.gles.shader.filter.pack.PackFilter
 import com.ynsuper.slideshowver1.R
 import com.ynsuper.slideshowver1.adapter.MusicAdapter
 import com.ynsuper.slideshowver1.adapter.SoundManager
 import com.ynsuper.slideshowver1.base.BaseActivity
+import com.ynsuper.slideshowver1.bottomsheet.FilterPackDialogFragment
+import com.ynsuper.slideshowver1.callback.FilterListener
 import com.ynsuper.slideshowver1.callback.SaveStateListener
 import com.ynsuper.slideshowver1.callback.SceneOptionStateListener
 import com.ynsuper.slideshowver1.databinding.ActivitySlideshowBinding
@@ -36,11 +37,9 @@ import java.util.*
 
 class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
     MusicAdapter.OnSongClickListener, MusicViewLayout.OnSelectedSongListener, SaveStateListener,
-    TextQuoteViewLayout.QuoteListener {
+    TextQuoteViewLayout.QuoteListener , FilterListener, FilterPackDialogFragment.FilterPackListener{
     private val binding by binding<ActivitySlideshowBinding>(R.layout.activity_slideshow)
     private lateinit var viewModel: SlideShowViewModel
-    private val quoteStatePool = SparseArray<QuoteState>()
-    private lateinit var quoteState: QuoteState
 
     private var mViews: ArrayList<View>? = null
     private var mCurrentView: StickerView? = null
@@ -50,6 +49,7 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
         super.onCreate(savedInstanceState)
         initView()
         initEvent()
+
     }
 
     private fun initView() {
@@ -72,7 +72,6 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
     }
 
 
-
     override fun onSelectedSong(songName: String) {
         super.onSelectedSong(songName)
         Log.e(Constant.YNSUPER_TAG, "onSelectedSong: $songName")
@@ -87,6 +86,8 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
         layout_menu_music.setOnClickListener { viewModel.selectMenuMusic() }
         layout_menu_duration.setOnClickListener { viewModel.selectMenuSpeed() }
         layout_menu_sticker.setOnClickListener { viewModel.selectMenuSticker() }
+        layout_menu_effect.setOnClickListener { viewModel.selectMenuOverlay() }
+        layout_menu_filter.setOnClickListener { viewModel.selectMenuFilter() }
         layout_menu_text.setOnClickListener { viewModel.selectMenuText() }
         image_add_image.setOnClickListener { viewModel.showAddImageSheet() }
         image_save_draft.setOnClickListener { viewModel.saveDraft() }
@@ -174,6 +175,19 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
     override fun onReceiveQuoteBitmap(bitmap: Bitmap) {
         viewModel.onReceiverQuoteBitMap(bitmap)
     }
+
+    override fun onFilterSelected(frameId: Int) {
+        viewModel.onOverlaySelected(frameId)
+    }
+
+    override fun onBackToGroup() {
+
+    }
+
+    override fun onFilterPackSaved(filterPack: PackFilter) {
+        viewModel.onFilterSelected(filterPack)
+    }
+
 
 //    override fun onSongDownloadClick(
 //        url: String?,

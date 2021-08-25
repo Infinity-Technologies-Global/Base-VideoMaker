@@ -8,23 +8,33 @@
 
     <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        >
+        android:layout_height="match_parent">
 
         <ImageView
-            android:visibility="gone"
+            android:id="@+id/buttonReset"
+            android:layout_width="56dp"
+            android:layout_height="30dp"
+            android:layout_alignParentLeft="true"
+            android:layout_gravity="center"
+            android:layout_margin="8dp"
+            android:visibility="invisible"
+            android:src="@drawable/ic_baseline_refresh_24"
+            app:tint="@color/white" />
+
+        <ImageView
             android:id="@+id/image_close_menu"
             android:layout_width="56dp"
             android:layout_height="56dp"
             android:padding="16dp"
-            android:src="@drawable/ic_close_black_24dp" />
+            android:src="@drawable/ic_close_black_24dp"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/text_name_top_bar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:layout_centerInParent="true"
+            android:layout_weight="1"
             android:gravity="center"
             android:text="@string/app_name"
             android:textColor="@color/color_main_dark"
@@ -36,10 +46,10 @@
             android:id="@+id/image_submit_menu"
             android:layout_width="56dp"
             android:layout_height="30dp"
+            android:layout_alignParentRight="true"
             android:layout_gravity="center"
             android:layout_margin="8dp"
             android:src="@drawable/ic_check_black_24dp"
-            android:layout_alignParentRight="true"
             app:tint="@color/white">
 
 

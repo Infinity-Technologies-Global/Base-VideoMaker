@@ -42,7 +42,12 @@ android {
     dataBinding {
         enabled = true
     }
-
+    lintOptions {
+        checkReleaseBuilds false
+        // Or, if you prefer, you can continue to check for errors in release builds,
+        // but continue the build even when errors are found:
+        abortOnError false
+    }
 }
 
 def room_version = "2.2.1"
@@ -101,5 +106,6 @@ dependencies {
     implementation 'com.google.firebase:firebase-crashlytics-ktx'
 
     implementation 'com.jakewharton.timber:timber:4.7.1'
-
+    implementation 'org.wysaid:gpuimage-plus:2.6.3-min'
+    implementation 'com.github.siyamed:android-shape-imageview:0.9.3@aar'
 }

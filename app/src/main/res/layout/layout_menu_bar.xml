@@ -107,6 +107,57 @@
             android:textColor="@color/color_text_bottom"
             android:textSize="8sp" />
     </LinearLayout>
+    <LinearLayout
+        android:id="@+id/layout_menu_filter"
+        android:layout_width="60dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="?attr/selectableItemBackground"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:src="@drawable/ic_photo_filter_black_24dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:padding="4dp"
+            android:text="@string/text_filter"
+            android:textColor="@color/color_text_bottom"
+            android:textSize="8sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_menu_effect"
+        android:layout_width="60dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="?attr/selectableItemBackground"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:src="@drawable/ic_baseline_frame" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:padding="4dp"
+            android:text="@string/text_frame"
+            android:textColor="@color/color_text_bottom"
+            android:textSize="8sp" />
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/layout_menu_duration"
@@ -141,6 +192,7 @@
         android:layout_width="60dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
+        android:visibility="gone"
         android:background="?attr/selectableItemBackground"
         android:gravity="center"
         android:orientation="vertical">
@@ -176,8 +228,6 @@
         <ImageView
             android:layout_width="35dp"
             android:layout_height="35dp"
-
-
             android:paddingLeft="8dp"
             android:paddingRight="8dp"
             android:src="@drawable/ic_icon_material_text" />
@@ -187,7 +237,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="4dp"
             android:padding="4dp"
-            android:text="@string/text_edit_text"
+            android:text="@string/text_quote"
             android:textColor="@color/color_text_bottom"
             android:textSize="8sp" />
     </LinearLayout>

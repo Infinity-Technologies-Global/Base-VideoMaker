@@ -3,19 +3,11 @@ package com.ynsuper.slideshowver1.view.menu
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.os.Bundle
 import android.util.AttributeSet
 import android.util.TypedValue
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import android.widget.AutoCompleteTextView
-import android.widget.SeekBar
 import androidx.annotation.Px
-import androidx.appcompat.app.AppCompatDialogFragment
-import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.widget.addTextChangedListener
-import androidx.fragment.app.DialogFragment
 import com.skydoves.colorpickerview.ColorEnvelope
 import com.skydoves.colorpickerview.ColorPickerDialog
 import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
@@ -28,15 +20,15 @@ import com.ynsuper.slideshowver1.view.adapter.FontFamilyAdapter
 import com.ynsuper.slideshowver1.view.sticker.QuoteState
 import com.ynsuper.slideshowver1.view.sticker.StickerView
 import com.ynsuper.slideshowver1.viewmodel.SlideShowViewModel
-import kotlinx.android.synthetic.main.fragment_duration_option.view.*
 import kotlinx.android.synthetic.main.item_layout_edit_top_view.view.*
 import kotlinx.android.synthetic.main.layout_text_quote.view.*
-import java.lang.NullPointerException
 import kotlin.math.roundToInt
 
 class TextQuoteViewLayout : BaseCustomConstraintLayout {
+    private var isApplyForAll: Boolean = false
     private lateinit var preview: StickerView
     private lateinit var topBarController: TopBarController
+    private lateinit var slideShowViewModel: SlideShowViewModel
     private var listener: QuoteListener? = null
 
     private var state: QuoteState? = null
@@ -47,29 +39,31 @@ class TextQuoteViewLayout : BaseCustomConstraintLayout {
         setLayoutInflate(R.layout.layout_text_quote)
     }
 
-    constructor(context: Context?, attrs: AttributeSet?) : super(context, attrs){
+    constructor(context: Context?, attrs: AttributeSet?) : super(context, attrs) {
         init(context)
         setLayoutInflate(R.layout.layout_text_quote)
     }
+
     constructor(context: Context?, attrs: AttributeSet?, defStyleAttr: Int) : super(
         context,
         attrs,
         defStyleAttr
-    ){
+    ) {
         init(context)
         setLayoutInflate(R.layout.layout_text_quote)
     }
 
 
-    fun setTopBarName(name: String){
+    fun setTopBarName(name: String) {
         text_name_top_bar.text = name
     }
+
     private var bgColor = Color.WHITE
 
     private var currentFont: FontLoader.FontFamily? = null
 
 
-    fun setState(state : QuoteState, preview : StickerView){
+    fun setState(state: QuoteState, preview: StickerView) {
         this.state = state
         this.preview = preview
         initView()
@@ -103,6 +97,9 @@ class TextQuoteViewLayout : BaseCustomConstraintLayout {
         editText.addTextChangedListener {
             preview.setText(it.toString())
         }
+        checkbox_text_all.setOnCheckedChangeListener { buttonView, isChecked ->
+            isApplyForAll = isChecked
+        }
 
         val defaultSize = 12f.dip()
 
@@ -132,11 +129,13 @@ class TextQuoteViewLayout : BaseCustomConstraintLayout {
         }
     }
 
-     fun saveBitmap() {
+    fun saveBitmap() {
+        if (isApplyForAll) {
+            slideShowViewModel.setCurrentSlideAdapter(-1)
+        }
         listener?.onReceiveQuoteBitmap(preview.getBitmap())
         listener?.newQuoteState(QuoteState.from(preview, currentFont))
     }
-
 
 
     private fun toggleBg() {
@@ -189,8 +188,11 @@ class TextQuoteViewLayout : BaseCustomConstraintLayout {
             .show()
     }
 
-    fun setTopbarController(topBarController: TopBarController) {
+    fun setTopbarController(
+        topBarController: TopBarController,
+        slideShowViewModel: SlideShowViewModel) {
         this.topBarController = topBarController
+        this.slideShowViewModel = slideShowViewModel
 
     }
 

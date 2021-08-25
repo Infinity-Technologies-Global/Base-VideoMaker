@@ -2,6 +2,7 @@ package com.ynsuper.slideshowver1.viewmodel
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.res.AssetManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -22,6 +23,7 @@ import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.SimpleItemAnimator
 import androidx.room.Room
+import com.seanghay.studio.gles.shader.filter.pack.PackFilter
 import com.seanghay.studio.gles.transition.Transition
 import com.seanghay.studio.gles.transition.TransitionStore
 import com.seanghay.studio.utils.BitmapProcessor
@@ -29,6 +31,7 @@ import com.ynsuper.slideshowver1.R
 import com.ynsuper.slideshowver1.adapter.SoundManager
 import com.ynsuper.slideshowver1.base.BaseViewModel
 import com.ynsuper.slideshowver1.bottomsheet.AddImageGroupBottomSheet
+import com.ynsuper.slideshowver1.bottomsheet.FilterPackDialogFragment
 import com.ynsuper.slideshowver1.bottomsheet.SaveVideoBottomSheet
 import com.ynsuper.slideshowver1.bottomsheet.StickerBottomSheet
 import com.ynsuper.slideshowver1.callback.*
@@ -67,9 +70,8 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
 
+
 class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListChange {
-
-
     private var lastIndex: Int = 0
     private lateinit var onSelectedSongListener: MusicViewLayout.OnSelectedSongListener
     private var arrListSticker: ListSticker? = null
@@ -78,6 +80,7 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
     private var startScroll: Int = 0
     private var timer: Timer? = null
     private lateinit var textQuoteViewLayout: TextQuoteViewLayout
+    private lateinit var overLayViewLayout: OverLayViewLayout
     private lateinit var durationViewLayout: DurationViewLayout
     private lateinit var musicViewLayout: MusicViewLayout
     private lateinit var ratioViewLayout: RatioViewLayout
@@ -111,7 +114,7 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
     fun initDataBase(context: SlideShowActivity) {
         this.context = context
         videoComposer = VideoComposer(context)
-        // update next version 3.0
+        /* update next version 3.0 */
         compressor = Compressor(context)
 
         appDatabase = Room.databaseBuilder(context, AppDatabase::class.java, "slideshow-v1")
@@ -161,7 +164,11 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
         durationViewLayout.setTopbarController(this)
 
         textQuoteViewLayout = context.findViewById(R.id.text_quote_view_layout)
-        textQuoteViewLayout.setTopbarController(this)
+        textQuoteViewLayout.setTopbarController(this, this)
+
+        overLayViewLayout = context.findViewById(R.id.overlay_view_layout)
+        overLayViewLayout.setTopbarController(this);
+
     }
 
 
@@ -507,7 +514,7 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
                     val fileOutputStream = FileOutputStream(file)
                     IOUtils.copy(inputStream, fileOutputStream)
                     // set chat luong anh
-                    val compressedFile = compressor.setQuality(70)
+                    val compressedFile = compressor.setQuality(100)
                         .setCompressFormat(Bitmap.CompressFormat.JPEG)
                         .compressToFile(file, "photos-${UUID.randomUUID()}.jpg")
                     SlideEntity(
@@ -559,6 +566,30 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
 
             )
 
+
+    }
+
+    fun selectMenuOverlay() {
+        overLayViewLayout.visibility = View.VISIBLE
+        Handler().post(Runnable {
+            val textureView =
+                context.findViewById<TextureView>(R.id.textureView)
+            overLayViewLayout.setState(textureView)
+        })
+
+        hideMenuBar()
+
+    }
+    fun selectMenuFilter() {
+        var filter = videoComposer.getCurrentFilterPack()
+
+        if (slideAdapter.selectedAt != -1) {
+            filter = videoComposer.getScenes()[slideAdapter.selectedAt].filter
+        }
+
+        FilterPackDialogFragment
+            .newInstance(filter)
+            .show(context.supportFragmentManager, "filters")
 
     }
 
@@ -624,7 +655,8 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
 
         textQuoteViewLayout.visibility = View.VISIBLE
         binding.preview.visibility = View.VISIBLE
-        val previewText = context.findViewById<com.ynsuper.slideshowver1.view.sticker.StickerView>(R.id.preview)
+        val previewText =
+            context.findViewById<com.ynsuper.slideshowver1.view.sticker.StickerView>(R.id.preview)
         textQuoteViewLayout.setState(quoteState, previewText)
         hideMenuBar()
     }
@@ -675,6 +707,10 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
         if (textQuoteViewLayout.visibility == View.VISIBLE) {
             textQuoteViewLayout.visibility = View.GONE
             binding.preview.visibility = View.GONE
+            showMenuBar()
+        }
+        if (overLayViewLayout.visibility == View.VISIBLE) {
+            overLayViewLayout.visibility = View.GONE
             showMenuBar()
         }
 
@@ -1198,6 +1234,41 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
             videoComposer.setQuoteAt(slideAdapter.selectedAt, bitmap)
         } else videoComposer.applyQuoteBitmap(bitmap)
         dispatchDraw()
+    }
+
+    fun setCurrentSlideAdapter(i: Int) {
+        slideAdapter.deselectAll()
+//
+//        slideAdapter.selectedAt = i
+    }
+
+    fun onOverlaySelected(frameId: Int) {
+//        binding.preview.visibility = View.VISIBLE
+        Handler().post(Runnable {
+            val bitmap = getBitmapfromeFrameId(frameId)
+            videoComposer.applyQuoteBitmap(bitmap)
+            dispatchDraw()
+            dispatchDraw()
+        })
+
+
+    }
+
+    private fun getBitmapfromeFrameId(frameId: Int): Bitmap {
+        val assetManager: AssetManager = context.getAssets()
+        val bitmap = BitmapFactory.decodeStream(assetManager.open("frame/frame_" + frameId+".png"))
+        return bitmap
+    }
+
+
+    fun onFilterSelected(filterPack: PackFilter) {
+        if (slideAdapter.selectedAt != -1) {
+            videoComposer.getScenes()[slideAdapter.selectedAt].filter = filterPack
+        } else {
+            videoComposer.applyFilterPack(filterPack, true)
+        }
+        dispatchDraw()
+
     }
 
 

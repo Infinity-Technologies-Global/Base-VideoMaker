@@ -107,7 +107,7 @@
                     android:id="@+id/seek_bar"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
-                    android:thumb="@drawable/thumb_seek_bar"
+                    android:thumb="@drawable/custom_thumb"
                     app:layout_constraintBottom_toTopOf="parent"
                     app:layout_constraintEnd_toStartOf="@id/txtTimeTotal"
                     app:layout_constraintStart_toEndOf="@id/txtTimeDuration"

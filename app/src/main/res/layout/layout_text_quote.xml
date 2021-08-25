@@ -9,11 +9,22 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_marginBottom="16dp"
         app:layout_behavior="com.google.android.material.appbar.AppBarLayout$ScrollingViewBehavior">
         <include
             android:id="@+id/layout_top_bar"
             layout="@layout/item_layout_edit_top_view" />
 
+        <CheckBox
+            android:visibility="gone"
+            app:layout_constraintTop_toBottomOf="@+id/layout_top_bar"
+            android:id="@+id/checkbox_text_all"
+            android:text="Apply To All"
+            android:paddingRight="8dp"
+            app:layout_constraintRight_toRightOf="parent"
+            android:textColor="@color/white"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/editTextLayout"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense"
@@ -24,7 +35,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             android:textColorHint="@color/color_main_dark"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/layout_top_bar"
+            app:layout_constraintTop_toBottomOf="@+id/checkbox_text_all"
             app:startIconDrawable="@drawable/ic_icon_material_text"
             app:startIconTint="?colorAccent">
 

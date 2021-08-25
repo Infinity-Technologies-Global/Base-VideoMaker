@@ -3,6 +3,7 @@ package com.ynsuper.slideshowver1.bottomsheet
 import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
+import android.os.Handler
 import android.text.SpannableStringBuilder
 import android.view.LayoutInflater
 import android.view.View
@@ -17,7 +18,8 @@ import androidx.core.view.forEach
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.seanghay.studio.gles.shader.filter.pack.PackFilter
 import com.ynsuper.slideshowver1.R
-import kotlinx.android.synthetic.main.dialog_filters.*
+import kotlinx.android.synthetic.main.item_layout_edit_top_view.*
+import kotlinx.android.synthetic.main.layout_filter.*
 
 class FilterPackDialogFragment : BottomSheetDialogFragment(), SeekBar.OnSeekBarChangeListener {
 
@@ -37,7 +39,7 @@ class FilterPackDialogFragment : BottomSheetDialogFragment(), SeekBar.OnSeekBarC
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.dialog_filters, container, false)
+        return inflater.inflate(R.layout.layout_filter, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -49,20 +51,114 @@ class FilterPackDialogFragment : BottomSheetDialogFragment(), SeekBar.OnSeekBarC
 
         traverseLabels(view)
         setValues(filterPack)
+        layout_filter_brightness.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
 
+        buttonReset.visibility = View.VISIBLE
         seekBars.forEach {
             val seekBar = view.findViewById<SeekBar>(it.value)
             seekBar.setOnSeekBarChangeListener(this)
         }
-
-        buttonReset {
+        buttonReset.setOnClickListener {
             this.filterPack = PackFilter()
             setValues(this.filterPack!!)
         }
+//        buttonReset {
+//
+//        }
 
-        buttonSave {
+        image_submit_menu.setOnClickListener {
             saveAndClose()
         }
+
+        layout_filter_brightness.setOnClickListener {
+            resetColor()
+            hideAllViewSeekBar()
+            layout_brightness.visibility = View.VISIBLE
+            layout_filter_brightness.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+
+        }
+        layout_filter_contrast.setOnClickListener {
+            resetColor()
+            hideAllViewSeekBar()
+            layout_contrast.visibility = View.VISIBLE
+            layout_filter_contrast.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+
+        }
+        layout_filter_saturation.setOnClickListener {
+            resetColor()
+            hideAllViewSeekBar()
+            layout_saturation.visibility = View.VISIBLE
+            layout_filter_saturation.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+
+        }
+        layout_filter_tint.setOnClickListener {
+            resetColor()
+            hideAllViewSeekBar()
+            layout_tint.visibility = View.VISIBLE
+            layout_filter_tint.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+
+        }
+        layout_filter_gamma.setOnClickListener {
+            resetColor()
+            hideAllViewSeekBar()
+            layout_gamma.visibility = View.VISIBLE
+            layout_filter_gamma.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+
+        }
+        layout_filter_warmth.setOnClickListener {
+            resetColor()
+            hideAllViewSeekBar()
+            layout_warmth.visibility = View.VISIBLE
+            layout_filter_warmth.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+
+        }
+        layout_filter_vibrant.setOnClickListener {
+            resetColor()
+            hideAllViewSeekBar()
+            layout_vibrant.visibility = View.VISIBLE
+            layout_filter_vibrant.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+
+        }
+        layout_filter_sepia.setOnClickListener {
+            resetColor()
+            hideAllViewSeekBar()
+            layout_sepia.visibility = View.VISIBLE
+            layout_filter_sepia.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+
+        }
+        layout_filter_intensity.setOnClickListener {
+            resetColor()
+            hideAllViewSeekBar()
+            layout_intensity.visibility = View.VISIBLE
+            layout_filter_intensity.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+        }
+
+
+    }
+
+    private fun hideAllViewSeekBar() {
+        layout_brightness.visibility = View.GONE
+        layout_contrast.visibility = View.GONE
+        layout_saturation.visibility = View.GONE
+        layout_tint.visibility = View.GONE
+        layout_gamma.visibility = View.GONE
+        layout_warmth.visibility = View.GONE
+        layout_vibrant.visibility = View.GONE
+        layout_sepia.visibility = View.GONE
+        layout_intensity.visibility = View.GONE
+    }
+
+    private fun resetColor() {
+        layout_filter_brightness.setBackgroundColor(resources.getColor(R.color.color_main_edit))
+        layout_filter_contrast.setBackgroundColor(resources.getColor(R.color.color_main_edit))
+        layout_filter_saturation.setBackgroundColor(resources.getColor(R.color.color_main_edit))
+        layout_filter_tint.setBackgroundColor(resources.getColor(R.color.color_main_edit))
+        layout_filter_gamma.setBackgroundColor(resources.getColor(R.color.color_main_edit))
+        layout_filter_warmth.setBackgroundColor(resources.getColor(R.color.color_main_edit))
+        layout_filter_vibrant.setBackgroundColor(resources.getColor(R.color.color_main_edit))
+        layout_filter_sepia.setBackgroundColor(resources.getColor(R.color.color_main_edit))
+        layout_filter_intensity.setBackgroundColor(resources.getColor(R.color.color_main_edit))
+
     }
 
     private fun saveAndClose() {
@@ -131,7 +227,7 @@ class FilterPackDialogFragment : BottomSheetDialogFragment(), SeekBar.OnSeekBarC
     private fun wrap(label: String, progress: Int): CharSequence {
         return SpannableStringBuilder(label)
             .append(" • ")
-            .color(Color.BLACK) {
+            .color(Color.WHITE) {
                 scale(.8f) {
                     bold {
                         append("$progress%")

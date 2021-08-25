@@ -105,7 +105,7 @@ open class EglSurfaceBase(protected var eglCore: EglCore) {
         BufferedOutputStream(FileOutputStream(filename)).use {
             Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
                 copyPixelsFromBuffer(buffer)
-                compress(Bitmap.CompressFormat.PNG, 90, it)
+                compress(Bitmap.CompressFormat.PNG, 100, it)
                 recycle()
             }
         }

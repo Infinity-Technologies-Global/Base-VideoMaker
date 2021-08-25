@@ -170,6 +170,7 @@
         android:progress="14"
         android:max="30"
         android:min="1"
+        android:thumb="@drawable/custom_thumb"
         android:backgroundTint="@color/color_text_bottom"
         android:progressBackgroundTint="@color/color_text_bottom"
         app:layout_constraintBottom_toBottomOf="@+id/checkboxBlur"
