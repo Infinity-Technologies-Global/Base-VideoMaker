@@ -381,36 +381,6 @@ public class EditingActivity extends AppCompatActivityImpl {
                 }
             } else {
                 stopPlayback();
-                playPauseButton.setImageResource(R.drawable.baseline_play_circle_24);
-
-
-                LoggingManager.LogToToast(this, "Begin prepare for preview!");
-                //refreshPreviewClip();
-
-                // TODO: Temporary processing real-time audio !
-                for(Track audioTrack : timeline.tracks)
-                {
-                    for(Clip audioClip : audioTrack.clips)
-                    {
-                        if(audioClip.type == ClipType.AUDIO)
-                        {
-                            try {
-
-                                audioRenderer.reset();
-
-                                audioRenderer.setDataSource(audioClip.getAbsolutePath(properties));
-                                audioRenderer.prepareAsync();
-                            } catch (IOException e) {
-                                LoggingManager.LogToPersistentDataPath(this, LoggingManager.getStackTraceFromException(e));
-                            }
-                        }
-                    }
-                }
-                timelineRenderer.buildTimeline(timeline);
-
-                previewView.queueEvent(() -> {
-                    timelineRenderer.initClips(); // safe again
-                });
             }
         });
         exportButton = findViewById(R.id.exportButton);
@@ -492,6 +462,8 @@ public class EditingActivity extends AppCompatActivityImpl {
         setupSpecificEdit();
 
         setupToolbars();
+
+        handleEditZoneInteraction(timelineScroll);
     }
     private void editingMultiple() {
         editMultipleAreaClips.setVisibility(View.VISIBLE);
@@ -914,7 +886,6 @@ public class EditingActivity extends AppCompatActivityImpl {
                     isPlaying = false;
                     currentTime = 0f;
                     stopPlayback();
-                    playPauseButton.setImageResource(R.drawable.baseline_play_circle_24);
                 }
 
 
@@ -925,7 +896,41 @@ public class EditingActivity extends AppCompatActivityImpl {
     }
 
     private void stopPlayback() {
+        isPlaying = false;
+
         playbackHandler.removeCallbacks(playbackLoop);
+        playPauseButton.setImageResource(R.drawable.baseline_play_circle_24);
+
+
+
+
+        LoggingManager.LogToToast(this, "Begin prepare for preview!");
+        //refreshPreviewClip();
+
+        // TODO: Temporary processing real-time audio !
+        for(Track audioTrack : timeline.tracks)
+        {
+            for(Clip audioClip : audioTrack.clips)
+            {
+                if(audioClip.type == ClipType.AUDIO)
+                {
+                    try {
+
+                        audioRenderer.reset();
+
+                        audioRenderer.setDataSource(audioClip.getAbsolutePath(properties));
+                        audioRenderer.prepareAsync();
+                    } catch (IOException e) {
+                        LoggingManager.LogToPersistentDataPath(this, LoggingManager.getStackTraceFromException(e));
+                    }
+                }
+            }
+        }
+        timelineRenderer.buildTimeline(timeline);
+
+        previewView.queueEvent(() -> {
+            timelineRenderer.initClips(); // safe again
+        });
     }
     private void setCurrentTime(float value)
     {
@@ -1133,6 +1138,27 @@ public class EditingActivity extends AppCompatActivityImpl {
         clipView.getLayoutParams().width = (int) (data.duration * pixelsPerSecond);
 
 
+    }
+    private void handleEditZoneInteraction(View view) {
+        view.setOnTouchListener((v, event) -> {
+            switch (event.getAction())
+            {
+                case MotionEvent.ACTION_MOVE:
+                    if(isPlaying)
+                        stopPlayback();
+                    break;
+                // ACTION_UP is the action that invoke only if we clicked
+                // that's mean its invoke if we didn't ACTION_MOVE
+                case MotionEvent.ACTION_UP:
+                    v.performClick();
+                    break;
+                // ACTION_CANCEL is when you accidentally click something and
+                // drag it somewhere so it doesn't recognize that click anymore
+                case MotionEvent.ACTION_CANCEL:
+                    break;
+            }
+            return false;
+        });
     }
     private void handleKeyframeInteraction(View view) {
         view.setOnClickListener(v -> {
@@ -2655,7 +2681,7 @@ frameRate = 60;
 
 
             try {
-                pumpDecoderInput(playheadTime); // Feed decoder
+                pumpDecoderInputSeek(playheadTime); // Feed decoder
 
                 // Drain decoder and render frame
                 MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
@@ -2738,12 +2764,30 @@ frameRate = 60;
                         long sampleTime = extractor.getSampleTime();
                         if (sampleTime >= ptsUs) {
                             // Feed this frame to MediaCodec
-                            decoder.queueInputBuffer(inputIndex, 0, sampleSize, ptsUs, 0);
                             System.err.println(ptsUs + "|" + extractor.getSampleTime());
                             break;
                         }
                         extractor.advance();
                     }
+                    decoder.queueInputBuffer(inputIndex, 0, sampleSize, ptsUs, 0);
+                } else {
+                    decoder.queueInputBuffer(inputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                }
+            }
+        }
+        private void pumpDecoderInputSeek(float playheadTime) {
+            if(decoder == null) return;
+            float clipTime = playheadTime - clip.startTime;
+            long ptsUs = (long)(clipTime * 1_000_000); // override presentation timestamp
+            int inputIndex = decoder.dequeueInputBuffer(0);
+            if (inputIndex >= 0) {
+                ByteBuffer inputBuffer = decoder.getInputBuffer(inputIndex);
+                int sampleSize = extractor.readSampleData(inputBuffer, 0);
+
+                if (sampleSize >= 0) {
+                    extractor.seekTo(ptsUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
+                    decoder.queueInputBuffer(inputIndex, 0, sampleSize, ptsUs, 0);
+
                 } else {
                     decoder.queueInputBuffer(inputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
                 }

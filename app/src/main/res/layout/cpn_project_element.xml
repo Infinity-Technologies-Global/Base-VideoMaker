@@ -2,8 +2,10 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="100dp"
-    android:layout_margin="25dp">
+    android:layout_height="110dp"
+    android:layout_marginTop="10dp"
+    android:layout_marginStart="25dp"
+    android:layout_marginEnd="25dp">
     <com.google.android.material.imageview.ShapeableImageView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -19,7 +21,6 @@
         android:id="@+id/previewImage"
         android:layout_width="75dp"
         android:layout_height="75dp"
-        android:layout_centerVertical="true"
         android:layout_marginStart="5dp"
         android:layout_marginTop="5dp"
         android:layout_marginEnd="5dp"
@@ -40,10 +41,12 @@
         android:layout_marginStart="5dp"
         android:layout_marginTop="0dp"
         android:layout_marginEnd="5dp"
-        android:layout_marginBottom="5dp"
+        android:layout_marginBottom="0dp"
         android:layout_toStartOf="@id/moreButton"
         android:layout_toEndOf="@id/previewImage"
         android:layout_alignTop="@+id/previewImage"
+        android:textSize="24sp"
+        android:textStyle="bold"
         android:text="@string/title" />
 
     <ImageButton
@@ -68,10 +71,10 @@
         android:layout_marginStart="5dp"
         android:layout_marginTop="0dp"
         android:layout_marginEnd="5dp"
-        android:layout_marginBottom="5dp"
+        android:layout_marginBottom="0dp"
         android:layout_toEndOf="@id/previewImage"
         android:layout_below="@+id/titleText"
-        android:text="31/12/2007" />
+        android:text="dd/mm/yyyy" />
 
     <TextView
         android:id="@+id/sizeText"
@@ -87,16 +90,15 @@
 
     <TextView
         android:id="@+id/durationText"
-        android:layout_width="match_parent"
+        android:layout_width="75dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="5dp"
         android:layout_marginTop="0dp"
         android:layout_marginEnd="5dp"
         android:layout_marginBottom="5dp"
-        android:layout_toEndOf="@id/previewImage"
-        android:layout_below="@+id/dateText"
-        android:gravity="end"
-        android:text="01:02:03" />
+        android:layout_below="@+id/previewImage"
+        android:gravity="center"
+        android:text="hh:mm:ss" />
 
 
 </RelativeLayout>
