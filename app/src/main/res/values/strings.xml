@@ -16,6 +16,7 @@
     <string name="alert_delete_project_confirmation_description">Are you sure you want to delete this project?</string>
 
     <string name="alert_processing_preview">Processing Preview…</string>
+    <string name="alert_processing_without_preview_confirmation">Proceed without preview</string>
 
     <string name="menu_cpn_project_element_edit">Edit title</string>
     <string name="menu_cpn_project_element_delete">Delete project</string>

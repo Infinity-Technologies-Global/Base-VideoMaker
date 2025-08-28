@@ -34,7 +34,6 @@ import android.view.ScaleGestureDetector;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.TouchDelegate;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
@@ -60,6 +59,7 @@ import com.arthenica.ffmpegkit.Statistics;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
+import com.vanvatcorporation.doubleclips.FFmpegEdit;
 import com.vanvatcorporation.doubleclips.FXCommandEmitter;
 import com.vanvatcorporation.doubleclips.R;
 import com.vanvatcorporation.doubleclips.constants.Constants;
@@ -187,6 +187,8 @@ public class EditingActivity extends AppCompatActivityImpl {
 
 
 
+    FFmpegEdit.FfmpegRenderQueue previewRenderQueue = new FFmpegEdit.FfmpegRenderQueue();
+
 
     @SuppressLint("Range")
     public String getFileName(Uri uri) {
@@ -301,7 +303,15 @@ public class EditingActivity extends AppCompatActivityImpl {
 
         offsetTime += duration;
 
+
+        // This will show all in one
         processingPreview(newClip, clipPath, previewClipPath);
+        // TODO: Add processingPreview method to the queue, so that the dialog
+        //  will be show one by one
+        previewRenderQueue.enqueue(new FFmpegEdit.FfmpegRenderQueue.FfmpegRenderQueueInfo("Preview Generation",
+                () -> {
+                    System.err.println("Ffff");
+                }));
 
         return offsetTime;
     }
@@ -315,17 +325,25 @@ public class EditingActivity extends AppCompatActivityImpl {
         View dialogView = inflater.inflate(R.layout.popup_processing_preview, null);
         builder.setView(dialogView);
         builder.setCancelable(false);
+        builder.setNegativeButton(getText(R.string.alert_processing_without_preview_confirmation),
+                (dialog, which) -> {
+            // This initial listener might be simple or a placeholder
+                    dialog.dismiss();
+        });
 
         // Get references to the EditText and Buttons in your custom layout
         TextView processingText = dialogView.findViewById(R.id.processingText);
         TextView processingDescription = dialogView.findViewById(R.id.processingDescription);
         ProgressBar previewProgressBar = dialogView.findViewById(R.id.previewProgressBar);
+        TextView processingPercent = dialogView.findViewById(R.id.processingPercent);
 
         // Create the AlertDialog
         AlertDialog dialog = builder.create();
 
         // Show the dialog
         dialog.show();
+
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setVisibility(View.GONE);
 
 
         processingText.setText(getString(R.string.processing) + " " + clip.clipName);
@@ -338,11 +356,19 @@ public class EditingActivity extends AppCompatActivityImpl {
                 "\" -vn -ac 1 -ar 22050 -c:a pcm_s16le -y \"" + previewClipPath.substring(0, previewClipPath.lastIndexOf('.')) + ".wav\"";
 
 
+        processingDescription.setTextColor(0xFF00AA00);
         if(clip.type == ClipType.AUDIO)
         {
-            runAnyCommand(this, previewGeneratedAudioCmd, "Exporting Preview Audio", dialog::dismiss, () -> {
+            runAnyCommand(this, previewGeneratedAudioCmd, "Exporting Preview Audio",
+                    () -> {
+                        dialog.dismiss();
+                        previewRenderQueue.taskCompleted();
+                    }, () -> {
                         processingDescription.post(() -> {
                             processingDescription.setTextColor(0xFFFF0000);
+
+                            dialog.setCancelable(true);
+                            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setVisibility(View.VISIBLE);
                         });
                     }
                     , new RunnableImpl() {
@@ -356,9 +382,7 @@ public class EditingActivity extends AppCompatActivityImpl {
                     }, new RunnableImpl() {
                         @Override
                         public <T> void runWithParam(T param) {
-                            //MediaInformationSession session = FFprobeKit.getMediaInformation(properties.getProjectPath());
-                            //double duration = Double.parseDouble(session.getMediaInformation().getDuration());
-                            double duration = properties.getProjectDuration();
+                            double duration = clip.duration * 1000;
 
                             Statistics statistics = (Statistics) param;
                             {
@@ -366,6 +390,7 @@ public class EditingActivity extends AppCompatActivityImpl {
                                     int progress = (int) ((statistics.getTime() * 100) / (int) duration);
                                     previewProgressBar.setMax(100);
                                     previewProgressBar.setProgress(progress);
+                                    processingPercent.setText(progress + "%");
                                 }
                             }
                         }
@@ -373,9 +398,16 @@ public class EditingActivity extends AppCompatActivityImpl {
         }
         else if(clip.type == ClipType.VIDEO)
         {
-            runAnyCommand(this, previewGeneratedVideoCmd, "Exporting Preview Video", dialog::dismiss, () -> {
+            runAnyCommand(this, previewGeneratedVideoCmd, "Exporting Preview Video",
+                    () -> {
+                        dialog.dismiss();
+                        previewRenderQueue.taskCompleted();
+                    }, () -> {
                         processingDescription.post(() -> {
                             processingDescription.setTextColor(0xFFFF0000);
+
+                            dialog.setCancelable(true);
+                            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setVisibility(View.VISIBLE);
                         });
                 }
                     , new RunnableImpl() {
@@ -389,9 +421,7 @@ public class EditingActivity extends AppCompatActivityImpl {
                     }, new RunnableImpl() {
                         @Override
                         public <T> void runWithParam(T param) {
-                            //MediaInformationSession session = FFprobeKit.getMediaInformation(properties.getProjectPath());
-                            //double duration = Double.parseDouble(session.getMediaInformation().getDuration());
-                            double duration = properties.getProjectDuration();
+                            double duration = clip.duration * 1000;
 
                             Statistics statistics = (Statistics) param;
                             {
@@ -399,17 +429,11 @@ public class EditingActivity extends AppCompatActivityImpl {
                                     int progress = (int) ((statistics.getTime() * 100) / (int) duration);
                                     previewProgressBar.setMax(100);
                                     previewProgressBar.setProgress(progress);
+                                    processingPercent.setText(progress + "%");
                                 }
                             }
                         }
                     });
-        }
-
-
-
-        while (!dialog.isShowing())
-        {
-
         }
     }
 
@@ -2816,7 +2840,8 @@ frameRate = 60;
                         audioDecoder.start();
 
                         int sampleRate = audioFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE);
-                        int channelConfig = AudioFormat.CHANNEL_OUT_STEREO;
+                        System.err.println(sampleRate);
+                        int channelConfig = AudioFormat.CHANNEL_OUT_MONO;
                         int audioFormatPCM = AudioFormat.ENCODING_PCM_16BIT;
                         int minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormatPCM);
 
