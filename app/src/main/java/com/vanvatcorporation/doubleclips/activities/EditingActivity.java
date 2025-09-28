@@ -391,7 +391,7 @@ public class EditingActivity extends AppCompatActivityImpl {
             //float totalSeconds = (timelineScroll.getScrollX()) / (float) pixelsPerSecond;
             currentTimePosText.post(() -> currentTimePosText.setText(DateHelper.convertTimestampToMMSSFormat((long) (currentTime * 1000L)) + String.format(".%02d", ((long)((currentTime % 1) * 100)))));
 
-            timelineRenderer.updateTime(currentTime);
+            timelineRenderer.updateTime(currentTime, !isPlaying);
         });
 
 
@@ -479,10 +479,12 @@ public class EditingActivity extends AppCompatActivityImpl {
         toolbarClips.setVisibility(View.GONE);
 
 
-        RelativeLayout.LayoutParams editingTrackParams = (RelativeLayout.LayoutParams) editingTrackZone.getLayoutParams();
-        editingTrackParams.addRule(RelativeLayout.ABOVE, toolbarDefault.getId());
-        editingTrackZone.setLayoutParams(editingTrackParams);
-        editingTrackZone.requestLayout();
+        toolbarDefault.post(() -> {
+            RelativeLayout.LayoutParams editingTrackParams = (RelativeLayout.LayoutParams) editingTrackZone.getLayoutParams();
+            editingTrackParams.addRule(RelativeLayout.ABOVE, toolbarDefault.getId());
+            editingTrackZone.setLayoutParams(editingTrackParams);
+            editingTrackZone.requestLayout();
+        });
 
         // ===========================       CRITICAL ZONE       ====================================
 
@@ -846,7 +848,7 @@ public class EditingActivity extends AppCompatActivityImpl {
                 if (!isPlaying) return;
                 currentTime += frameInterval;
 
-                timelineRenderer.updateTime(currentTime);
+                timelineRenderer.updateTime(currentTime, false);
 
                 int newScrollX = (int) (currentTime * pixelsPerSecond);
                 timelineScroll.scrollTo(newScrollX, 0);
@@ -1514,6 +1516,19 @@ public class EditingActivity extends AppCompatActivityImpl {
         if(pixelsPerSecond < 5000 && pixelsPerSecond > 2000)
         {
             changedRulerInterval = 0.05f;
+        }
+        // Recently updated. Above are tested.
+        if(pixelsPerSecond < 10000 && pixelsPerSecond > 5000)
+        {
+            changedRulerInterval = 0.02f;
+        }
+        if(pixelsPerSecond < 20000 && pixelsPerSecond > 10000)
+        {
+            changedRulerInterval = 0.01f;
+        }
+        if(pixelsPerSecond < 50000 && pixelsPerSecond > 20000)
+        {
+            changedRulerInterval = 0.005f;
         }
 
 
@@ -2561,14 +2576,14 @@ frameRate = 60;
                                     videoPlayer.setDataSource(new FileSource(new File(clip.getAbsolutePath(data))));
                                     videoPlayer.setDisplay(surfaceHolder);
                                     videoPlayer.setOnCompletionListener(v -> {
-                                        surfaceView.post(() -> {
-                                            if(!surfaceHolder.getSurface().isValid()) return;
-                                            Canvas canvas = surfaceHolder.lockCanvas(); // TODO: Still cant lock the canvas
-                                            if (canvas != null) {
-                                                canvas.drawColor(Color.BLACK); // Fill canvas with black
-                                                surfaceHolder.unlockCanvasAndPost(canvas);
-                                            }
-                                        });
+//                                        surfaceView.post(() -> {
+//                                            if(!surfaceHolder.getSurface().isValid()) return;
+//                                            Canvas canvas = surfaceHolder.lockCanvas(); // TODO: Still cant lock the canvas
+//                                            if (canvas != null) {
+//                                                canvas.drawColor(Color.BLACK); // Fill canvas with black
+//                                                surfaceHolder.unlockCanvasAndPost(canvas);
+//                                            }
+//                                        });
                                     });
                                     videoPlayer.prepareAsync();
                                 }
@@ -2597,15 +2612,15 @@ frameRate = 60;
                             public void surfaceCreated(@NonNull SurfaceHolder holder) {
                                 Bitmap image = IOImageHelper.LoadFileAsPNGImage(context, clip.getAbsolutePath(data));
 
-                                surfaceView.post(() -> {
-                                    if (!surfaceHolder.getSurface().isValid()) return;
-                                    Canvas canvas = surfaceHolder.lockCanvas();
-                                    if (canvas != null) {
-                                        canvas.drawColor(Color.BLACK); // Optional background
-                                        canvas.drawBitmap(image, 0, 0, null); // Draw image at top-left
-                                        surfaceHolder.unlockCanvasAndPost(canvas);
-                                    }
-                                });
+//                                surfaceView.post(() -> {
+//                                    if (!surfaceHolder.getSurface().isValid()) return;
+//                                    Canvas canvas = surfaceHolder.lockCanvas();
+//                                    if (canvas != null) {
+//                                        canvas.drawColor(Color.BLACK); // Optional background
+//                                        canvas.drawBitmap(image, 0, 0, null); // Draw image at top-left
+//                                        surfaceHolder.unlockCanvasAndPost(canvas);
+//                                    }
+//                                });
                             }
                             @Override
                             public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int width, int height) {}
@@ -2638,7 +2653,7 @@ frameRate = 60;
                     playheadTime <= clip.startTime + clip.duration;
         }
 
-        public void renderFrame(float playheadTime) {
+        public void renderFrame(float playheadTime, boolean isSeekingOnly) {
             if (!isVisible(playheadTime)) {
 //                if(surfaceView != null)
 //                {
@@ -2650,12 +2665,12 @@ frameRate = 60;
 //                }
                 return;
             }
-            if(isPlaying) return;
+            if(isPlaying && !isSeekingOnly) return;
 
-            startPlayingAt(playheadTime);
+            startPlayingAt(playheadTime, isSeekingOnly);
         }
 
-        public void startPlayingAt(float playheadTime) {
+        public void startPlayingAt(float playheadTime, boolean isSeekingOnly) {
             if (!isVisible(playheadTime)) {
 //                Canvas canvas = surfaceHolder.lockCanvas();
 //                if (canvas != null) {
@@ -2677,8 +2692,11 @@ frameRate = 60;
                         {
                             videoPlayer.seekTo((long) (clip.getTrimmedLocalTime(clip.getLocalClipTime(playheadTime)) * 1000000));
                             System.err.println(videoPlayer.getCurrentPosition());
-                            videoPlayer.start();
-                            isPlaying = true;
+                            if(!isSeekingOnly)
+                            {
+                                videoPlayer.start();
+                                isPlaying = true;
+                            }
                         }
                         break;
                     }
@@ -2692,8 +2710,11 @@ frameRate = 60;
                             else {
                                 audioPlayer.seekTo((int) (clip.getTrimmedLocalTime(clip.getLocalClipTime(playheadTime)) * 1000));
                             }
-                            audioPlayer.start();
-                            isPlaying = true;
+                            if(!isSeekingOnly)
+                            {
+                                audioPlayer.start();
+                                isPlaying = true;
+                            }
                         }
                         break;
                     }
@@ -2758,13 +2779,15 @@ frameRate = 60;
                         case VIDEO:
                         case AUDIO:
                         case IMAGE:
-                            renderers.add(new ClipRenderer(context, clip, properties, previewViewGroup));
+                            ClipRenderer clipRenderer = new ClipRenderer(context, clip, properties, previewViewGroup);
+                            renderers.add(clipRenderer);
+                            break;
                     }
                 }
                 trackLayers.add(renderers);
             }
         }
-        public void updateTime(float time)
+        public void updateTime(float time, boolean isSeekingOnly)
         {
             for (List<ClipRenderer> trackRenderer : trackLayers) {
                 for (ClipRenderer clipRenderer : trackRenderer) {
@@ -2780,7 +2803,7 @@ frameRate = 60;
                                 clipRenderer.surfaceView.setVisibility(View.GONE);
                             clipRenderer.isPlaying = false;
                         }
-                        clipRenderer.renderFrame(time);
+                        clipRenderer.renderFrame(time, isSeekingOnly);
                     }
                 }
             }
@@ -2794,7 +2817,7 @@ frameRate = 60;
             for (List<ClipRenderer> track : trackLayers) {
                 for (ClipRenderer clipRenderer : track) {
                     if (clipRenderer.isVisible(time)) {
-                        clipRenderer.startPlayingAt(time);
+                        clipRenderer.startPlayingAt(time, false);
                         renderedAny = true;
                     }
                 }

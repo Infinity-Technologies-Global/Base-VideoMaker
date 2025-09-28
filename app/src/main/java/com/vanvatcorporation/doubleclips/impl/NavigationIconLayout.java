@@ -71,7 +71,7 @@ public class NavigationIconLayout extends RelativeLayout {
                 iconView.startAnimation(AnimationUtils.loadAnimation(getContext(), R.anim.anim_expand_rapidly));
                 break;
             case UNSELECTED:
-                textView.setTextColor(getContext().getColor(R.color.colorPrimaryButton));
+                textView.setTextColor(getContext().getColor(R.color.colorPrimaryBackground));
                 textView.setTypeface(null, Typeface.NORMAL);
                 iconView.setColorFilter(R.color.colorPrimaryButton, PorterDuff.Mode.SRC_ATOP);
                 iconView.startAnimation(AnimationUtils.loadAnimation(getContext(), R.anim.anim_shrink_rapidly));

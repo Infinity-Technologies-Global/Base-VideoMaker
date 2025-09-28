@@ -33,7 +33,7 @@
 
 
 
-            android:background="@color/colorSoftBlueBackground"
+            android:background="@color/colorPalette1_2"
 
             app:strokeColor="@color/colorSoftBackground"
             app:strokeWidth="1dp"

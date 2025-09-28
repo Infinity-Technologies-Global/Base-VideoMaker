@@ -2,4 +2,9 @@
 <resources>
     <color name="colorPrimaryBackground">#FF000000</color>
     <color name="colorPrimaryButton">#FFFFFFFF</color>
+
+    <color name="colorPalette1_1">#FF7F3E</color>
+    <color name="colorPalette1_2">#FFDA78</color>
+    <color name="colorPalette1_3">#003285</color>
+    <color name="colorPalette1_4">#2A629A</color>
 </resources>

@@ -11,7 +11,7 @@
         android:layout_height="match_parent"
 
 
-        android:background="@color/colorSoftBackground"
+        android:background="@color/colorPalette1_4"
 
         app:strokeColor="@color/colorGlassBackground"
         app:strokeWidth="1dp"
@@ -47,6 +47,7 @@
         android:layout_alignTop="@+id/previewImage"
         android:textSize="24sp"
         android:textStyle="bold"
+        android:textColor="@color/colorPrimaryButton"
         android:text="@string/title" />
 
     <ImageButton
@@ -74,6 +75,7 @@
         android:layout_marginBottom="0dp"
         android:layout_toEndOf="@id/previewImage"
         android:layout_below="@+id/titleText"
+        android:textColor="@color/colorPrimaryButton"
         android:text="dd/mm/yyyy" />
 
     <TextView
@@ -86,6 +88,7 @@
         android:layout_marginBottom="5dp"
         android:layout_toEndOf="@id/previewImage"
         android:layout_below="@+id/dateText"
+        android:textColor="@color/colorPrimaryButton"
         android:text="1024MB" />
 
     <TextView
@@ -98,6 +101,7 @@
         android:layout_marginBottom="5dp"
         android:layout_below="@+id/previewImage"
         android:gravity="center"
+        android:textColor="@color/colorPrimaryButton"
         android:text="hh:mm:ss" />
 
 
