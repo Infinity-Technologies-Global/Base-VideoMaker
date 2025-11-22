@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <HorizontalScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/toolbarScrollView"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
@@ -16,35 +17,42 @@
             android:layout_margin="5dp"
             android:gravity="center"
             android:text="Clips"/>
-        <ImageView
+
+        <com.vanvatcorporation.doubleclips.impl.NavigationIconLayout
             android:id="@+id/deleteMediaButton"
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:layout_margin="5dp"
-            android:src="@drawable/baseline_delete_24"/>
-        <ImageView
+            app:navIcon="@drawable/baseline_delete_24"
+            app:navText="Delete"/>
+        <com.vanvatcorporation.doubleclips.impl.NavigationIconLayout
             android:id="@+id/splitMediaButton"
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:layout_margin="5dp"
-            android:src="@drawable/baseline_content_cut_24"/>
-        <ImageView
+            app:navIcon="@drawable/baseline_content_cut_24"
+            app:navText="Split"/>
+        <com.vanvatcorporation.doubleclips.impl.NavigationIconLayout
             android:id="@+id/editMediaButton"
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:layout_margin="5dp"
-            android:src="@drawable/baseline_edit_square_24"/>
-        <ImageView
+            app:navIcon="@drawable/baseline_edit_square_24"
+            app:navText="Edit"/>
+        <com.vanvatcorporation.doubleclips.impl.NavigationIconLayout
             android:id="@+id/addKeyframeButton"
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:layout_margin="5dp"
-            android:src="@drawable/round_auto_awesome_24"/>
-        <ImageView
+            app:navIcon="@drawable/round_auto_awesome_24"
+            app:navText="Keyframe"/>
+        <com.vanvatcorporation.doubleclips.impl.NavigationIconLayout
             android:id="@+id/selectMultipleButton"
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:layout_margin="5dp"
-            android:src="@drawable/baseline_menu_24"/>
+            app:navIcon="@drawable/baseline_menu_24"
+            app:navText="SelectMultiple"/>
+
     </LinearLayout>
 </HorizontalScrollView>

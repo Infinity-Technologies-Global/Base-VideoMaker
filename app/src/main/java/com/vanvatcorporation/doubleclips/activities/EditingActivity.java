@@ -479,9 +479,10 @@ public class EditingActivity extends AppCompatActivityImpl {
         toolbarClips.setVisibility(View.GONE);
 
 
+        // TODO: Doesn't work, made a temporary 'editingToolsZone' buffer at the layout xml instead
         toolbarDefault.post(() -> {
             RelativeLayout.LayoutParams editingTrackParams = (RelativeLayout.LayoutParams) editingTrackZone.getLayoutParams();
-            editingTrackParams.addRule(RelativeLayout.ABOVE, toolbarDefault.getId());
+            editingTrackParams.addRule(RelativeLayout.BELOW, toolbarDefault.getId());
             editingTrackZone.setLayoutParams(editingTrackParams);
             editingTrackZone.requestLayout();
         });
