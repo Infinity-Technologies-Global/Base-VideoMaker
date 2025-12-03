@@ -253,6 +253,7 @@ public class FFmpegEdit {
 
                         // Before going to the input stream, detect if it has a keyframe properties, if it has,
                         // render that video beforehand before entering the stream
+                        // TODO: Deprecate the still image rendering. Targeting to put expr onto all component
                         if (clip.hasAnimatedProperties()) {
                             renderKeyframedClip(context, data.getProjectPath(), clip, keyframeClipIndex, settings.getFrameRate()); // Pre-render to video
                             clip.clipName = clip.getRenderedName(); // Replace with new video
