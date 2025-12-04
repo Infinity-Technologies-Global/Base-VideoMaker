@@ -11,6 +11,7 @@ public class Constants {
     public static final String DEFAULT_EXPORT_CLIP_FILENAME = "export.mp4";
     public static final String DEFAULT_LOGGING_DIRECTORY = "Logging";
     public static final String DEFAULT_CLIP_DIRECTORY = "Clips";
+    public static final String DEFAULT_PREVIEW_CLIP_DIRECTORY = "PreviewClips";
     public static final String DEFAULT_CLIP_TEMP_DIRECTORY = "Clips/Temp";
     public static final int SAMPLE_SIZE_PREVIEW_CLIP = 16;
     public static final int DEFAULT_DEBUG_LOGGING_SIZE = 1048576;

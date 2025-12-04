@@ -342,6 +342,10 @@ public class MainActivity extends AppCompatActivityImpl {
             if(!basicDir.exists())
                 basicDir.mkdirs();
 
+            File previewDir = new File(IOHelper.CombinePath(projectPath, Constants.DEFAULT_PREVIEW_CLIP_DIRECTORY));
+            if(!previewDir.exists())
+                previewDir.mkdirs();
+
             enterEditing(this, data);
         }
     }
@@ -548,6 +552,10 @@ public class MainActivity extends AppCompatActivityImpl {
             {
                 holder.projectPreview.setImageBitmap((iconBitmap));
             }
+            holder.projectTitle.setOnLongClickListener(v -> {
+                EditProjectTitle(projectItem);
+                return true;
+            });
             holder.moreButton.setOnClickListener(v -> {
                 PopupMenu popup = new PopupMenu(context, v);
                 popup.getMenuInflater().inflate(R.menu.menu_cpn_project_element_more, popup.getMenu());
@@ -555,38 +563,7 @@ public class MainActivity extends AppCompatActivityImpl {
                 popup.setOnMenuItemClickListener(item -> {
                     if(item.getItemId() == R.id.action_edit)
                     {
-                        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-
-                        // Inflate your custom layout
-                        LayoutInflater inflater = LayoutInflater.from(context);
-                        View dialogView = inflater.inflate(R.layout.popup_edit_project_title, null);
-                        builder.setView(dialogView);
-
-                        // Get references to the EditText and Buttons in your custom layout
-                        EditText editText = dialogView.findViewById(R.id.directoryText);
-                        Button okButton = dialogView.findViewById(R.id.okButton);
-                        Button cancelButton = dialogView.findViewById(R.id.cancelButton);
-
-                        // Create the AlertDialog
-                        AlertDialog dialog = builder.create();
-                        editText.setText(projectItem.getProjectTitle());
-
-                        // Set button click listeners
-                        okButton.setOnClickListener(vok -> {
-                            projectItem.setProjectTitle(context, editText.getText().toString(), true);
-
-
-                            dialog.dismiss();
-                        });
-
-                        cancelButton.setOnClickListener(vcan -> {
-                            // Just dismiss the dialog
-                            dialog.dismiss();
-                        });
-
-                        // Show the dialog
-                        dialog.show();
-
+                        EditProjectTitle(projectItem);
                         return true;
                     }
                     else if(item.getItemId() == R.id.action_delete)
@@ -670,6 +647,43 @@ public class MainActivity extends AppCompatActivityImpl {
                 holder.moreButton.performClick();
                 return true;
             });
+        }
+
+        private void EditProjectTitle(ProjectData projectItem) {
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+
+            // Inflate your custom layout
+            LayoutInflater inflater = LayoutInflater.from(context);
+            View dialogView = inflater.inflate(R.layout.popup_edit_project_title, null);
+            builder.setView(dialogView);
+
+            // Get references to the EditText and Buttons in your custom layout
+            EditText editText = dialogView.findViewById(R.id.directoryText);
+            Button okButton = dialogView.findViewById(R.id.okButton);
+            Button cancelButton = dialogView.findViewById(R.id.cancelButton);
+
+            // Create the AlertDialog
+            AlertDialog dialog = builder.create();
+            editText.setText(projectItem.getProjectTitle());
+
+            // Set button click listeners
+            okButton.setOnClickListener(vok -> {
+                projectItem.setProjectTitle(context, editText.getText().toString(), true);
+
+
+                dialog.dismiss();
+            });
+
+            cancelButton.setOnClickListener(vcan -> {
+                // Just dismiss the dialog
+                dialog.dismiss();
+            });
+
+            // Show the dialog
+            dialog.show();
+
+
         }
 
         @Override

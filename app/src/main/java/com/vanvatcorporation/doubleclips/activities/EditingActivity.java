@@ -1,5 +1,7 @@
 package com.vanvatcorporation.doubleclips.activities;
 
+import static com.vanvatcorporation.doubleclips.FFmpegEdit.runAnyCommand;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -11,6 +13,10 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
+import android.media.AudioFormat;
+import android.media.AudioManager;
+import android.media.AudioTrack;
+import android.media.MediaCodec;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.media.MediaMetadataRetriever;
@@ -25,8 +31,10 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.TouchDelegate;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
@@ -36,6 +44,7 @@ import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
@@ -46,6 +55,8 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.core.content.res.ResourcesCompat;
 
+import com.arthenica.ffmpegkit.Log;
+import com.arthenica.ffmpegkit.Statistics;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
@@ -63,13 +74,12 @@ import com.vanvatcorporation.doubleclips.helper.StringFormatHelper;
 import com.vanvatcorporation.doubleclips.impl.AppCompatActivityImpl;
 import com.vanvatcorporation.doubleclips.impl.ImageGroupView;
 import com.vanvatcorporation.doubleclips.impl.TrackFrameLayout;
+import com.vanvatcorporation.doubleclips.impl.java.RunnableImpl;
 import com.vanvatcorporation.doubleclips.manager.LoggingManager;
+import com.vanvatcorporation.doubleclips.utils.TimelineUtils;
 
-import net.protyposis.android.mediaplayer.FileSource;
-import net.protyposis.android.mediaplayer.MediaPlayer;
-
-import java.io.File;
 import java.io.Serializable;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -242,6 +252,7 @@ public class EditingActivity extends AppCompatActivityImpl {
         if(selectedTrack == null) return offsetTime;
         String filename = getFileName(uri);
         String clipPath = IOHelper.CombinePath(properties.getProjectPath(), Constants.DEFAULT_CLIP_DIRECTORY, filename);
+        String previewClipPath = IOHelper.CombinePath(properties.getProjectPath(), Constants.DEFAULT_PREVIEW_CLIP_DIRECTORY, filename);
         IOHelper.writeToFileAsRaw(this, clipPath, IOHelper.readFromFileAsRaw(this, getContentResolver(), uri));
 
         float duration = 3f; // fallback default if needed
@@ -289,7 +300,117 @@ public class EditingActivity extends AppCompatActivityImpl {
         addClipToTrack(selectedTrack, newClip);
 
         offsetTime += duration;
+
+        processingPreview(newClip, clipPath, previewClipPath);
+
         return offsetTime;
+    }
+
+    void processingPreview(Clip clip, String originalClipPath, String previewClipPath)
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        // Inflate your custom layout
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View dialogView = inflater.inflate(R.layout.popup_processing_preview, null);
+        builder.setView(dialogView);
+        builder.setCancelable(false);
+
+        // Get references to the EditText and Buttons in your custom layout
+        TextView processingText = dialogView.findViewById(R.id.processingText);
+        TextView processingDescription = dialogView.findViewById(R.id.processingDescription);
+        ProgressBar previewProgressBar = dialogView.findViewById(R.id.previewProgressBar);
+
+        // Create the AlertDialog
+        AlertDialog dialog = builder.create();
+
+        // Show the dialog
+        dialog.show();
+
+
+        processingText.setText(getString(R.string.processing) + " " + clip.clipName);
+
+
+
+        String previewGeneratedVideoCmd = "-i \"" + originalClipPath +
+                "\" -vf \"scale=1280:-2\" -c:v libx264 -preset ultrafast -crf 32 -x264-params keyint=1 -an -y \"" + previewClipPath + "\"";
+        String previewGeneratedAudioCmd = "-i \"" + originalClipPath +
+                "\" -vn -ac 1 -ar 22050 -c:a pcm_s16le -y \"" + previewClipPath.substring(0, previewClipPath.lastIndexOf('.')) + ".wav\"";
+
+
+        if(clip.type == ClipType.AUDIO)
+        {
+            runAnyCommand(this, previewGeneratedAudioCmd, "Exporting Preview Audio", dialog::dismiss, () -> {
+                        processingDescription.post(() -> {
+                            processingDescription.setTextColor(0xFFFF0000);
+                        });
+                    }
+                    , new RunnableImpl() {
+                        @Override
+                        public <T> void runWithParam(T param) {
+                            Log log = (Log) param;
+                            processingDescription.post(() -> {
+                                processingDescription.setText(log.getMessage());
+                            });
+                        }
+                    }, new RunnableImpl() {
+                        @Override
+                        public <T> void runWithParam(T param) {
+                            //MediaInformationSession session = FFprobeKit.getMediaInformation(properties.getProjectPath());
+                            //double duration = Double.parseDouble(session.getMediaInformation().getDuration());
+                            double duration = properties.getProjectDuration();
+
+                            Statistics statistics = (Statistics) param;
+                            {
+                                if (statistics.getTime() > 0) {
+                                    int progress = (int) ((statistics.getTime() * 100) / (int) duration);
+                                    previewProgressBar.setMax(100);
+                                    previewProgressBar.setProgress(progress);
+                                }
+                            }
+                        }
+                    });
+        }
+        else if(clip.type == ClipType.VIDEO)
+        {
+            runAnyCommand(this, previewGeneratedVideoCmd, "Exporting Preview Video", dialog::dismiss, () -> {
+                        processingDescription.post(() -> {
+                            processingDescription.setTextColor(0xFFFF0000);
+                        });
+                }
+                    , new RunnableImpl() {
+                        @Override
+                        public <T> void runWithParam(T param) {
+                            Log log = (Log) param;
+                            processingDescription.post(() -> {
+                                processingDescription.setText(log.getMessage());
+                            });
+                        }
+                    }, new RunnableImpl() {
+                        @Override
+                        public <T> void runWithParam(T param) {
+                            //MediaInformationSession session = FFprobeKit.getMediaInformation(properties.getProjectPath());
+                            //double duration = Double.parseDouble(session.getMediaInformation().getDuration());
+                            double duration = properties.getProjectDuration();
+
+                            Statistics statistics = (Statistics) param;
+                            {
+                                if (statistics.getTime() > 0) {
+                                    int progress = (int) ((statistics.getTime() * 100) / (int) duration);
+                                    previewProgressBar.setMax(100);
+                                    previewProgressBar.setProgress(progress);
+                                }
+                            }
+                        }
+                    });
+        }
+
+
+
+        while (!dialog.isShowing())
+        {
+
+        }
     }
 
 
@@ -872,6 +993,8 @@ public class EditingActivity extends AppCompatActivityImpl {
         LoggingManager.LogToToast(this, "Begin prepare for preview!");
         //refreshPreviewClip();
 
+        // TODO: Tested for dragging back and forth clips. They're doing fine with the extractor SYNC_EXACT
+        //  Limit the time of refreshing entire timeline like this.
         timelineRenderer.buildTimeline(timeline, properties, previewViewGroup);
     }
     private void setCurrentTime(float value)
@@ -1022,7 +1145,7 @@ public class EditingActivity extends AppCompatActivityImpl {
         //params.topMargin = 4; // 8
         clipView.setX(getTimeInX(data.startTime));
         clipView.setLayoutParams(params);
-        clipView.setFilledImageBitmap(combineThumbnails(extractThumbnail(this, data.getAbsolutePath(properties), data.type)));
+        clipView.setFilledImageBitmap(combineThumbnails(extractThumbnail(this, data.getAbsolutePreviewPath(properties), data.type)));
         clipView.setTag(data);
 
 
@@ -1862,7 +1985,7 @@ public class EditingActivity extends AppCompatActivityImpl {
                 if(nearestClip != null) break;
             }
             if(nearestClip != null)
-                IOImageHelper.SaveFileAsPNGImage(context, IOHelper.CombinePath(data.getProjectPath(), "preview.png"), extractThumbnail(context, nearestClip.getAbsolutePath(data), nearestClip.type, 1).get(0), 25);
+                IOImageHelper.SaveFileAsPNGImage(context, IOHelper.CombinePath(data.getProjectPath(), "preview.png"), extractThumbnail(context, nearestClip.getAbsolutePreviewPath(data), nearestClip.type, 1).get(0), 25);
 
             data.setProjectTimestamp(new Date().getTime());
             data.setProjectDuration((long) (timeline.duration * 1000));
@@ -2296,11 +2419,34 @@ public class EditingActivity extends AppCompatActivityImpl {
         public void setRenderedName(String s) {
             preRenderedName = s;
         }
+        /**
+         * Used for FFmpeg and other output that requires original quality.
+         *
+         * @param properties The Project Data.
+         * @return The path for original file.
+         */
         public String getAbsolutePath(MainActivity.ProjectData properties) {
             return getAbsolutePath(properties.getProjectPath());
         }
         public String getAbsolutePath(String projectPath) {
             return IOHelper.CombinePath(projectPath, Constants.DEFAULT_CLIP_DIRECTORY, clipName);
+        }
+        /**
+         * Used for EditingActivity in which didn't need high quality video. Fit for real-time preview.
+         *
+         * @param properties The Project Data.
+         * @return The path for preview file.
+         */
+        public String getAbsolutePreviewPath(MainActivity.ProjectData properties) {
+            return getAbsolutePreviewPath(properties.getProjectPath());
+        }
+        public String getAbsolutePreviewPath(String projectPath) {
+            String path = IOHelper.CombinePath(projectPath, Constants.DEFAULT_PREVIEW_CLIP_DIRECTORY, clipName);
+            // Fallback if not available yet.
+            // TODO: Temporary fix for the soon preview loading. Consider block main thread for preview to have time to load first
+            if(!IOHelper.isFileExist(path))
+                path = getAbsolutePath(projectPath);
+            return path;
         }
         public String getAbsoluteRenderPath(MainActivity.ProjectData properties) {
             return getAbsoluteRenderPath(properties.getProjectPath());
@@ -2556,12 +2702,16 @@ frameRate = 60;
     public static class ClipRenderer {
         public final Clip clip;
 
-        public MediaPlayer videoPlayer;
-        public android.media.MediaPlayer audioPlayer;
+        private MediaExtractor videoExtractor;
+        private MediaCodec videoDecoder;
+
+        private MediaExtractor audioExtractor;
+        private MediaCodec audioDecoder;
+        private AudioTrack audioTrack;
         public boolean isPlaying;
 
         private SurfaceView surfaceView;
-        private SurfaceHolder surfaceHolder;
+        private Surface surface;
         private Context context;
 
         public ClipRenderer(Context context, Clip clip, MainActivity.ProjectData data, RelativeLayout previewViewGroup) {
@@ -2579,40 +2729,44 @@ frameRate = 60;
                         RelativeLayout.LayoutParams surfaceViewLayoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
                         previewViewGroup.addView(surfaceView, surfaceViewLayoutParams);
 
-                        surfaceHolder = surfaceView.getHolder();
-                        surfaceHolder.addCallback(new SurfaceHolder.Callback() {
+                        surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
                             @Override
                             public void surfaceCreated(@NonNull SurfaceHolder holder) {
-                                try {
-                                    videoPlayer = new MediaPlayer();
-                                    videoPlayer.setSeekMode(MediaPlayer.SeekMode.FAST_EXACT);
-                                    //videoPlayer.setSeekMode(MediaPlayer.SeekMode.PRECISE);
-                                    //videoPlayer.setSeekMode(MediaPlayer.SeekMode.EXACT);
+                                try
+                                {
+                                    surface = surfaceView.getHolder().getSurface();
+                                    // Step 1: Extractor setup
+                                    videoExtractor = new MediaExtractor();
+                                    videoExtractor.setDataSource(clip.getAbsolutePreviewPath(data));
 
-                                    videoPlayer.setDataSource(new FileSource(new File(clip.getAbsolutePath(data))));
-                                    videoPlayer.setDisplay(surfaceHolder);
-                                    videoPlayer.setOnCompletionListener(v -> {
-//                                        surfaceView.post(() -> {
-//                                            if(!surfaceHolder.getSurface().isValid()) return;
-//                                            Canvas canvas = surfaceHolder.lockCanvas(); // TODO: Still cant lock the canvas
-//                                            if (canvas != null) {
-//                                                canvas.drawColor(Color.BLACK); // Fill canvas with black
-//                                                surfaceHolder.unlockCanvasAndPost(canvas);
-//                                            }
-//                                        });
-                                    });
-                                    videoPlayer.prepareAsync();
+                                    int trackIndex = TimelineUtils.findVideoTrackIndex(videoExtractor);
+                                    videoExtractor.selectTrack(trackIndex);
+
+                                    MediaFormat format = videoExtractor.getTrackFormat(trackIndex);
+
+                                    // Step 2: Codec setup
+                                    videoDecoder = MediaCodec.createDecoderByType(format.getString(MediaFormat.KEY_MIME));
+                                    videoDecoder.configure(format, surface, null, 0);
+                                    videoDecoder.start();
                                 }
                                 catch (Exception e)
                                 {
                                     LoggingManager.LogExceptionToNoteOverlay(context, e);
                                 }
                             }
+
                             @Override
-                            public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int width, int height) {}
+                            public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int width, int height) {
+
+                            }
+
                             @Override
-                            public void surfaceDestroyed(@NonNull SurfaceHolder holder) {}
+                            public void surfaceDestroyed(@NonNull SurfaceHolder holder) {
+
+                            }
                         });
+
+
                         break;
                     }
                     case IMAGE:
@@ -2622,21 +2776,22 @@ frameRate = 60;
                         RelativeLayout.LayoutParams surfaceViewLayoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
                         previewViewGroup.addView(surfaceView, surfaceViewLayoutParams);
 
-                        surfaceHolder = surfaceView.getHolder();
+                        SurfaceHolder surfaceHolder = surfaceView.getHolder();
                         surfaceHolder.addCallback(new SurfaceHolder.Callback() {
                             @Override
                             public void surfaceCreated(@NonNull SurfaceHolder holder) {
-                                Bitmap image = IOImageHelper.LoadFileAsPNGImage(context, clip.getAbsolutePath(data));
+                                Bitmap image = IOImageHelper.LoadFileAsPNGImage(context, clip.getAbsolutePreviewPath(data), 8);
 
-//                                surfaceView.post(() -> {
-//                                    if (!surfaceHolder.getSurface().isValid()) return;
-//                                    Canvas canvas = surfaceHolder.lockCanvas();
-//                                    if (canvas != null) {
-//                                        canvas.drawColor(Color.BLACK); // Optional background
-//                                        canvas.drawBitmap(image, 0, 0, null); // Draw image at top-left
-//                                        surfaceHolder.unlockCanvasAndPost(canvas);
-//                                    }
-//                                });
+                                surfaceView.post(() -> {
+                                    if (!surfaceHolder.getSurface().isValid()) return;
+                                    Canvas canvas = surfaceHolder.lockCanvas();
+                                    if (canvas != null) {
+                                        canvas.drawColor(Color.BLACK); // Optional background
+                                        canvas.drawBitmap(image, 0, 0, null); // Draw image at top-left
+                                        surfaceHolder.unlockCanvasAndPost(canvas);
+                                    }
+                                });
+
                             }
                             @Override
                             public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int width, int height) {}
@@ -2648,9 +2803,33 @@ frameRate = 60;
                     }
                     case AUDIO:
                     {
-                        audioPlayer = new android.media.MediaPlayer();
-                        audioPlayer.setDataSource(clip.getAbsolutePath(data));
-                        audioPlayer.prepareAsync();
+
+                        audioExtractor = new MediaExtractor();
+                        audioExtractor.setDataSource(clip.getAbsolutePreviewPath(data));
+
+                        int audioTrackIndex = TimelineUtils.findVideoTrackIndex(audioExtractor);
+                        audioExtractor.selectTrack(audioTrackIndex);
+
+                        MediaFormat audioFormat = audioExtractor.getTrackFormat(audioTrackIndex);
+                        audioDecoder = MediaCodec.createDecoderByType(audioFormat.getString(MediaFormat.KEY_MIME));
+                        audioDecoder.configure(audioFormat, null, null, 0);
+                        audioDecoder.start();
+
+                        int sampleRate = audioFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE);
+                        int channelConfig = AudioFormat.CHANNEL_OUT_STEREO;
+                        int audioFormatPCM = AudioFormat.ENCODING_PCM_16BIT;
+                        int minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormatPCM);
+
+                        audioTrack = new AudioTrack(
+                                AudioManager.STREAM_MUSIC,
+                                sampleRate,
+                                channelConfig,
+                                audioFormatPCM,
+                                minBufferSize,
+                                AudioTrack.MODE_STREAM
+                        );
+                        audioTrack.play();
+
                         break;
                     }
                 }
@@ -2681,10 +2860,76 @@ frameRate = 60;
 //                }
                 return;
             }
-            if(isPlaying && !isSeekingOnly) return;
+//            if(isPlaying && !isSeekingOnly) return;
 
             startPlayingAt(playheadTime, isSeekingOnly);
         }
+
+        private void pumpDecoderVideoSeek(float playheadTime) {
+            if(videoDecoder == null) return;
+            float clipTime = playheadTime - clip.startTime;
+            long ptsUs = (long)(clipTime * 1_000_000); // override presentation timestamp
+            int inputIndex = videoDecoder.dequeueInputBuffer(0);
+            if (inputIndex >= 0) {
+                ByteBuffer inputBuffer = videoDecoder.getInputBuffer(inputIndex);
+                int sampleSize = videoExtractor.readSampleData(inputBuffer, 0);
+
+                if (sampleSize >= 0) {
+                    videoExtractor.seekTo(ptsUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
+                    videoDecoder.queueInputBuffer(inputIndex, 0, sampleSize, ptsUs, 0);
+
+                } else {
+                    videoDecoder.queueInputBuffer(inputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                }
+            }
+
+            MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
+            int outputIndex = videoDecoder.dequeueOutputBuffer(bufferInfo, 0);
+            if (outputIndex >= 0) {
+                videoDecoder.releaseOutputBuffer(outputIndex, true); // true = render to surface
+            }
+        }
+        private void pumpDecoderAudioSeek(float playheadTime) {
+            if (audioDecoder == null) return;
+            float clipTime = playheadTime - clip.startTime;
+            long ptsUs = (long)(clipTime * 1_000_000); // override presentation timestamp
+
+            int inputIndex = audioDecoder.dequeueInputBuffer(0);
+            if (inputIndex >= 0) {
+                ByteBuffer inputBuffer = audioDecoder.getInputBuffer(inputIndex);
+                int sampleSize = audioExtractor.readSampleData(inputBuffer, 0);
+
+                if (sampleSize >= 0) {
+                    // Seek extractor to desired timestamp
+                    audioExtractor.seekTo(ptsUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
+                    audioDecoder.queueInputBuffer(inputIndex, 0, sampleSize, ptsUs, 0);
+                } else {
+                    audioDecoder.queueInputBuffer(inputIndex, 0, 0, 0,
+                            MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                }
+            }
+
+            MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
+            int outputIndex = audioDecoder.dequeueOutputBuffer(bufferInfo, 0);
+            if (outputIndex >= 0) {
+                ByteBuffer outputBuffer = audioDecoder.getOutputBuffer(outputIndex);
+
+                if (bufferInfo.size > 0 && outputBuffer != null) {
+                    byte[] chunk = new byte[bufferInfo.size];
+                    outputBuffer.get(chunk);
+                    outputBuffer.clear();
+
+                    // Write PCM data to AudioTrack
+                    audioTrack.write(chunk, 0, chunk.length);
+                }
+
+                audioDecoder.releaseOutputBuffer(outputIndex, false); // false = no surface render
+            }
+        }
+
+
+
+
 
         public void startPlayingAt(float playheadTime, boolean isSeekingOnly) {
             if (!isVisible(playheadTime)) {
@@ -2704,34 +2949,38 @@ frameRate = 60;
                     case VIDEO:
                     {
 
-                        if(clip.getLocalClipTime(playheadTime) * 1000 > 0 && clip.getLocalClipTime(playheadTime) * 1000 < clip.duration)
-                        {
-                            videoPlayer.seekTo((long) (clip.getTrimmedLocalTime(clip.getLocalClipTime(playheadTime)) * 1000000));
-                            System.err.println(videoPlayer.getCurrentPosition());
-                            if(!isSeekingOnly)
-                            {
-                                videoPlayer.start();
-                                isPlaying = true;
-                            }
-                        }
+//                        if(clip.getLocalClipTime(playheadTime) * 1000 > 0 && clip.getLocalClipTime(playheadTime) * 1000 < clip.duration)
+//                        {
+//                            videoPlayer.seekTo((long) (clip.getTrimmedLocalTime(clip.getLocalClipTime(playheadTime)) * 1000000));
+//                            System.err.println(videoPlayer.getCurrentPosition());
+//                            if(!isSeekingOnly)
+//                            {
+//                                videoPlayer.start();
+//                                isPlaying = true;
+//                            }
+//                        }
+                        pumpDecoderVideoSeek(playheadTime);
                         break;
                     }
                     case AUDIO:
                     {
-                        if(clip.getLocalClipTime(playheadTime) * 1000 > 0 && clip.getLocalClipTime(playheadTime) * 1000 < clip.duration)
-                        {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                audioPlayer.seekTo((int) (clip.getTrimmedLocalTime(clip.getLocalClipTime(playheadTime)) * 1000), android.media.MediaPlayer.SEEK_CLOSEST);
-                            }
-                            else {
-                                audioPlayer.seekTo((int) (clip.getTrimmedLocalTime(clip.getLocalClipTime(playheadTime)) * 1000));
-                            }
-                            if(!isSeekingOnly)
-                            {
-                                audioPlayer.start();
-                                isPlaying = true;
-                            }
-                        }
+//                        if(clip.getLocalClipTime(playheadTime) * 1000 > 0 && clip.getLocalClipTime(playheadTime) * 1000 < clip.duration)
+//                        {
+//                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//                                audioPlayer.seekTo((int) (clip.getTrimmedLocalTime(clip.getLocalClipTime(playheadTime)) * 1000), android.media.MediaPlayer.SEEK_CLOSEST);
+//                            }
+//                            else {
+//                                audioPlayer.seekTo((int) (clip.getTrimmedLocalTime(clip.getLocalClipTime(playheadTime)) * 1000));
+//                            }
+//                            if(!isSeekingOnly)
+//                            {
+//                                audioPlayer.start();
+//                                isPlaying = true;
+//                            }
+//                        }
+
+
+                        pumpDecoderAudioSeek(playheadTime);
                         break;
                     }
 
@@ -2748,13 +2997,17 @@ frameRate = 60;
 
 
         public void release() {
-            if (audioPlayer != null) {
-                audioPlayer.stop();
-                audioPlayer.release();
+            if (audioDecoder != null) {
+                audioDecoder.release();
             }
-            if (videoPlayer != null) {
-                videoPlayer.stop();
-                videoPlayer.release();
+            if (audioExtractor != null) {
+                audioExtractor.release();
+            }
+            if(videoDecoder != null) {
+                videoDecoder.release();
+            }
+            if(videoExtractor != null) {
+                videoExtractor.release();
             }
         }
     }
@@ -2826,14 +3079,14 @@ frameRate = 60;
         }
 
 
-        public void startPlayAt(float time) {
+        public void startPlayAt(float playheadTime) {
 
             boolean renderedAny = false;
 
             for (List<ClipRenderer> track : trackLayers) {
                 for (ClipRenderer clipRenderer : track) {
-                    if (clipRenderer.isVisible(time)) {
-                        clipRenderer.startPlayingAt(time, false);
+                    if (clipRenderer.isVisible(playheadTime)) {
+                        clipRenderer.renderFrame(playheadTime, false);
                         renderedAny = true;
                     }
                 }
