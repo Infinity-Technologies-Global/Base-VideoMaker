@@ -724,6 +724,10 @@ public class MainActivity extends AppCompatActivityImpl {
             switch (data.version)
             {
                 case "1.0.0":
+                    // Migrate for the lower project
+                    // For example newer version may create the folder
+                    // but older version don't, therefore missing folder leading to ffmpeg failure
+                    // IOHelper.writeToFileAsRaw(MainActivity.this, "/file-or-folder/to/create/for/migration");
                     break;
             }
         }
