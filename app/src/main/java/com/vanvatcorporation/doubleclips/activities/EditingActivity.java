@@ -2765,7 +2765,6 @@ frameRate = 60;
         private MediaCodec videoDecoder;
 
         private MediaExtractor audioExtractor;
-        private MediaCodec audioDecoder;
         private AudioTrack audioTrack;
         public boolean isPlaying;
 
@@ -2874,7 +2873,6 @@ frameRate = 60;
 
                         MediaFormat audioFormat = audioExtractor.getTrackFormat(audioTrackIndex);
 
-
                         int sampleRate = audioFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE);
                         int channelConfig = (audioFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT) == 1) ?
                                 AudioFormat.CHANNEL_OUT_MONO : AudioFormat.CHANNEL_OUT_STEREO;
@@ -2951,7 +2949,7 @@ frameRate = 60;
             }
         }
         private void pumpDecoderAudioSeek(float playheadTime) {
-            if (audioDecoder == null) return;
+
             float clipTime = playheadTime - clip.startTime + clip.startClipTrim;
             long ptsUs = (long)(clipTime * 1_000_000); // override presentation timestamp
             audioExtractor.seekTo(ptsUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
@@ -2966,6 +2964,7 @@ frameRate = 60;
             buffer.clear();
 
             audioTrack.write(chunk, 0, chunk.length, AudioTrack.WRITE_NON_BLOCKING);
+
         }
 
 
@@ -3038,9 +3037,6 @@ frameRate = 60;
 
 
         public void release() {
-            if (audioDecoder != null) {
-                audioDecoder.release();
-            }
             if (audioExtractor != null) {
                 audioExtractor.release();
             }
