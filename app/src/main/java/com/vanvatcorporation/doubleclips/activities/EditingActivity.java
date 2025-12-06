@@ -2873,12 +2873,11 @@ frameRate = 60;
                         audioExtractor.selectTrack(audioTrackIndex);
 
                         MediaFormat audioFormat = audioExtractor.getTrackFormat(audioTrackIndex);
-                        audioDecoder = MediaCodec.createDecoderByType(audioFormat.getString(MediaFormat.KEY_MIME));
-                        audioDecoder.configure(audioFormat, null, null, 0);
-                        audioDecoder.start();
 
-                        int sampleRate = audioFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE); // 22050
-                        int channelConfig = AudioFormat.CHANNEL_OUT_MONO;
+
+                        int sampleRate = audioFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE);
+                        int channelConfig = (audioFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT) == 1) ?
+                                AudioFormat.CHANNEL_OUT_MONO : AudioFormat.CHANNEL_OUT_STEREO;
                         int audioFormatPCM = AudioFormat.ENCODING_PCM_16BIT;
                         int minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormatPCM);
 
@@ -2967,7 +2966,6 @@ frameRate = 60;
             buffer.clear();
 
             audioTrack.write(chunk, 0, chunk.length);
-            audioExtractor.advance();
         }
 
 
