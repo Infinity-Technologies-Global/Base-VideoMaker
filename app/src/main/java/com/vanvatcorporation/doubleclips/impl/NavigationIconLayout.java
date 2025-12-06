@@ -80,6 +80,17 @@ public class NavigationIconLayout extends RelativeLayout {
         }
     }
 
+
+
+    public ImageView getIconView()
+    {
+        return iconView;
+    }
+    public TextView getTextView()
+    {
+        return textView;
+    }
+
     public enum AnimationType {
         SELECTED, UNSELECTED
     }

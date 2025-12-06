@@ -130,7 +130,7 @@ public class FXCommandEmitter {
                         + outputLabel + ";\n";
             }
         }
-        else {
+        else if(!transition.effect.style.equals("none")) {
             tags.storeTag(mergedClip, outputLabel, fromTag.index);
             return fromTag.tag + toTag.tag +
                     "xfade=transition=" + transition.effect.style + ":duration=" + transition.duration + ":offset=" +

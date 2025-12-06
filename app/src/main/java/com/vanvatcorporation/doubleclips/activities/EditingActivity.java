@@ -75,6 +75,7 @@ import com.vanvatcorporation.doubleclips.helper.ParserHelper;
 import com.vanvatcorporation.doubleclips.helper.StringFormatHelper;
 import com.vanvatcorporation.doubleclips.impl.AppCompatActivityImpl;
 import com.vanvatcorporation.doubleclips.impl.ImageGroupView;
+import com.vanvatcorporation.doubleclips.impl.NavigationIconLayout;
 import com.vanvatcorporation.doubleclips.impl.PlayerVisualizerView;
 import com.vanvatcorporation.doubleclips.impl.TrackFrameLayout;
 import com.vanvatcorporation.doubleclips.impl.java.RunnableImpl;
@@ -727,7 +728,7 @@ public class EditingActivity extends AppCompatActivityImpl {
 
             if(selectedTrack != null) {
                 isClipSelectMultiple = true;
-                ((ImageView)toolbarClips.findViewById(R.id.selectMultipleButton)).setColorFilter(0xFFFF0000, PorterDuff.Mode.SRC_ATOP);
+                ((NavigationIconLayout)toolbarClips.findViewById(R.id.selectMultipleButton)).getIconView().setColorFilter(0xFFFF0000, PorterDuff.Mode.SRC_ATOP);
 
                 deselectingClip();
 
