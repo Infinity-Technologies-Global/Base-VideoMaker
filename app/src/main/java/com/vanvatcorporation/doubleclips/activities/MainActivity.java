@@ -549,7 +549,8 @@ public class MainActivity extends AppCompatActivityImpl {
             holder.projectSize.setText(StringFormatHelper.smartRound((projectItem.getProjectSize() / 1024d / 1024d), 2, true) + "MB");
             holder.projectDuration.setText(DateHelper.convertTimestampToHHMMSSFormat(projectItem.getProjectDuration()));
 
-            IOImageHelper.SaveFileAsPNGImage(context, IOHelper.CombinePath(projectItem.getProjectPath(), "preview.png"), ImageHelper.createBitmapFromDrawable(AppCompatResources.getDrawable(context, R.drawable.logo)));
+            if(!IOHelper.isFileExist(IOHelper.CombinePath(projectItem.getProjectPath(), "preview.png")))
+                IOImageHelper.SaveFileAsPNGImage(context, IOHelper.CombinePath(projectItem.getProjectPath(), "preview.png"), ImageHelper.createBitmapFromDrawable(AppCompatResources.getDrawable(context, R.drawable.logo)));
             Bitmap iconBitmap = IOImageHelper.LoadFileAsPNGImage(context, IOHelper.CombinePath(projectItem.getProjectPath(), "preview.png"));
             if(iconBitmap != null)
             {

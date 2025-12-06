@@ -1875,7 +1875,10 @@ public class EditingActivity extends AppCompatActivityImpl {
 
                     long durationMs = Long.parseLong(Objects.requireNonNull(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)));
                     int frameCount = frameCountOverride;
-                    if(frameCountOverride == -1) frameCount = (int) (durationMs * pixelsPerSecond / 10000 / 100) + 1;
+                    // Every 1s will have a thumbnail
+                    // Math.ceil will make sure 0.1 will be 1, and clamp to 1 using Math.max to make sure not 0 or below
+                    // TODO: Convert it to other thread in order to prevent lag
+                    if(frameCountOverride == -1) frameCount = (int) Math.max(1, Math.ceil((double) durationMs / 1000));
                     int originalWidth = Integer.parseInt(Objects.requireNonNull(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)));
                     int originalHeight = Integer.parseInt(Objects.requireNonNull(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)));
 
