@@ -2950,13 +2950,13 @@ frameRate = 60;
                 videoDecoder.releaseOutputBuffer(outputIndex, true); // true = render to surface
             }
         }
-        private void pumpDecoderAudioSeek(float playheadTime, boolean isSeekingOnly) {
+        private void pumpDecoderAudioSeek(float playheadTime) {
             if (audioDecoder == null) return;
             float clipTime = playheadTime - clip.startTime + clip.startClipTrim;
             long ptsUs = (long)(clipTime * 1_000_000); // override presentation timestamp
             audioExtractor.seekTo(ptsUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
 
-            ByteBuffer buffer = ByteBuffer.allocate(4096);
+            ByteBuffer buffer = ByteBuffer.allocate(32768);
 
             int sampleSize = audioExtractor.readSampleData(buffer, 0);
             if (sampleSize < 0) return; // End of stream
@@ -2965,7 +2965,7 @@ frameRate = 60;
             buffer.get(chunk, 0, sampleSize);
             buffer.clear();
 
-            audioTrack.write(chunk, 0, chunk.length);
+            audioTrack.write(chunk, 0, chunk.length, AudioTrack.WRITE_NON_BLOCKING);
         }
 
 
@@ -3021,7 +3021,7 @@ frameRate = 60;
 //                        }
 
 
-                        renderThreadExecutor.execute(() -> pumpDecoderAudioSeek(playheadTime, isSeekingOnly));
+                        renderThreadExecutor.execute(() -> pumpDecoderAudioSeek(playheadTime));
                         break;
                     }
 
