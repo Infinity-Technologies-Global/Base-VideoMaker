@@ -1856,24 +1856,24 @@ public class EditingActivity extends AppCompatActivityImpl {
 
 
     // Native Android user only
-    private static List<Bitmap> extractThumbnail(Context context, String filePath, ClipType type)
+    private static List<Bitmap> extractThumbnail(Context context, String filePath, Clip clip)
     {
-        return extractThumbnail(context, filePath, type, -1);
+        return extractThumbnail(context, filePath, clip, -1);
     }
-    private static List<Bitmap> extractThumbnail(Context context, String filePath, ClipType type, int frameCountOverride)
+    private static List<Bitmap> extractThumbnail(Context context, String filePath, Clip clip, int frameCountOverride)
     {
         List<Bitmap> thumbnails = new ArrayList<>();
-        if(type == null)
-            type = ClipType.EFFECT;
+        if(clip.type == null)
+            clip.type = ClipType.EFFECT;
         Drawable drawable = ResourcesCompat.getDrawable(context.getResources(), R.drawable.ic_launcher_background, null);
-        switch (type)
+        switch (clip.type)
         {
             case VIDEO:
                 try {
                     MediaMetadataRetriever retriever = new MediaMetadataRetriever();
                     retriever.setDataSource(filePath);
 
-                    long durationMs = Long.parseLong(Objects.requireNonNull(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)));
+                    long durationMs = (long) (clip.getCutoutDuration() * 1000);
                     int frameCount = frameCountOverride;
                     // Every 1s will have a thumbnail
                     // Math.ceil will make sure 0.1 will be 1, and clamp to 1 using Math.max to make sure not 0 or below
@@ -1886,7 +1886,7 @@ public class EditingActivity extends AppCompatActivityImpl {
                     int desiredHeight = originalHeight / Constants.SAMPLE_SIZE_PREVIEW_CLIP;
 
                     for (int i = 0; i < frameCount; i++) {
-                        long timeUs = (durationMs * 1000L * i) / frameCount;
+                        long timeUs = (long) (((clip.startClipTrim * 1_000_000) + durationMs * 1000L * i) / frameCount);
                         Bitmap frame;
                         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
                             frame = retriever.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, desiredWidth, desiredHeight);
@@ -2523,6 +2523,10 @@ public class EditingActivity extends AppCompatActivityImpl {
 
         public float getTrimmedLocalTime(float localClipTime) {
             return localClipTime + startClipTrim;
+        }
+
+        public float getCutoutDuration() {
+            return duration - startClipTrim - endClipTrim;
         }
     }
 
