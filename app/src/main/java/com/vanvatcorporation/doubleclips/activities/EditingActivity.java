@@ -1177,7 +1177,7 @@ public class EditingActivity extends AppCompatActivityImpl {
         //params.topMargin = 4; // 8
         clipView.setX(getTimeInX(data.startTime));
         clipView.setLayoutParams(params);
-        clipView.setFilledImageBitmap(combineThumbnails(extractThumbnail(this, data.getAbsolutePreviewPath(properties), data.type)));
+        clipView.setFilledImageBitmap(combineThumbnails(extractThumbnail(this, data.getAbsolutePreviewPath(properties), data)));
         clipView.setTag(data);
 
 
@@ -2030,7 +2030,7 @@ public class EditingActivity extends AppCompatActivityImpl {
                 if(nearestClip != null) break;
             }
             if(nearestClip != null)
-                IOImageHelper.SaveFileAsPNGImage(context, IOHelper.CombinePath(data.getProjectPath(), "preview.png"), extractThumbnail(context, nearestClip.getAbsolutePreviewPath(data), nearestClip.type, 1).get(0), 25);
+                IOImageHelper.SaveFileAsPNGImage(context, IOHelper.CombinePath(data.getProjectPath(), "preview.png"), extractThumbnail(context, nearestClip.getAbsolutePreviewPath(data), nearestClip, 1).get(0), 25);
 
             data.setProjectTimestamp(new Date().getTime());
             data.setProjectDuration((long) (timeline.duration * 1000));
