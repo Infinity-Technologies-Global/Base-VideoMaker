@@ -2955,43 +2955,19 @@ frameRate = 60;
             if (audioDecoder == null) return;
             float clipTime = playheadTime - clip.startTime + clip.startClipTrim;
             long ptsUs = (long)(clipTime * 1_000_000); // override presentation timestamp
+            audioExtractor.seekTo(ptsUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
 
-            int inputIndex = audioDecoder.dequeueInputBuffer(10000);
-            if (inputIndex >= 0) {
-                ByteBuffer inputBuffer = audioDecoder.getInputBuffer(inputIndex);
-                int sampleSize = audioExtractor.readSampleData(inputBuffer, 0);
+            ByteBuffer buffer = ByteBuffer.allocate(4096);
 
-                if (sampleSize >= 0) {
-                    // Seek extractor to desired timestamp
-                    if(isSeekingOnly)
-                        audioExtractor.seekTo(ptsUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
-                    else
-                    {
-                        audioExtractor.advance(); // <— move to next sample
-                        audioDecoder.queueInputBuffer(inputIndex, 0, sampleSize, ptsUs, 0);
-                    }
-                } else {
-                    audioDecoder.queueInputBuffer(inputIndex, 0, 0, 0,
-                            MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-                }
-            }
+            int sampleSize = audioExtractor.readSampleData(buffer, 0);
+            if (sampleSize < 0) return; // End of stream
 
-            MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
-            int outputIndex = audioDecoder.dequeueOutputBuffer(bufferInfo, 10000);
-            if (outputIndex >= 0) {
-                ByteBuffer outputBuffer = audioDecoder.getOutputBuffer(outputIndex);
+            byte[] chunk = new byte[sampleSize];
+            buffer.get(chunk, 0, sampleSize);
+            buffer.clear();
 
-                if (bufferInfo.size > 0 && outputBuffer != null) {
-                    byte[] chunk = new byte[bufferInfo.size];
-                    outputBuffer.get(chunk);
-                    outputBuffer.clear();
-
-                    // Write PCM data to AudioTrack
-                    audioTrack.write(chunk, 0, chunk.length);
-                }
-
-                audioDecoder.releaseOutputBuffer(outputIndex, false); // false = no surface render
-            }
+            audioTrack.write(chunk, 0, chunk.length);
+            audioExtractor.advance();
         }
 
 
