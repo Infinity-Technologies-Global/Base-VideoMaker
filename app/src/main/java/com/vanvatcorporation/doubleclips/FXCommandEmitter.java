@@ -165,6 +165,8 @@ public class FXCommandEmitter {
             put("custom_fake-glass-shatter", "Fake Glass Shatter [Custom]");
 
 
+            put("none", "None");
+
             put("fade", "Cross Fade");
             put("dissolve", "Dissolve");
             put("radial ", "Radial");

@@ -443,6 +443,10 @@ public class EditingActivity extends AppCompatActivityImpl {
                         }
                     });
         }
+        else {
+            // Any other type should be drop
+            dialog.dismiss();
+        }
     }
 
 
@@ -1873,7 +1877,7 @@ public class EditingActivity extends AppCompatActivityImpl {
                     MediaMetadataRetriever retriever = new MediaMetadataRetriever();
                     retriever.setDataSource(filePath);
 
-                    long durationMs = (long) (clip.getCutoutDuration() * 1000);
+                    long durationMs = (long) (clip.duration * 1000);
                     int frameCount = frameCountOverride;
                     // Every 1s will have a thumbnail
                     // Math.ceil will make sure 0.1 will be 1, and clamp to 1 using Math.max to make sure not 0 or below
@@ -1886,7 +1890,7 @@ public class EditingActivity extends AppCompatActivityImpl {
                     int desiredHeight = originalHeight / Constants.SAMPLE_SIZE_PREVIEW_CLIP;
 
                     for (int i = 0; i < frameCount; i++) {
-                        long timeUs = (long) (((clip.startClipTrim * 1_000_000) + durationMs * 1000L * i) / frameCount);
+                        long timeUs = (long) (clip.startClipTrim * 1_000_000) +  ((durationMs * 1000L * i) / frameCount);
                         Bitmap frame;
                         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
                             frame = retriever.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, desiredWidth, desiredHeight);
