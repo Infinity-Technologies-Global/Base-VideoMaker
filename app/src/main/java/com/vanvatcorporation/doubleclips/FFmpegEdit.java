@@ -335,13 +335,45 @@ public class FFmpegEdit {
                     case VIDEO:
                     case IMAGE:
 
+                        // Transition extension
+                        // First we find the exact clip associated with the TransitionClip's clipA
+                        // Then extract the half duration, we don't need the rest for now at least
+                        // This for loop may inefficient, but it works! Optimize this later
+                        // TODO: Optimize the search.
+                        float fillingTransitionDuration = 0;
+
+                        for (EditingActivity.TransitionClip transition : track.transitions) {
+                            if(clip == transition.fromClip && !transition.effect.style.equals("none")) {
+                                fillingTransitionDuration = transition.duration / 2; // divide by 2 to get the half of it.
+                                break;
+                            }
+                        }
+                        // Because we based on availability of endClipTrim, we first get the few parameters
+                        // correct adding (extendMediaDuration) and freeze frame duration (freezeFrameDuration)
+
+                        // extendMediaDuration: We get the minimum of the clip to extend, if endClipTrim has more than filling
+                        // then we just take the half duration of transition to extend.
+                        // if filling is more than the available of clip, which is endClipTrim, then we only extend to the maximum duration of the clip,
+                        // that mean endClipTrim is meaningless.
+                        float extendMediaDuration = Math.min(clip.endClipTrim, fillingTransitionDuration);
+
+                        // freezeFrameDuration: We get the max value of these 2 variable ( fillingTransitionDuration - clip.endClipTrim and 0 )
+                        // fillingTransitionDuration - clip.endClipTrim will get the remaining duration after the clip extend all of it endClipTrim
+                        // Why 0? If the subtraction is negative then it has no freeze frame because there is still enough endClipTrim to extend.
+                        float freezeFrameDuration = Math.max(fillingTransitionDuration - clip.endClipTrim, 0);
+
+
+
+
                         // 🖼️ Video/Image visual logic
+                        // Transition extension: Add half of the duration to the transparent layer, if transition isn't exist, then add 0
                         filterComplex.append("[").append(inputIndex).append(":v]")
                                 .append("trim=duration=").append(clip.duration).append(",")
                                 .append("setpts=PTS-STARTPTS+").append(clip.startTime).append("/TB").append(transparentLabel).append(";\n");
                         inputIndex++;
 
                         // Video can use start and end trim, but image cant, so we need to specify the trim for each type.
+                        // Transition extension: Because we based on availability of
                         String trimFilter =
                                 clip.type == EditingActivity.ClipType.VIDEO ?
                                         "trim=start=" + clip.startClipTrim + ":end=" + (clip.startClipTrim + clip.duration) :
