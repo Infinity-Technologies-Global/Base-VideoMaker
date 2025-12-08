@@ -500,13 +500,9 @@ public class FFmpegEdit {
         // Null when there are no video in the track
         FfmpegFilterComplexTags.FilterComplexInfo mapTag = tags.useTag(0);
 
-        cmd.append("-filter_complex \"").append(filterComplex).append("\" ");
-        // If video is present
-        if(mapTag != null)
-        {
-            cmd.append("-map \"").append(mapTag.tag).append("\" ");
-        }
-        cmd.append(audioMaps)
+        cmd.append("-filter_complex \"").append(filterComplex).append("\" ")
+                .append("-map \"").append( (mapTag != null ? mapTag.tag : "[base]") ).append("\" ")
+                .append(audioMaps)
                 .append("-t ").append(timeline.duration)
                 .append(" -c:v libx264 -preset ").append(settings.getPreset())
                 .append(" -tune ").append(settings.getTune())
