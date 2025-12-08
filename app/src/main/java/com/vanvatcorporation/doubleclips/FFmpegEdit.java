@@ -332,6 +332,7 @@ public class FFmpegEdit {
 
 
 
+
                 // Transition extension
                 // First we find the exact clip associated with the TransitionClip's clipA
                 // Then extract the half duration, we don't need the rest for now at least
@@ -341,7 +342,25 @@ public class FFmpegEdit {
 
                 for (EditingActivity.TransitionClip transition : track.transitions) {
                     if(clip == transition.fromClip && !transition.effect.style.equals("none")) {
-                        fillingTransitionDuration = transition.duration / 2; // divide by 2 to get the half of it.
+                        switch (transition.mode)
+                        {
+                            case END_FIRST:
+                                // 0. End first mean the moment the second clip begin, the fade has completed, so we
+                                // doesnt need filling as we begin the transition at the clipA entirely
+                                fillingTransitionDuration = 0;
+                                break;
+                            case OVERLAP:
+                                // Duration / 2. Overlap mean half of clipA and half of clipB are join together, we only need
+                                // to fill half the clipA as clipB is already get the half.
+                                fillingTransitionDuration = transition.duration / 2;
+                                break;
+                            case BEGIN_SECOND:
+                                // Duration. Begin second mean the opposite to end first. The moment the second clip begin,
+                                // its when the transition begin, so we need to fill all of the duration that's going to fade
+                                fillingTransitionDuration = transition.duration;
+                                break;
+
+                        }
                         break;
                     }
                 }
