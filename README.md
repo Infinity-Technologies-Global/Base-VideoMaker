@@ -33,7 +33,7 @@ DoubleClips is an open-source, ready-to-use video editor with functionality simi
 - Multitrack editing
 - No watermarks or subscriptions
 - ~~Profiles and status~~
-- ~~Transactions~~ (Not what you might think! We can upload the template, set the price for people to buy, and you earn 80% of the transactions. Purchased templates can be customized however the buyers want. It’s literally their right to own it.)
+- ~~Transactions~~ (Not what you might think! You can upload the template, set the price for people to buy, and earn 80% of the transactions. Purchased templates can be customized however the buyers want. It’s literally their right to own it.)
 - ~~Sharable templates~~ (still in development, but yes, the template feature allows you to create videos super quickly, similar to CapCut. However, what CapCut lacks is the ability to modify the template edit fully, giving you complete control over the chosen template. For template creators, you also have full control over the templates you share, meaning you can disable the modification feature to prevent others from customizing it, kind of like GitHub's fork, branch, and similar features).
 
 ## Requirements
