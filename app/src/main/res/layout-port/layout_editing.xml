@@ -37,6 +37,12 @@
                 android:layout_width="50dp"
                 android:layout_height="50dp"
                 android:src="@drawable/baseline_keyboard_return_24"/>
+            <ImageButton
+                android:id="@+id/settingsButton"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_toEndOf="@id/backButton"
+                android:src="@drawable/baseline_search_24"/>
 
         </RelativeLayout>
 

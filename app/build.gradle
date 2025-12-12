@@ -32,6 +32,7 @@ android {
     }
     buildFeatures {
         buildConfig = true
+        shaders true
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8

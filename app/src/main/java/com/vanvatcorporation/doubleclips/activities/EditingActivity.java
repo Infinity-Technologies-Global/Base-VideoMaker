@@ -484,6 +484,8 @@ public class EditingActivity extends AppCompatActivityImpl {
         //settings = new VideoSettings(1280, 720, 30, 30, VideoSettings.FfmpegPreset.MEDIUM, VideoSettings.FfmpegTune.ZEROLATENCY);
         settings = new VideoSettings(1366, 768, 30, 30, VideoSettings.FfmpegPreset.MEDIUM, VideoSettings.FfmpegTune.ZEROLATENCY);
 
+        pixelsPerSecond = basePixelsPerSecond;
+
 
         setContentView(R.layout.layout_editing);
         timelineTracksContainer = findViewById(R.id.timeline_tracks_container);
