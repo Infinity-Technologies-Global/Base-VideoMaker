@@ -7,6 +7,7 @@ import com.vanvatcorporation.doubleclips.helper.IOHelper;
 public class Constants {
     public static final String DEFAULT_PROJECT_PROPERTIES_FILENAME = "project.properties";
     public static final String DEFAULT_TIMELINE_FILENAME = "project.timeline";
+    public static final String DEFAULT_VIDEO_SETTINGS_FILENAME = "project.settings";
     public static final String DEFAULT_PREVIEW_CLIP_FILENAME = "preview.mp4";
     public static final String DEFAULT_EXPORT_CLIP_FILENAME = "export.mp4";
     public static final String DEFAULT_LOGGING_DIRECTORY = "Logging";

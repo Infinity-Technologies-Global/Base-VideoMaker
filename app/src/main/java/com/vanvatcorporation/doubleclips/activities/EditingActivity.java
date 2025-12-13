@@ -111,7 +111,7 @@ public class EditingActivity extends AppCompatActivityImpl {
     VideoSettings settings;
 
     private LinearLayout timelineTracksContainer, rulerContainer, trackInfoLayout;
-    private RelativeLayout timelineWrapper, editingZone, previewZone, editingToolsZone;
+    private RelativeLayout timelineWrapper, editingZone, previewZone, editingToolsZone, outerPreviewViewGroup;
     private HorizontalScrollView timelineScroll, rulerScroll;
     private ScrollView timelineVerticalScroll, trackInfoVerticalScroll;
     private TextView currentTimePosText, durationTimePosText;
@@ -139,6 +139,8 @@ public class EditingActivity extends AppCompatActivityImpl {
     private final int TRACK_HEIGHT = 100;
     private static final float MIN_CLIP_DURATION = 0.1f; // in seconds
     public static int pixelsPerSecond = 100;
+
+    public static int previewAvailableWidth, previewAvailableHeight;
 
     public static int centerOffset;
     int currentTimelineEnd = 0; // Keep a variable that tracks the furthest X position of any clip
@@ -508,7 +510,13 @@ public class EditingActivity extends AppCompatActivityImpl {
         properties = (MainActivity.ProjectData) createrBundle.getSerializable("ProjectProperties");
 
         //settings = new VideoSettings(1280, 720, 30, 30, VideoSettings.FfmpegPreset.MEDIUM, VideoSettings.FfmpegTune.ZEROLATENCY);
-        settings = new VideoSettings(1366, 768, 30, 30, VideoSettings.FfmpegPreset.MEDIUM, VideoSettings.FfmpegTune.ZEROLATENCY);
+        assert properties != null;
+        settings = VideoSettings.loadSettings(this, properties);
+
+        if(settings == null)
+        {
+            settings = new VideoSettings(1366, 768, 30, 30, VideoSettings.FfmpegPreset.MEDIUM, VideoSettings.FfmpegTune.ZEROLATENCY);
+        }
 
         pixelsPerSecond = basePixelsPerSecond;
 
@@ -542,6 +550,14 @@ public class EditingActivity extends AppCompatActivityImpl {
         previewViewGroupParams.height = settings.videoHeight;
         previewViewGroup.setLayoutParams(previewViewGroupParams);
 
+
+        outerPreviewViewGroup = findViewById(R.id.outerPreviewViewGroup);
+
+        outerPreviewViewGroup.post(() -> {
+            previewAvailableWidth = outerPreviewViewGroup.getWidth();
+            previewAvailableHeight = outerPreviewViewGroup.getHeight();
+        });
+
         playPauseButton = findViewById(R.id.playPauseButton);
         playPauseButton.setOnClickListener(v -> {
 
@@ -556,7 +572,7 @@ public class EditingActivity extends AppCompatActivityImpl {
         });
         exportButton = findViewById(R.id.exportButton);
         exportButton.setOnClickListener(v -> {
-            Timeline.saveTimeline(this, timeline, properties);
+            Timeline.saveTimeline(this, timeline, properties, settings);
             Intent intent = new Intent(this, ExportActivity.class);
             intent.putExtra("ProjectProperties", properties);
             intent.putExtra("ProjectSettings", settings);
@@ -1094,7 +1110,7 @@ public class EditingActivity extends AppCompatActivityImpl {
 
         // TODO: Tested for dragging back and forth clips. They're doing fine with the extractor SYNC_EXACT
         //  Limit the time of refreshing entire timeline like this.
-        timelineRenderer.buildTimeline(timeline, properties, previewViewGroup);
+        timelineRenderer.buildTimeline(timeline, properties, settings, previewViewGroup);
     }
     private void setCurrentTime(float value)
     {
@@ -1156,14 +1172,14 @@ public class EditingActivity extends AppCompatActivityImpl {
         super.finish();
 
         timelineRenderer.release();
-        Timeline.saveTimeline(this, timeline, properties);
+        Timeline.saveTimeline(this, timeline, properties, settings);
     }
     @Override
     public void onPause() {
         super.onPause();
 
         timelineRenderer.release();
-        Timeline.saveTimeline(this, timeline, properties);
+        Timeline.saveTimeline(this, timeline, properties, settings);
     }
 
     private Track addNewTrack() {
@@ -2032,6 +2048,26 @@ public class EditingActivity extends AppCompatActivityImpl {
 
 
 
+    public static int previewToRenderConversionX(float previewX, float renderResolutionX)
+    {
+        return (int) ((previewX / previewAvailableWidth) * renderResolutionX);
+    }
+    public static int previewToRenderConversionY(float previewY, float renderResolutionY)
+    {
+        return (int) ((previewY / previewAvailableHeight) * renderResolutionY);
+    }
+
+    public static int renderToPreviewConversionX(float renderX, float renderResolutionX)
+    {
+        return (int) ((renderX * previewAvailableWidth) / renderResolutionX);
+    }
+    public static int renderToPreviewConversionY(float renderY, float renderResolutionY)
+    {
+        return (int) ((renderY / previewAvailableHeight) * renderResolutionY);
+    }
+
+
+
 
 
 
@@ -2076,7 +2112,7 @@ public class EditingActivity extends AppCompatActivityImpl {
 
 
 
-        public static void saveTimeline(Context context, Timeline timeline, MainActivity.ProjectData data)
+        public static void saveTimeline(Context context, Timeline timeline, MainActivity.ProjectData data, VideoSettings settings)
         {
             float max = 0;
             for (Track trackCpn : timeline.tracks) {
@@ -2108,7 +2144,10 @@ public class EditingActivity extends AppCompatActivityImpl {
 
 
             data.savePropertiesAtProject(context);
+            settings.saveSettings(context, data);
             IOHelper.writeToFile(context, IOHelper.CombinePath(data.getProjectPath(), Constants.DEFAULT_TIMELINE_FILENAME), jsonTimeline);
+
+
         }
         public static Timeline loadRawTimeline(Context context, MainActivity.ProjectData data)
         {
@@ -2740,6 +2779,23 @@ public class EditingActivity extends AppCompatActivityImpl {
             return tune;
         }
 
+        public void saveSettings(Context context, MainActivity.ProjectData data) {
+            IOHelper.writeToFile(context, IOHelper.CombinePath(data.getProjectPath(), Constants.DEFAULT_VIDEO_SETTINGS_FILENAME), new Gson().toJson(this));
+        }
+        public void loadSettingsFromProject(Context context, MainActivity.ProjectData data)
+        {
+            VideoSettings loadSettings = loadSettings(context, data);
+            this.videoWidth = loadSettings.videoWidth;
+            this.videoHeight = loadSettings.videoHeight;
+            this.frameRate = loadSettings.frameRate;
+            this.crf = loadSettings.crf;
+            this.preset = loadSettings.preset;
+            this.tune = loadSettings.tune;
+        }
+        public static VideoSettings loadSettings(Context context, MainActivity.ProjectData data) {
+            return new Gson().fromJson(IOHelper.readFromFile(context, IOHelper.CombinePath(data.getProjectPath(), Constants.DEFAULT_VIDEO_SETTINGS_FILENAME)), VideoSettings.class);
+        }
+
         /*
         // Low
 videoWidth = 640;
@@ -2888,7 +2944,7 @@ frameRate = 60;
         private ExecutorService renderThreadExecutorVideo = Executors.newFixedThreadPool(1);
 
 
-        public ClipRenderer(Context context, Clip clip, MainActivity.ProjectData data, FrameLayout previewViewGroup) {
+        public ClipRenderer(Context context, Clip clip, MainActivity.ProjectData data, VideoSettings settings, FrameLayout previewViewGroup) {
             this.context = context;
             this.clip = clip;
 
@@ -2936,27 +2992,11 @@ frameRate = 60;
 
                                     surfaceTexture.setDefaultBufferSize(clip.width, clip.height); // or your target resolution
 
-
-                                    // Apply transform to avoid scaling
-                                    Matrix matrix = new Matrix();
-                                    matrix.reset();
-
-                                    // Keep original size (no scaling)
-                                    float scaleX = 1f;
-                                    float scaleY = 1f;
-                                    matrix.setScale(scaleX, scaleY);
-
-                                    //matrix.postScale(0.5f, 0.5f);
-//                                    matrix.postTranslate(posX, posY);
-
-                                    textureView.setTransform(matrix);
-                                    textureView.invalidate();
-
-                                    // Optionally center the video inside the smaller TextureView
-//                                    float dx = (width - 700) / 2f;  // negative if video is larger
-//                                    float dy = (height - 700) / 2f;
-//                                    matrix.postTranslate(dx, dy);
-
+                                    textureView.setTranslationX(EditingActivity.renderToPreviewConversionX(clip.posX, settings.videoWidth));
+                                    textureView.setTranslationY(EditingActivity.renderToPreviewConversionY(clip.posY, settings.videoHeight));
+                                    textureView.setScaleX(clip.scaleX);
+                                    textureView.setScaleY(clip.scaleY);
+                                    textureView.setRotation(clip.rotation);
 
 
                                 } catch (Exception e) {
@@ -3094,11 +3134,7 @@ frameRate = 60;
                 if(textureView != null)
                 {
                     setPivot();
-                    attachGestureControls(textureView, clip);
-                    textureView.setOnClickListener(v -> {
-                        clip.select();
-                        EditingActivity.selectedClip = clip;
-                    });
+                    attachGestureControls(textureView, clip, settings);
                 }
 
 
@@ -3259,7 +3295,7 @@ frameRate = 60;
         }
 
 
-        private void attachGestureControls(TextureView tv, Clip clip) {
+        private void attachGestureControls(TextureView tv, Clip clip, VideoSettings settings) {
             final GestureDetector tapDrag = new GestureDetector(tv.getContext(), new GestureDetector.SimpleOnGestureListener() {
                 @Override public boolean onDown(MotionEvent e) { return true; } // must return true to receive events
                 @Override public boolean onScroll(MotionEvent e1, MotionEvent e2, float dx, float dy) {
@@ -3270,8 +3306,8 @@ frameRate = 60;
                     tv.setTranslationY(newY);
 
                     // Sync model
-                    clip.posX = newX;
-                    clip.posY = newY;
+                    clip.posX = EditingActivity.previewToRenderConversionX(newX, settings.videoWidth);
+                    clip.posY = EditingActivity.previewToRenderConversionY(newY, settings.videoHeight);
                     return true;
                 }
                 @Override public boolean onSingleTapUp(MotionEvent e) {
@@ -3303,6 +3339,7 @@ frameRate = 60;
             tv.setOnTouchListener((v, event) -> {
                 tapDrag.onTouchEvent(event);
                 scaler.onTouchEvent(event);
+
 
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_POINTER_DOWN:
@@ -3381,7 +3418,7 @@ frameRate = 60;
             this.context = context;
         }
 
-        public void buildTimeline(Timeline timeline, MainActivity.ProjectData properties, FrameLayout previewViewGroup)
+        public void buildTimeline(Timeline timeline, MainActivity.ProjectData properties, VideoSettings settings, FrameLayout previewViewGroup)
         {
             for (List<ClipRenderer> trackRenderer : trackLayers) {
                 for (ClipRenderer clipRenderer : trackRenderer) {
@@ -3417,7 +3454,7 @@ frameRate = 60;
                         case VIDEO:
                         case AUDIO:
                         case IMAGE:
-                            ClipRenderer clipRenderer = new ClipRenderer(context, clip, properties, previewViewGroup);
+                            ClipRenderer clipRenderer = new ClipRenderer(context, clip, properties, settings, previewViewGroup);
                             renderers.add(clipRenderer);
                             break;
                     }
