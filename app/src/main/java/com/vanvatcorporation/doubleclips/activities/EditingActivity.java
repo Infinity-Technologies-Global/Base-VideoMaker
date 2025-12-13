@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
@@ -67,6 +68,7 @@ import com.vanvatcorporation.doubleclips.activities.editing.ClipsEditSpecificAre
 import com.vanvatcorporation.doubleclips.activities.editing.EffectEditSpecificAreaScreen;
 import com.vanvatcorporation.doubleclips.activities.editing.TextEditSpecificAreaScreen;
 import com.vanvatcorporation.doubleclips.activities.editing.TransitionEditSpecificAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.editing.VideoPropertiesEditSpecificAreaScreen;
 import com.vanvatcorporation.doubleclips.constants.Constants;
 import com.vanvatcorporation.doubleclips.externalUtils.Random;
 import com.vanvatcorporation.doubleclips.helper.DateHelper;
@@ -104,13 +106,13 @@ public class EditingActivity extends AppCompatActivityImpl {
     VideoSettings settings;
 
     private LinearLayout timelineTracksContainer, rulerContainer, trackInfoLayout;
-    private RelativeLayout timelineWrapper, editingZone, editingToolsZone;
+    private RelativeLayout timelineWrapper, editingZone, previewZone, editingToolsZone;
     private HorizontalScrollView timelineScroll, rulerScroll;
     private ScrollView timelineVerticalScroll, trackInfoVerticalScroll;
     private TextView currentTimePosText, durationTimePosText;
     private ImageButton addNewTrackButton;
     private RelativeLayout previewViewGroup;
-    private ImageButton playPauseButton, backButton;
+    private ImageButton playPauseButton, backButton, settingsButton;
     private Button exportButton;
     private TimelineRenderer timelineRenderer;
 
@@ -120,6 +122,7 @@ public class EditingActivity extends AppCompatActivityImpl {
     private EffectEditSpecificAreaScreen effectEditSpecificAreaScreen;
     private TransitionEditSpecificAreaScreen transitionEditSpecificAreaScreen;
     private ClipsEditSpecificAreaScreen clipsEditSpecificAreaScreen;
+    private VideoPropertiesEditSpecificAreaScreen videoPropertiesEditSpecificAreaScreen;
 
 
 
@@ -292,6 +295,7 @@ public class EditingActivity extends AppCompatActivityImpl {
 
 
         boolean isVideoHasAudio = false;
+        int width = 0, height = 0;
         // Video check
         if(type == ClipType.VIDEO)
         {
@@ -299,15 +303,26 @@ public class EditingActivity extends AppCompatActivityImpl {
                 MediaMetadataRetriever retriever = new MediaMetadataRetriever();
                 retriever.setDataSource(clipPath);
 
+                width = Integer.parseInt(Objects.requireNonNull(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)));
+                height = Integer.parseInt(Objects.requireNonNull(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)));
+
                 isVideoHasAudio = "yes".equals(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO));
                 retriever.close();
             } catch (IOException e) {
                 LoggingManager.LogExceptionToNoteOverlay(this, e);
             }
         }
+        if(type == ClipType.IMAGE)
+        {
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true; // Don't load the full bitmap
+            BitmapFactory.decodeFile(clipPath, options);
+            width = options.outWidth;
+            height = options.outHeight;
+        }
 
 
-        Clip newClip = new Clip(filename, currentTime + offsetTime, duration, selectedTrack.trackIndex, type, isVideoHasAudio);
+        Clip newClip = new Clip(filename, currentTime + offsetTime, duration, selectedTrack.trackIndex, type, isVideoHasAudio, width, height);
 
 
         addClipToTrack(selectedTrack, newClip);
@@ -501,6 +516,7 @@ public class EditingActivity extends AppCompatActivityImpl {
 
 
         editingZone = findViewById(R.id.editingZone);
+        previewZone = findViewById(R.id.previewZone);
         editingToolsZone = findViewById(R.id.editingToolsZone);
 
         currentTimePosText = findViewById(R.id.currentTimePosText);
@@ -515,6 +531,11 @@ public class EditingActivity extends AppCompatActivityImpl {
         //timelineTracksContainer.addView(addTrackButton);
 
         previewViewGroup = findViewById(R.id.previewViewGroup);
+
+        ViewGroup.LayoutParams previewViewGroupParams = previewViewGroup.getLayoutParams();
+        previewViewGroupParams.width = settings.videoWidth;
+        previewViewGroupParams.height = settings.videoHeight;
+        previewViewGroup.setLayoutParams(previewViewGroupParams);
 
         playPauseButton = findViewById(R.id.playPauseButton);
         playPauseButton.setOnClickListener(v -> {
@@ -540,6 +561,10 @@ public class EditingActivity extends AppCompatActivityImpl {
         backButton = findViewById(R.id.backButton);
         backButton.setOnClickListener(v -> {
             finish();
+        });
+        settingsButton = findViewById(R.id.settingsButton);
+        settingsButton.setOnClickListener(v -> {
+            videoPropertiesEditSpecificAreaScreen.open();
         });
 
 
@@ -610,19 +635,19 @@ public class EditingActivity extends AppCompatActivityImpl {
         handleEditZoneInteraction(timelineScroll);
     }
     private void editingMultiple() {
-        clipsEditSpecificAreaScreen.open(BaseEditSpecificAreaScreen.AnimationScreen.ToTop);
+        clipsEditSpecificAreaScreen.open();
     }
     private void editingSpecific(ClipType type) {
         switch (type)
         {
             case TEXT:
-                textEditSpecificAreaScreen.open(BaseEditSpecificAreaScreen.AnimationScreen.ToTop);
+                textEditSpecificAreaScreen.open();
                 break;
             case EFFECT:
-                effectEditSpecificAreaScreen.open(BaseEditSpecificAreaScreen.AnimationScreen.ToTop);
+                effectEditSpecificAreaScreen.open();
                 break;
             case TRANSITION:
-                transitionEditSpecificAreaScreen.open(BaseEditSpecificAreaScreen.AnimationScreen.ToTop);
+                transitionEditSpecificAreaScreen.open();
                 break;
         }
     }
@@ -714,7 +739,7 @@ public class EditingActivity extends AppCompatActivityImpl {
 
 
 
-            Clip newClip = new Clip("TEXT", currentTime, duration, selectedTrack.trackIndex, type, false);
+            Clip newClip = new Clip("TEXT", currentTime, duration, selectedTrack.trackIndex, type, false, 0, 0);
             newClip.textContent = "Simple text";
             newClip.fontSize = 30;
             addClipToTrack(selectedTrack, newClip);
@@ -729,7 +754,7 @@ public class EditingActivity extends AppCompatActivityImpl {
             float duration = 3f; // fallback default if needed
             ClipType type = ClipType.EFFECT; // if effect or unknown
 
-            Clip newClip = new Clip("EFFECT", currentTime, duration, selectedTrack.trackIndex, type, false);
+            Clip newClip = new Clip("EFFECT", currentTime, duration, selectedTrack.trackIndex, type, false, 0, 0);
             newClip.effect = new EffectTemplate("glitch-pulse", 1.2, 4.0);
 
             addClipToTrack(selectedTrack, newClip);
@@ -853,6 +878,12 @@ public class EditingActivity extends AppCompatActivityImpl {
         // ===========================       MULTIPLE CLIPS ZONE       ====================================
 
 
+        // ===========================       VIDEO PROPERTIES ZONE       ====================================
+        videoPropertiesEditSpecificAreaScreen = (VideoPropertiesEditSpecificAreaScreen) LayoutInflater.from(this).inflate(R.layout.view_edit_specific_video_properties, null);
+        previewZone.addView(videoPropertiesEditSpecificAreaScreen);
+        // ===========================       VIDEO PROPERTIES ZONE       ====================================
+
+
 
 
 
@@ -918,7 +949,7 @@ public class EditingActivity extends AppCompatActivityImpl {
             }
         };
         transitionEditSpecificAreaScreen.applyAllTransitionButton.setOnClickListener(v -> {
-            transitionEditSpecificAreaScreen.animateLayout(BaseEditSpecificAreaScreen.AnimationScreen.ToTop, BaseEditSpecificAreaScreen.AnimationType.Close);
+            transitionEditSpecificAreaScreen.animateLayout(BaseEditSpecificAreaScreen.AnimationType.Close);
             if(selectedKnot != null)
             {
                 for (int i = 0; i < timeline.tracks.get(selectedKnot.trackIndex).transitions.size(); i++)
@@ -961,6 +992,31 @@ public class EditingActivity extends AppCompatActivityImpl {
         };
         clipsEditSpecificAreaScreen.onOpen = () -> {
             clipsEditSpecificAreaScreen.clipsDurationContent.setText(String.valueOf(selectedClips.get(0).duration));
+        };
+
+
+        // ===========================       MULTIPLE CLIPS ZONE       ====================================
+
+
+
+        // ===========================       MULTIPLE CLIPS ZONE       ====================================
+
+        videoPropertiesEditSpecificAreaScreen.onClose = () -> {
+            settings.videoWidth = ParserHelper.TryParse(videoPropertiesEditSpecificAreaScreen.resolutionXField.getText().toString(), 1366);
+            settings.videoHeight = ParserHelper.TryParse(videoPropertiesEditSpecificAreaScreen.resolutionYField.getText().toString(), 768);
+            settings.crf = ParserHelper.TryParse(videoPropertiesEditSpecificAreaScreen.bitrateField.getText().toString(), 30);
+
+
+
+            ViewGroup.LayoutParams previewViewGroupParams = previewViewGroup.getLayoutParams();
+            previewViewGroupParams.width = settings.videoWidth;
+            previewViewGroupParams.height = settings.videoHeight;
+            previewViewGroup.setLayoutParams(previewViewGroupParams);
+        };
+        videoPropertiesEditSpecificAreaScreen.onOpen = () -> {
+            videoPropertiesEditSpecificAreaScreen.resolutionXField.setText(String.valueOf(settings.getVideoWidth()));
+            videoPropertiesEditSpecificAreaScreen.resolutionYField.setText(String.valueOf(settings.getVideoHeight()));
+            videoPropertiesEditSpecificAreaScreen.bitrateField.setText(String.valueOf(settings.getCRF()));
         };
 
 
@@ -2198,6 +2254,11 @@ public class EditingActivity extends AppCompatActivityImpl {
         public int trackIndex;
 
         @Expose
+        public int width;
+        @Expose
+        public int height;
+
+        @Expose
         public float posX;
         @Expose
         public float posY;
@@ -2242,7 +2303,7 @@ public class EditingActivity extends AppCompatActivityImpl {
         public transient View leftHandle, rightHandle;
         public transient ImageGroupView viewRef;
 
-        public Clip(String clipName, float startTime, float duration, int trackIndex, ClipType type, boolean isVideoHasAudio) {
+        public Clip(String clipName, float startTime, float duration, int trackIndex, ClipType type, boolean isVideoHasAudio, int width, int height) {
             this.clipName = clipName;
             this.startTime = startTime;
             this.startClipTrim = 0;
@@ -2252,6 +2313,9 @@ public class EditingActivity extends AppCompatActivityImpl {
             this.trackIndex = trackIndex;
             this.type = type;
             this.isVideoHasAudio = isVideoHasAudio;
+
+            this.width = width;
+            this.height = height;
 
             this.scaleX = 1;
             this.scaleY = 1;
@@ -2463,7 +2527,13 @@ public class EditingActivity extends AppCompatActivityImpl {
 
             float translatedLocalCurrentTime = getLocalClipTime(currentGlobalTime);
 
-            Clip secondaryClip = new Clip(clipName, currentGlobalTime, originalDuration, trackIndex, type, isVideoHasAudio);
+            Clip secondaryClip = new Clip(clipName, currentGlobalTime, originalDuration, trackIndex, type, isVideoHasAudio, width, height);
+
+            if(type == ClipType.TEXT)
+            {
+                secondaryClip.textContent = textContent;
+                secondaryClip.fontSize = fontSize;
+            }
 
             float oldEndClipTrim = endClipTrim;
             float oldStartClipTrim = startClipTrim;
@@ -2829,7 +2899,8 @@ frameRate = 60;
                         // VIDEO
 
                         surfaceView = new SurfaceView(context);
-                        RelativeLayout.LayoutParams surfaceViewLayoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+                        RelativeLayout.LayoutParams surfaceViewLayoutParams = new RelativeLayout.LayoutParams(clip.width, clip.height);
+                        surfaceView.getHolder().setFixedSize(clip.width, clip.height);
                         previewViewGroup.addView(surfaceView, surfaceViewLayoutParams);
 
                         surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
@@ -2912,7 +2983,7 @@ frameRate = 60;
                     {
 
                         surfaceView = new SurfaceView(context);
-                        RelativeLayout.LayoutParams surfaceViewLayoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+                        RelativeLayout.LayoutParams surfaceViewLayoutParams = new RelativeLayout.LayoutParams(clip.width, clip.height);
                         previewViewGroup.addView(surfaceView, surfaceViewLayoutParams);
 
                         SurfaceHolder surfaceHolder = surfaceView.getHolder();
@@ -3004,6 +3075,8 @@ frameRate = 60;
 
         private void pumpDecoderVideoSeek(float playheadTime) {
             if(videoDecoder == null) return;
+            if(surfaceView == null) return;
+            if(surface == null) return;
             float clipTime = playheadTime - clip.startTime + clip.startClipTrim;
             long ptsUs = (long)(clipTime * 1_000_000); // override presentation timestamp
             int inputIndex = videoDecoder.dequeueInputBuffer(0);

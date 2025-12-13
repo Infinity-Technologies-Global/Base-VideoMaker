@@ -37,16 +37,4 @@ public class ClipsEditSpecificAreaScreen extends BaseEditSpecificAreaScreen {
         clipsDurationContent = findViewById(R.id.durationContent);
     }
 
-
-
-
-    @Override
-    public void open(AnimationScreen animationScreen) {
-        super.open(animationScreen);
-    }
-
-    @Override
-    public void close(AnimationScreen animationScreen) {
-        super.close(animationScreen);
-    }
 }

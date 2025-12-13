@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.vanvatcorporation.doubleclips.activities.editing.VideoPropertiesEditSpecificAreaScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/editSpecificArea"
-    android:layout_below="@id/timestampBar"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
     <com.google.android.material.imageview.ShapeableImageView
@@ -54,15 +52,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="15dp"
-                android:layout_toEndOf="@id/resolutionText"
                 android:text="1366"
+                android:inputType="number"
                 android:textSize="18sp" />
             <TextView
                 android:id="@+id/xText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="15dp"
-                android:layout_toEndOf="@id/resolutionXField"
                 android:text="x"
                 android:textSize="18sp" />
             <EditText
@@ -70,8 +67,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="15dp"
-                android:layout_toEndOf="@id/xText"
                 android:text="768"
+                android:inputType="number"
                 android:textSize="18sp" />
 
 
@@ -93,12 +90,19 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="15dp"
-                android:layout_toEndOf="@id/bitrateText"
-                android:text="768"
+                android:text="30"
+                android:inputType="number"
+                android:textSize="18sp" />
+            <TextView
+                android:id="@+id/bitrateMeasurement"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="15dp"
+                android:text="Mbps"
                 android:textSize="18sp" />
 
 
         </LinearLayout>
     </LinearLayout>
 
-</RelativeLayout>
+</com.vanvatcorporation.doubleclips.activities.editing.VideoPropertiesEditSpecificAreaScreen>

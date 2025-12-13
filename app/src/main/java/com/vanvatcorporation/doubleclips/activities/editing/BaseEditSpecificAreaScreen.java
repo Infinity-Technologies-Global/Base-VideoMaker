@@ -18,6 +18,10 @@ public class BaseEditSpecificAreaScreen extends RelativeLayout {
     public ImageButton closeWindowButton;
     public Runnable onClose;
     public Runnable onOpen;
+
+    public AnimationScreen animationScreen = AnimationScreen.ToTop;
+
+
     public BaseEditSpecificAreaScreen(Context context) {
         super(context);
     }
@@ -43,28 +47,29 @@ public class BaseEditSpecificAreaScreen extends RelativeLayout {
     public void init() {
         windowBackground = findViewById(R.id.windowBackground);
         closeWindowButton = findViewById(R.id.closeWindowButton);
+        setVisibility(GONE);
 
         // Only visible that we gonna block the view
         windowBackground.setOnLongClickListener(v -> false);
         closeWindowButton.setOnClickListener(v -> {
-            close(AnimationScreen.ToTop);
+            close();
         });
     }
-    public void open(AnimationScreen animationScreen)
+    public void open()
     {
-        animateLayout(animationScreen, AnimationType.Open);
+        animateLayout(AnimationType.Open);
 
         onOpen.run();
     }
-    public void close(AnimationScreen animationScreen)
+    public void close()
     {
-        animateLayout(animationScreen, AnimationType.Close);
+        animateLayout(AnimationType.Close);
 
         onClose.run();
     }
 
 
-    public void animateLayout(AnimationScreen animationScreen, AnimationType type) {
+    public void animateLayout(AnimationType type) {
         Animation animation;
         if(type == AnimationType.Close)
         {

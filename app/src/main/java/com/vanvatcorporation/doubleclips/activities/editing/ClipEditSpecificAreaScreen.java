@@ -6,9 +6,6 @@ import android.util.AttributeSet;
 public class ClipEditSpecificAreaScreen extends BaseEditSpecificAreaScreen {
 
 
-
-
-
     public ClipEditSpecificAreaScreen(Context context) {
         super(context);
     }
@@ -25,16 +22,10 @@ public class ClipEditSpecificAreaScreen extends BaseEditSpecificAreaScreen {
         super(context, attrs, defStyleAttr, defStyleRes);
     }
 
-
-
-
     @Override
-    public void open(AnimationScreen animationScreen) {
-        super.open(animationScreen);
+    public void init()
+    {
+        super.init();
     }
 
-    @Override
-    public void close(AnimationScreen animationScreen) {
-        super.close(animationScreen);
-    }
 }

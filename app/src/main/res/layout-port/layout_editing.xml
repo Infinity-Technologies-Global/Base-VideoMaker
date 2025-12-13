@@ -13,11 +13,22 @@
 
 
         <RelativeLayout
-            android:id="@+id/previewViewGroup"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_below="@id/top_bar"
-            android:layout_above="@id/controller_bar"/>
+            android:layout_above="@id/controller_bar"
+            android:gravity="center">
+
+
+            <RelativeLayout
+                android:id="@+id/previewViewGroup"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+
+            </RelativeLayout>
+
+        </RelativeLayout>
 
 
 
@@ -42,7 +53,7 @@
                 android:layout_width="50dp"
                 android:layout_height="50dp"
                 android:layout_toEndOf="@id/backButton"
-                android:src="@drawable/baseline_search_24"/>
+                android:src="@drawable/baseline_display_settings_24"/>
 
         </RelativeLayout>
 

@@ -40,15 +40,4 @@ public class TextEditSpecificAreaScreen extends BaseEditSpecificAreaScreen {
     }
 
 
-
-
-    @Override
-    public void open(AnimationScreen animationScreen) {
-        super.open(animationScreen);
-    }
-
-    @Override
-    public void close(AnimationScreen animationScreen) {
-        super.close(animationScreen);
-    }
 }

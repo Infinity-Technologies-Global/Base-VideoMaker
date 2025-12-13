@@ -51,15 +51,4 @@ public class EffectEditSpecificAreaScreen extends BaseEditSpecificAreaScreen {
     }
 
 
-
-
-    @Override
-    public void open(AnimationScreen animationScreen) {
-        super.open(animationScreen);
-    }
-
-    @Override
-    public void close(AnimationScreen animationScreen) {
-        super.close(animationScreen);
-    }
 }
