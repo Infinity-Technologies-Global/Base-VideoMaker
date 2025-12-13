@@ -62,6 +62,11 @@ import com.google.gson.annotations.Expose;
 import com.vanvatcorporation.doubleclips.FFmpegEdit;
 import com.vanvatcorporation.doubleclips.FXCommandEmitter;
 import com.vanvatcorporation.doubleclips.R;
+import com.vanvatcorporation.doubleclips.activities.editing.BaseEditSpecificAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.editing.ClipsEditSpecificAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.editing.EffectEditSpecificAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.editing.TextEditSpecificAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.editing.TransitionEditSpecificAreaScreen;
 import com.vanvatcorporation.doubleclips.constants.Constants;
 import com.vanvatcorporation.doubleclips.externalUtils.Random;
 import com.vanvatcorporation.doubleclips.helper.DateHelper;
@@ -111,28 +116,10 @@ public class EditingActivity extends AppCompatActivityImpl {
 
     private TrackFrameLayout addNewTrackBlankTrackSpacer;
 
-
-    private RelativeLayout editSpecificAreaText;
-    private ImageButton closeTextWindowButton;
-    private EditText textEditContent;
-    private EditText textSizeContent;
-
-    private RelativeLayout editSpecificAreaEffect;
-    private ImageButton closeEffectWindowButton;
-    private Spinner effectEditContent;
-    private EditText effectDurationContent;
-
-    private RelativeLayout editSpecificAreaTransition;
-    private ImageButton closeTransitionWindowButton;
-    private Button applyAllTransitionButton;
-    private Spinner transitionEditContent;
-    private EditText transitionDurationContent;
-    private Spinner transitionModeEditContent;
-
-
-    private RelativeLayout editMultipleAreaClips;
-    private ImageButton closeClipsWindowButton;
-    private EditText clipsDurationContent;
+    private TextEditSpecificAreaScreen textEditSpecificAreaScreen;
+    private EffectEditSpecificAreaScreen effectEditSpecificAreaScreen;
+    private TransitionEditSpecificAreaScreen transitionEditSpecificAreaScreen;
+    private ClipsEditSpecificAreaScreen clipsEditSpecificAreaScreen;
 
 
 
@@ -333,6 +320,18 @@ public class EditingActivity extends AppCompatActivityImpl {
                     processingPreview(newClip, clipPath, previewClipPath);
                 }));
 
+        if(type == ClipType.VIDEO && isVideoHasAudio)
+        {
+            previewRenderQueue.enqueue(new FFmpegEdit.FfmpegRenderQueue.FfmpegRenderQueueInfo("Preview Generation",
+                    () -> {
+                        // Extract audio from Video if it has audio
+                        Clip audioClip = new Clip(newClip);
+                        audioClip.type = ClipType.AUDIO;
+                        processingPreview(audioClip, clipPath, previewClipPath);
+                    }));
+        }
+
+
 
         return offsetTime;
     }
@@ -458,6 +457,13 @@ public class EditingActivity extends AppCompatActivityImpl {
                             }
                         }
                     });
+
+
+
+
+
+
+
         }
         else {
             // Any other type should be drop
@@ -604,29 +610,19 @@ public class EditingActivity extends AppCompatActivityImpl {
         handleEditZoneInteraction(timelineScroll);
     }
     private void editingMultiple() {
-        editMultipleAreaClips.setVisibility(View.VISIBLE);
-        clipsDurationContent.setText(String.valueOf(selectedClips.get(0).duration));
+        clipsEditSpecificAreaScreen.open(BaseEditSpecificAreaScreen.AnimationScreen.ToTop);
     }
     private void editingSpecific(ClipType type) {
         switch (type)
         {
             case TEXT:
-                editSpecificAreaText.setVisibility(View.VISIBLE);
-                textEditContent.setText(selectedClip.textContent);
-                textSizeContent.setText(String.valueOf(selectedClip.fontSize));
+                textEditSpecificAreaScreen.open(BaseEditSpecificAreaScreen.AnimationScreen.ToTop);
                 break;
             case EFFECT:
-                editSpecificAreaEffect.setVisibility(View.VISIBLE);
-                List<String> stringEffects = Arrays.asList(FXCommandEmitter.FXRegistry.effectsFXMap.values().toArray(new String[0]));
-                effectEditContent.setSelection(stringEffects.indexOf(FXCommandEmitter.FXRegistry.effectsFXMap.get(selectedClip.effect.style)));
-                effectDurationContent.setText(String.valueOf(selectedClip.effect.duration));
+                effectEditSpecificAreaScreen.open(BaseEditSpecificAreaScreen.AnimationScreen.ToTop);
                 break;
             case TRANSITION:
-                editSpecificAreaTransition.setVisibility(View.VISIBLE);
-                List<String> stringTransition = Arrays.asList(FXCommandEmitter.FXRegistry.transitionFXMap.values().toArray(new String[0]));
-                transitionEditContent.setSelection(stringTransition.indexOf(FXCommandEmitter.FXRegistry.transitionFXMap.get(selectedKnot.effect.style)));
-                transitionDurationContent.setText(String.valueOf(selectedKnot.effect.duration));
-                transitionModeEditContent.setSelection(selectedKnot.mode.ordinal());
+                transitionEditSpecificAreaScreen.open(BaseEditSpecificAreaScreen.AnimationScreen.ToTop);
                 break;
         }
     }
@@ -835,45 +831,25 @@ public class EditingActivity extends AppCompatActivityImpl {
     private void setupSpecificEdit()
     {
         // ===========================       TEXT ZONE       ====================================
-        editSpecificAreaText = (RelativeLayout) LayoutInflater.from(this).inflate(R.layout.view_edit_specific_text, null);
-        editingZone.addView(editSpecificAreaText);
-        closeTextWindowButton = editSpecificAreaText.findViewById(R.id.closeWindowButton);
-        textEditContent = editSpecificAreaText.findViewById(R.id.textContent);
-        textSizeContent = editSpecificAreaText.findViewById(R.id.sizeContent);
-        editSpecificAreaText.setVisibility(View.GONE);
+        textEditSpecificAreaScreen = (TextEditSpecificAreaScreen) LayoutInflater.from(this).inflate(R.layout.view_edit_specific_text, null);
+        editingZone.addView(textEditSpecificAreaScreen);
         // ===========================       TEXT ZONE       ====================================
 
 
         // ===========================       EFFECT ZONE       ====================================
-        editSpecificAreaEffect = (RelativeLayout) LayoutInflater.from(this).inflate(R.layout.view_edit_specific_effect, null);
-        editingZone.addView(editSpecificAreaEffect);
-        closeEffectWindowButton = editSpecificAreaEffect.findViewById(R.id.closeWindowButton);
-        effectEditContent = editSpecificAreaEffect.findViewById(R.id.effectContent);
-        effectDurationContent = editSpecificAreaEffect.findViewById(R.id.durationContent);
-        editSpecificAreaEffect.setVisibility(View.GONE);
+        effectEditSpecificAreaScreen = (EffectEditSpecificAreaScreen) LayoutInflater.from(this).inflate(R.layout.view_edit_specific_effect, null);
+        editingZone.addView(effectEditSpecificAreaScreen);
         // ===========================       EFFECT ZONE       ====================================
 
 
         // ===========================       TRANSITION ZONE       ====================================
-        editSpecificAreaTransition = (RelativeLayout) LayoutInflater.from(this).inflate(R.layout.view_edit_specific_transition, null);
-        editingZone.addView(editSpecificAreaTransition);
-        closeTransitionWindowButton = editSpecificAreaTransition.findViewById(R.id.closeWindowButton);
-        applyAllTransitionButton = editSpecificAreaTransition.findViewById(R.id.applyAllButton);
-        transitionEditContent = editSpecificAreaTransition.findViewById(R.id.transitionContent);
-        transitionDurationContent = editSpecificAreaTransition.findViewById(R.id.durationContent);
-        transitionModeEditContent = editSpecificAreaTransition.findViewById(R.id.transitionModeContent);
-        editSpecificAreaTransition.setVisibility(View.GONE);
+        transitionEditSpecificAreaScreen = (TransitionEditSpecificAreaScreen) LayoutInflater.from(this).inflate(R.layout.view_edit_specific_transition, null);
+        editingZone.addView(transitionEditSpecificAreaScreen);
         // ===========================       TRANSITION ZONE       ====================================
 
-
-
-
         // ===========================       MULTIPLE CLIPS ZONE       ====================================
-        editMultipleAreaClips = (RelativeLayout) LayoutInflater.from(this).inflate(R.layout.view_edit_multiple_clips, null);
-        editingZone.addView(editMultipleAreaClips);
-        closeClipsWindowButton = editMultipleAreaClips.findViewById(R.id.closeWindowButton);
-        clipsDurationContent = editMultipleAreaClips.findViewById(R.id.durationContent);
-        editMultipleAreaClips.setVisibility(View.GONE);
+        clipsEditSpecificAreaScreen = (ClipsEditSpecificAreaScreen) LayoutInflater.from(this).inflate(R.layout.view_edit_multiple_clips, null);
+        editingZone.addView(clipsEditSpecificAreaScreen);
         // ===========================       MULTIPLE CLIPS ZONE       ====================================
 
 
@@ -883,43 +859,44 @@ public class EditingActivity extends AppCompatActivityImpl {
 
         // ===========================       TEXT ZONE       ====================================
 
-        closeTextWindowButton.setOnClickListener(v -> {
-            editSpecificAreaText.setVisibility(View.GONE);
-
+        textEditSpecificAreaScreen.onClose = () -> {
             if(selectedClip != null)
             {
-                selectedClip.textContent = textEditContent.getText().toString();
-                selectedClip.fontSize = ParserHelper.TryParse(textSizeContent.getText().toString(), 28f);
+                selectedClip.textContent = textEditSpecificAreaScreen.textEditContent.getText().toString();
+                selectedClip.fontSize = ParserHelper.TryParse(textEditSpecificAreaScreen.textSizeContent.getText().toString(), 28f);
             }
-        });
+        };
+        textEditSpecificAreaScreen.onOpen = () -> {
+            textEditSpecificAreaScreen.textEditContent.setText(selectedClip.textContent);
+            textEditSpecificAreaScreen.textSizeContent.setText(String.valueOf(selectedClip.fontSize));
+        };
 
         // ===========================       TEXT ZONE       ====================================
 
 
         // ===========================       EFFECT ZONE       ====================================
 
-        effectEditContent.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, FXCommandEmitter.FXRegistry.effectsFXMap.values().toArray(new String[0])));
 
-        closeEffectWindowButton.setOnClickListener(v -> {
-            editSpecificAreaEffect.setVisibility(View.GONE);
-
+        effectEditSpecificAreaScreen.onClose = () -> {
             if(selectedClip != null)
             {
-                selectedClip.effect = new EffectTemplate((String) FXCommandEmitter.FXRegistry.effectsFXMap.keySet().toArray()[effectEditContent.getSelectedItemPosition()], ParserHelper.TryParse(effectDurationContent.getText().toString(), 1), 1);
+                selectedClip.effect = new EffectTemplate((String) FXCommandEmitter.FXRegistry.effectsFXMap.keySet().toArray()[effectEditSpecificAreaScreen.effectEditContent.getSelectedItemPosition()], ParserHelper.TryParse(effectEditSpecificAreaScreen.effectDurationContent.getText().toString(), 1), 1);
             }
-        });
+        };
+        effectEditSpecificAreaScreen.onOpen = () -> {
+            List<String> stringEffects = Arrays.asList(FXCommandEmitter.FXRegistry.effectsFXMap.values().toArray(new String[0]));
+            effectEditSpecificAreaScreen.effectEditContent.setSelection(stringEffects.indexOf(FXCommandEmitter.FXRegistry.effectsFXMap.get(selectedClip.effect.style)));
+            effectEditSpecificAreaScreen.effectDurationContent.setText(String.valueOf(selectedClip.effect.duration));
+        };
 
         // ===========================       EFFECT ZONE       ====================================
 
 
         // ===========================       TRANSITION ZONE       ====================================
 
-        transitionEditContent.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, FXCommandEmitter.FXRegistry.transitionFXMap.values().toArray(new String[0])));
-        transitionModeEditContent.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, TransitionClip.TransitionMode.values()));
 
-        closeTransitionWindowButton.setOnClickListener(v -> {
-            editSpecificAreaTransition.setVisibility(View.GONE);
 
+        transitionEditSpecificAreaScreen.onClose = () -> {
             if(selectedKnot != null)
             {
                 for (int i = 0; i < timeline.tracks.get(selectedKnot.trackIndex).transitions.size(); i++)
@@ -927,10 +904,10 @@ public class EditingActivity extends AppCompatActivityImpl {
                     TransitionClip clip = timeline.tracks.get(selectedKnot.trackIndex).transitions.get(i);
                     if(clip == selectedKnot)
                     {
-                        clip.duration = ParserHelper.TryParse(transitionDurationContent.getText().toString(), 0.5f);
-                        clip.effect.style = (String) FXCommandEmitter.FXRegistry.transitionFXMap.keySet().toArray()[transitionEditContent.getSelectedItemPosition()];
-                        clip.effect.duration = ParserHelper.TryParse(transitionDurationContent.getText().toString(), 0.5f);
-                        clip.mode = TransitionClip.TransitionMode.values()[transitionModeEditContent.getSelectedItemPosition()];
+                        clip.duration = ParserHelper.TryParse(transitionEditSpecificAreaScreen.transitionDurationContent.getText().toString(), 0.5f);
+                        clip.effect.style = (String) FXCommandEmitter.FXRegistry.transitionFXMap.keySet().toArray()[transitionEditSpecificAreaScreen.transitionEditContent.getSelectedItemPosition()];
+                        clip.effect.duration = ParserHelper.TryParse(transitionEditSpecificAreaScreen.transitionDurationContent.getText().toString(), 0.5f);
+                        clip.mode = TransitionClip.TransitionMode.values()[transitionEditSpecificAreaScreen.transitionModeEditContent.getSelectedItemPosition()];
 //
 //                        for (TransitionClip clip2 : timeline.tracks.get(selectedKnot.trackIndex).transitions)
 //                            System.err.println(clip2.duration);
@@ -939,18 +916,18 @@ public class EditingActivity extends AppCompatActivityImpl {
                     }
                 }
             }
-        });
-        applyAllTransitionButton.setOnClickListener(v -> {
-            editSpecificAreaTransition.setVisibility(View.GONE);
+        };
+        transitionEditSpecificAreaScreen.applyAllTransitionButton.setOnClickListener(v -> {
+            transitionEditSpecificAreaScreen.animateLayout(BaseEditSpecificAreaScreen.AnimationScreen.ToTop, BaseEditSpecificAreaScreen.AnimationType.Close);
             if(selectedKnot != null)
             {
                 for (int i = 0; i < timeline.tracks.get(selectedKnot.trackIndex).transitions.size(); i++)
                 {
                     TransitionClip clip = timeline.tracks.get(selectedKnot.trackIndex).transitions.get(i);
-                    clip.duration = ParserHelper.TryParse(transitionDurationContent.getText().toString(), 0.5f);
-                    clip.effect.style = (String) FXCommandEmitter.FXRegistry.transitionFXMap.keySet().toArray()[transitionEditContent.getSelectedItemPosition()];
-                    clip.effect.duration = ParserHelper.TryParse(transitionDurationContent.getText().toString(), 0.5f);
-                    clip.mode = TransitionClip.TransitionMode.values()[transitionModeEditContent.getSelectedItemPosition()];
+                    clip.duration = ParserHelper.TryParse(transitionEditSpecificAreaScreen.transitionDurationContent.getText().toString(), 0.5f);
+                    clip.effect.style = (String) FXCommandEmitter.FXRegistry.transitionFXMap.keySet().toArray()[transitionEditSpecificAreaScreen.transitionEditContent.getSelectedItemPosition()];
+                    clip.effect.duration = ParserHelper.TryParse(transitionEditSpecificAreaScreen.transitionDurationContent.getText().toString(), 0.5f);
+                    clip.mode = TransitionClip.TransitionMode.values()[transitionEditSpecificAreaScreen.transitionModeEditContent.getSelectedItemPosition()];
                 }
 //                for (TransitionClip clip : timeline.tracks.get(selectedKnot.trackIndex).transitions)
 //                    System.err.println(clip.duration);
@@ -958,6 +935,12 @@ public class EditingActivity extends AppCompatActivityImpl {
 
             }
         });
+        transitionEditSpecificAreaScreen.onOpen = () -> {
+            List<String> stringTransition = Arrays.asList(FXCommandEmitter.FXRegistry.transitionFXMap.values().toArray(new String[0]));
+            transitionEditSpecificAreaScreen.transitionEditContent.setSelection(stringTransition.indexOf(FXCommandEmitter.FXRegistry.transitionFXMap.get(selectedKnot.effect.style)));
+            transitionEditSpecificAreaScreen.transitionDurationContent.setText(String.valueOf(selectedKnot.effect.duration));
+            transitionEditSpecificAreaScreen.transitionModeEditContent.setSelection(selectedKnot.mode.ordinal());
+        };
 
         // ===========================       TRANSITION ZONE       ====================================
 
@@ -965,19 +948,20 @@ public class EditingActivity extends AppCompatActivityImpl {
 
         // ===========================       MULTIPLE CLIPS ZONE       ====================================
 
-        closeClipsWindowButton.setOnClickListener(v -> {
-            editMultipleAreaClips.setVisibility(View.GONE);
-
+        clipsEditSpecificAreaScreen.onClose = () -> {
             if(!selectedClips.isEmpty())
             {
                 for (Clip clip : selectedClips) {
                     float defaultValue = clip.duration;
-                    clip.duration = ParserHelper.TryParse(clipsDurationContent.getText().toString(), defaultValue);
+                    clip.duration = ParserHelper.TryParse(clipsEditSpecificAreaScreen.clipsDurationContent.getText().toString(), defaultValue);
                 }
                 updateClipLayouts();
                 updateCurrentClipEnd();
             }
-        });
+        };
+        clipsEditSpecificAreaScreen.onOpen = () -> {
+            clipsEditSpecificAreaScreen.clipsDurationContent.setText(String.valueOf(selectedClips.get(0).duration));
+        };
 
 
         // ===========================       MULTIPLE CLIPS ZONE       ====================================
@@ -2273,6 +2257,21 @@ public class EditingActivity extends AppCompatActivityImpl {
             this.scaleY = 1;
         }
 
+        public Clip(Clip clip) {
+            this.clipName = clip.clipName;
+            this.startTime = clip.startTime;
+            this.startClipTrim = clip.startClipTrim;
+            this.endClipTrim = clip.endClipTrim;
+            this.duration = clip.duration;
+            this.originalDuration = clip.originalDuration;
+            this.trackIndex = clip.trackIndex;
+            this.type = clip.type;
+            this.isVideoHasAudio = clip.isVideoHasAudio;
+
+            this.scaleX = clip.scaleX;
+            this.scaleY = clip.scaleY;
+        }
+
         public void registerClipHandle(ImageGroupView clipView, EditingActivity activity, HorizontalScrollView timelineScroll) {
             viewRef = clipView;
 
@@ -2811,7 +2810,8 @@ frameRate = 60;
         private Surface surface;
         private Context context;
 
-        private ExecutorService renderThreadExecutor = Executors.newFixedThreadPool(1);
+        private ExecutorService renderThreadExecutorAudio = Executors.newFixedThreadPool(1);
+        private ExecutorService renderThreadExecutorVideo = Executors.newFixedThreadPool(1);
 
 
         public ClipRenderer(Context context, Clip clip, MainActivity.ProjectData data, RelativeLayout previewViewGroup) {
@@ -2825,6 +2825,9 @@ frameRate = 60;
                 {
                     case VIDEO:
                     {
+
+                        // VIDEO
+
                         surfaceView = new SurfaceView(context);
                         RelativeLayout.LayoutParams surfaceViewLayoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
                         previewViewGroup.addView(surfaceView, surfaceViewLayoutParams);
@@ -2865,6 +2868,42 @@ frameRate = 60;
 
                             }
                         });
+
+
+
+
+
+
+
+
+
+
+
+                        // AUDIO
+
+                        audioExtractor = new MediaExtractor();
+                        audioExtractor.setDataSource(clip.getAbsolutePreviewPath(data, ".wav"));
+
+                        int audioTrackIndex = TimelineUtils.findVideoTrackIndex(audioExtractor);
+                        audioExtractor.selectTrack(audioTrackIndex);
+
+                        MediaFormat audioFormat = audioExtractor.getTrackFormat(audioTrackIndex);
+
+                        int sampleRate = audioFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE);
+                        int channelConfig = (audioFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT) == 1) ?
+                                AudioFormat.CHANNEL_OUT_MONO : AudioFormat.CHANNEL_OUT_STEREO;
+                        int audioFormatPCM = AudioFormat.ENCODING_PCM_16BIT;
+                        int minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormatPCM);
+
+                        audioTrack = new AudioTrack(
+                                AudioManager.STREAM_MUSIC,
+                                sampleRate,
+                                channelConfig,
+                                audioFormatPCM,
+                                minBufferSize,
+                                AudioTrack.MODE_STREAM
+                        );
+                        audioTrack.play();
 
 
                         break;
@@ -3038,7 +3077,10 @@ frameRate = 60;
 //                                isPlaying = true;
 //                            }
 //                        }
-                        renderThreadExecutor.execute(() -> pumpDecoderVideoSeek(playheadTime));
+                        renderThreadExecutorVideo.execute(() -> pumpDecoderVideoSeek(playheadTime));
+
+                        if(clip.isVideoHasAudio)
+                            renderThreadExecutorAudio.execute(() -> pumpDecoderAudioSeek(playheadTime));
                         break;
                     }
                     case AUDIO:
@@ -3059,7 +3101,7 @@ frameRate = 60;
 //                        }
 
 
-                        renderThreadExecutor.execute(() -> pumpDecoderAudioSeek(playheadTime));
+                        renderThreadExecutorAudio.execute(() -> pumpDecoderAudioSeek(playheadTime));
                         break;
                     }
 
@@ -3085,8 +3127,11 @@ frameRate = 60;
             if(videoExtractor != null) {
                 videoExtractor.release();
             }
-            if(renderThreadExecutor != null) {
-                renderThreadExecutor.shutdown();
+            if(renderThreadExecutorAudio != null) {
+                renderThreadExecutorAudio.shutdown();
+            }
+            if(renderThreadExecutorVideo != null) {
+                renderThreadExecutorVideo.shutdown();
             }
 
         }

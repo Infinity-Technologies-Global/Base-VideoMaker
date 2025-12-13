@@ -572,7 +572,10 @@ public class MainActivity extends AppCompatActivityImpl {
             }
             holder.projectTitle.setOnLongClickListener(v -> {
                 EditProjectTitle(projectItem);
-                return true;
+                return false;
+            });
+            holder.projectTitle.setOnClickListener(v -> {
+                holder.wholeView.performClick();
             });
             holder.moreButton.setOnClickListener(v -> {
                 PopupMenu popup = new PopupMenu(context, v);
