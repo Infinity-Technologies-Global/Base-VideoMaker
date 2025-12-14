@@ -2129,7 +2129,7 @@ public class EditingActivity extends AppCompatActivityImpl {
     }
     public static int renderToPreviewConversionY(float renderY, float renderResolutionY, float clipScaleY)
     {
-        return (int) ((renderY / previewAvailableHeight) * renderResolutionY * clipScaleY);
+        return (int) ((renderY * previewAvailableHeight) / renderResolutionY * clipScaleY);
     }
 
 
@@ -3090,7 +3090,6 @@ frameRate = 60;
                                     textureView.setScaleY(clip.scaleY);
                                     textureView.setRotation(clip.rotation);
 
-
                                 } catch (Exception e) {
                                     LoggingManager.LogExceptionToNoteOverlay(context, e);
                                 }
@@ -3167,6 +3166,7 @@ frameRate = 60;
 
                                 textureView.setTranslationX(EditingActivity.renderToPreviewConversionX(clip.posX, settings.videoWidth, clip.scaleX));
                                 textureView.setTranslationY(EditingActivity.renderToPreviewConversionY(clip.posY, settings.videoHeight, clip.scaleY));
+
                                 textureView.setScaleX(clip.scaleX);
                                 textureView.setScaleY(clip.scaleY);
                                 textureView.setRotation(clip.rotation);
