@@ -2133,6 +2133,28 @@ public class EditingActivity extends AppCompatActivityImpl {
     }
 
 
+    public static float previewToRenderConversionScalingX(float clipScaleX, float renderResolutionX)
+    {
+        return clipScaleX * (Math.min(previewAvailableWidth, renderResolutionX) * renderResolutionX);
+    }
+    public static float previewToRenderConversionScalingY(float clipScaleY, float renderResolutionY)
+    {
+        return clipScaleY * (Math.min(previewAvailableHeight, renderResolutionY) * renderResolutionY);
+    }
+
+    public static float renderToPreviewConversionScalingX(float clipScaleX, float renderResolutionX)
+    {
+        return clipScaleX / (Math.min(previewAvailableWidth, renderResolutionX) / renderResolutionX);
+    }
+    public static float renderToPreviewConversionScalingY(float clipScaleY, float renderResolutionY)
+    {
+        return clipScaleY / (Math.min(previewAvailableHeight, renderResolutionY) / renderResolutionY);
+    }
+    // TODO: For the scaling. When passing the previewAvailableWidth/Height. We get
+    //  the previewAvailable / renderResolution for the ratio. And we divide the render scale by the ratio to
+    //  get the preview
+
+
 
 
 
@@ -3086,8 +3108,8 @@ frameRate = 60;
 
                                     textureView.setTranslationX(EditingActivity.renderToPreviewConversionX(clip.posX, settings.videoWidth, clip.scaleX));
                                     textureView.setTranslationY(EditingActivity.renderToPreviewConversionY(clip.posY, settings.videoHeight, clip.scaleY));
-                                    textureView.setScaleX(clip.scaleX);
-                                    textureView.setScaleY(clip.scaleY);
+                                    textureView.setScaleX(EditingActivity.renderToPreviewConversionScalingX(clip.scaleX, settings.videoWidth));
+                                    textureView.setScaleY(EditingActivity.renderToPreviewConversionScalingY(clip.scaleY, settings.videoHeight));
                                     textureView.setRotation(clip.rotation);
 
                                 } catch (Exception e) {
@@ -3166,9 +3188,8 @@ frameRate = 60;
 
                                 textureView.setTranslationX(EditingActivity.renderToPreviewConversionX(clip.posX, settings.videoWidth, clip.scaleX));
                                 textureView.setTranslationY(EditingActivity.renderToPreviewConversionY(clip.posY, settings.videoHeight, clip.scaleY));
-
-                                textureView.setScaleX(clip.scaleX);
-                                textureView.setScaleY(clip.scaleY);
+                                textureView.setScaleX(EditingActivity.renderToPreviewConversionScalingX(clip.scaleX, settings.videoWidth));
+                                textureView.setScaleY(EditingActivity.renderToPreviewConversionScalingY(clip.scaleY, settings.videoHeight));
                                 textureView.setRotation(clip.rotation);
 
                                 // For IMAGE rendering
@@ -3446,8 +3467,8 @@ frameRate = 60;
                     tv.setScaleY(sy);
 
                     // Sync model
-                    clip.scaleX = sx;
-                    clip.scaleY = sy;
+                    clip.scaleX = EditingActivity.previewToRenderConversionScalingX(sx, settings.videoWidth);
+                    clip.scaleY = EditingActivity.previewToRenderConversionScalingY(sy, settings.videoHeight);
 
                     setPivot();
 
