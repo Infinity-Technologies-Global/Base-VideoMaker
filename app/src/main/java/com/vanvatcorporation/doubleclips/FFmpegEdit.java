@@ -413,7 +413,17 @@ public class FFmpegEdit {
                                 .append(trimFilter).append(",")
                                 // Transition extension: If there has freeze frames, then this line will handle it.
                                 .append("tpad=stop_mode=clone:stop_duration=").append(freezeFrameDuration).append(",")
-                                .append("setpts=PTS-STARTPTS+").append(clip.startTime).append("/TB").append(clipLabel).append(";\n");
+                                .append("format=rgba,colorchannelmixer=aa=").append(clip.opacity).append(",")
+                                .append("setpts='(PTS-STARTPTS)/").append(clip.speed).append("+").append(clip.startTime).append("/TB'").append(clipLabel).append(";\n");
+                        // TODO: For robust speed control
+                        //'
+                        //    if(between(T,0,1.5),
+                        //       (PTS-STARTPTS)/(1+exp(-k*(T-0.75))),
+                        //       if(between(T,1.5,3.5),
+                        //          (PTS-STARTPTS)/2,
+                        //          (PTS-STARTPTS)/(1+exp(-k*(5-T))))
+                        //    ) + 3/TB
+                        //'
 
 
                         // Transition extension: because overlay are just like transparent layer so we add the raw fillingTransitionDuration
@@ -461,7 +471,7 @@ public class FFmpegEdit {
                 }
 
                 // 🔊 Handle embedded audio in VIDEO
-                if (clip.type == EditingActivity.ClipType.VIDEO && clip.isVideoHasAudio) {
+                if (clip.type == EditingActivity.ClipType.VIDEO && clip.isVideoHasAudio && !clip.isMute) {
 
                     // Transition extension: Same for clip
                     int delayMs = (int) (clip.startTime * 1000);

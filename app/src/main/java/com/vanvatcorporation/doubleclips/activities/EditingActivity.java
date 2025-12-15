@@ -1054,6 +1054,9 @@ public class EditingActivity extends AppCompatActivityImpl {
                 selectedClip.scaleX = ParserHelper.TryParse(clipEditSpecificAreaScreen.scaleXField.getText().toString(), selectedClip.scaleX);
                 selectedClip.scaleY = ParserHelper.TryParse(clipEditSpecificAreaScreen.scaleYField.getText().toString(), selectedClip.scaleY);
                 selectedClip.opacity = ParserHelper.TryParse(clipEditSpecificAreaScreen.opacityField.getText().toString(), selectedClip.opacity);
+                selectedClip.speed = ParserHelper.TryParse(clipEditSpecificAreaScreen.speedField.getText().toString(), selectedClip.speed);
+
+                selectedClip.isMute = clipEditSpecificAreaScreen.muteAudioCheckbox.isChecked();
 
                 updateClipLayouts();
                 updateCurrentClipEnd();
@@ -1073,6 +1076,9 @@ public class EditingActivity extends AppCompatActivityImpl {
             clipEditSpecificAreaScreen.scaleXField.setText(String.valueOf(selectedClip.scaleX));
             clipEditSpecificAreaScreen.scaleYField.setText(String.valueOf(selectedClip.scaleY));
             clipEditSpecificAreaScreen.opacityField.setText(String.valueOf(selectedClip.opacity));
+            clipEditSpecificAreaScreen.speedField.setText(String.valueOf(selectedClip.speed));
+
+            clipEditSpecificAreaScreen.muteAudioCheckbox.setChecked(selectedClip.isMute);
         };
 
 
@@ -2405,6 +2411,8 @@ public class EditingActivity extends AppCompatActivityImpl {
         public float rotation;
         @Expose
         public float opacity;
+        @Expose
+        public float speed;
 
         @Expose
         public AnimatedProperty posXKeyFrames = new AnimatedProperty();
@@ -2430,10 +2438,16 @@ public class EditingActivity extends AppCompatActivityImpl {
          * For VIDEO type.
          * When import, check whether the clip has audio or not
          * When export, decide to include audio stream or not to prevent "match no stream" ffmpeg error.
-         * Can use this to mute video when export
          */
         @Expose
         public boolean isVideoHasAudio;    // for VIDEO type
+
+        /**
+         * For VIDEO type.
+         * Can use this to mute video when export
+         */
+        @Expose
+        public boolean isMute;    // for VIDEO type
 
 
         //Not serializing
@@ -2458,6 +2472,8 @@ public class EditingActivity extends AppCompatActivityImpl {
             this.scaleY = 1;
 
             this.opacity = 1;
+            this.speed = 1;
+            this.isMute = false;
         }
 
         public Clip(Clip clip) {
@@ -2478,6 +2494,8 @@ public class EditingActivity extends AppCompatActivityImpl {
             this.scaleY = clip.scaleY;
 
             this.opacity = clip.opacity;
+            this.speed = clip.speed;
+            this.isMute = clip.isMute;
 
 
             if(clip.type == ClipType.TEXT)

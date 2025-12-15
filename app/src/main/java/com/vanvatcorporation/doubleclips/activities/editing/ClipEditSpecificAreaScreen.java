@@ -2,6 +2,7 @@ package com.vanvatcorporation.doubleclips.activities.editing;
 
 import android.content.Context;
 import android.util.AttributeSet;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 
@@ -10,7 +11,8 @@ import com.vanvatcorporation.doubleclips.R;
 public class ClipEditSpecificAreaScreen extends BaseEditSpecificAreaScreen {
 
     public TextView totalDurationText;
-    public EditText clipNameField, durationContent, positionXField, positionYField, rotationField, scaleXField, scaleYField, opacityField;
+    public EditText clipNameField, durationContent, positionXField, positionYField, rotationField, scaleXField, scaleYField, opacityField, speedField;
+    public CheckBox muteAudioCheckbox;
 
 
     public ClipEditSpecificAreaScreen(Context context) {
@@ -43,6 +45,8 @@ public class ClipEditSpecificAreaScreen extends BaseEditSpecificAreaScreen {
         scaleXField = findViewById(R.id.scaleXField);
         scaleYField = findViewById(R.id.scaleYField);
         opacityField = findViewById(R.id.opacityField);
+        speedField = findViewById(R.id.speedField);
+        muteAudioCheckbox = findViewById(R.id.muteAudioCheckbox);
     }
 
 }
