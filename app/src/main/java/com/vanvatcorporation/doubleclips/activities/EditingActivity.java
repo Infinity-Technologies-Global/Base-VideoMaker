@@ -2127,7 +2127,7 @@ public class EditingActivity extends AppCompatActivityImpl {
     }
 
     // TODO: Using the same ratio system like below because multiplication and division is in the same order, no plus and subtract
-    //  the matrix of the previwe clip are not using the previewAvailable ratio system yet, so 1366 width
+    //  the matrix of the preview clip are not using the previewAvailable ratio system yet, so 1366 width
     //  in the 1080px screen the movement will be jittered
 
     public static float previewToRenderConversionScalingX(float clipScaleX, float renderResolutionX)
@@ -3457,8 +3457,9 @@ frameRate = 60;
                     // Move
                     posX -= dx;
                     posY -= dy;
-                    posMatrixX -= dx;
-                    posMatrixY -= dy;
+                    posMatrixX -= dx * getRenderRatio(EditingActivity.previewAvailableWidth, settings.videoWidth);
+                    posMatrixY -= dy * getRenderRatio(EditingActivity.previewAvailableHeight, settings.videoHeight);
+                    System.err.println(posMatrixX + " - " + posMatrixY + " == " + getRenderRatio(EditingActivity.previewAvailableWidth, settings.videoWidth));
                     applyTransformation();
 
                     // Sync model
