@@ -2108,13 +2108,13 @@ public class EditingActivity extends AppCompatActivityImpl {
 
 
 
-    public static int previewToRenderConversionX(float previewX, float renderResolutionX, float clipScaleX)
+    public static int previewToRenderConversionX(float previewX, float renderResolutionX)
     {
-        return (int) ((previewX / Math.min(previewAvailableWidth, renderResolutionX)) * renderResolutionX / clipScaleX);
+        return (int) ((previewX / Math.min(previewAvailableWidth, renderResolutionX)) * renderResolutionX);
     }
-    public static int previewToRenderConversionY(float previewY, float renderResolutionY, float clipScaleY)
+    public static int previewToRenderConversionY(float previewY, float renderResolutionY)
     {
-        return (int) ((previewY / Math.min(previewAvailableHeight, renderResolutionY)) * renderResolutionY / clipScaleY);
+        return (int) ((previewY / Math.min(previewAvailableHeight, renderResolutionY)) * renderResolutionY);
     }
 
     public static int renderToPreviewConversionX(float renderX, float renderResolutionX, float clipScaleX)
@@ -2132,20 +2132,20 @@ public class EditingActivity extends AppCompatActivityImpl {
 
     public static float previewToRenderConversionScalingX(float clipScaleX, float renderResolutionX)
     {
-        return clipScaleX * getRenderRatio(previewAvailableWidth, renderResolutionX);
+        return clipScaleX / getRenderRatio(previewAvailableWidth, renderResolutionX);
     }
     public static float previewToRenderConversionScalingY(float clipScaleY, float renderResolutionY)
     {
-        return clipScaleY * getRenderRatio(previewAvailableHeight, renderResolutionY);
+        return clipScaleY / getRenderRatio(previewAvailableHeight, renderResolutionY);
     }
 
     public static float renderToPreviewConversionScalingX(float clipScaleX, float renderResolutionX)
     {
-        return clipScaleX / getRenderRatio(previewAvailableWidth, renderResolutionX);
+        return clipScaleX * getRenderRatio(previewAvailableWidth, renderResolutionX);
     }
     public static float renderToPreviewConversionScalingY(float clipScaleY, float renderResolutionY)
     {
-        return clipScaleY / getRenderRatio(previewAvailableHeight, renderResolutionY);
+        return clipScaleY * getRenderRatio(previewAvailableHeight, renderResolutionY);
     }
 
     public static float getRenderRatio(float previewAvailable, float renderResolution)
@@ -3436,8 +3436,9 @@ frameRate = 60;
 
         private void setPivot() {
             textureView.post(() -> {
-                textureView.setPivotX(clip.width / 2f * clip.scaleX);
-                textureView.setPivotY(clip.height / 2f * clip.scaleY);
+                // Not affecting the translation pos when scaling
+                textureView.setPivotX(0);
+                textureView.setPivotY(0);
             });
 
         }
@@ -3457,14 +3458,13 @@ frameRate = 60;
                     // Move
                     posX -= dx;
                     posY -= dy;
-                    posMatrixX -= dx * getRenderRatio(EditingActivity.previewAvailableWidth, settings.videoWidth);
-                    posMatrixY -= dy * getRenderRatio(EditingActivity.previewAvailableHeight, settings.videoHeight);
-                    System.err.println(posMatrixX + " - " + posMatrixY + " == " + getRenderRatio(EditingActivity.previewAvailableWidth, settings.videoWidth));
+                    posMatrixX -= dx;
+                    posMatrixY -= dy;
                     applyTransformation();
 
                     // Sync model
-                    clip.posX = EditingActivity.previewToRenderConversionX(posX, settings.videoWidth, clip.scaleX);
-                    clip.posY = EditingActivity.previewToRenderConversionY(posY, settings.videoHeight, clip.scaleY);
+                    clip.posX = EditingActivity.previewToRenderConversionX(posX, settings.videoWidth);
+                    clip.posY = EditingActivity.previewToRenderConversionY(posY, settings.videoHeight);
 
                     textCanvasControllerInfo.setText("Pos X: " + clip.posX + " | Pos Y: " + clip.posY);
                     return true;
@@ -3486,11 +3486,12 @@ frameRate = 60;
                     scaleY *= detector.getScaleFactor();
                     scaleMatrixX *= detector.getScaleFactor();
                     scaleMatrixY *= detector.getScaleFactor();
-                    // Optional clamp TODO: Remove later because well what are the point of this clamp when we can change it freely in the edit specific?
-//                    scaleX = Math.max(0.01f, Math.min(scaleX, 100f));
-//                    scaleY = Math.max(0.01f, Math.min(scaleY, 100f));
+
                     applyTransformation();
 
+                    // TODO: Before we going further. Let calculate first the aspect ratio of video
+                    //  only after that we based on the width and height of the following aspect ratio
+                    //  and use it for preview scaling inside the screen that smaller than the video. (Clamping)
                     // Sync model
                     clip.scaleX = EditingActivity.previewToRenderConversionScalingX(scaleX, settings.videoWidth);
                     clip.scaleY = EditingActivity.previewToRenderConversionScalingY(scaleY, settings.videoHeight);
