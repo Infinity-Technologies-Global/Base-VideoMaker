@@ -134,107 +134,6 @@ public class FFmpegEdit {
     }
 
 
-    public static void renderKeyframedClip(Context context, String workingProjectPath, EditingActivity.Clip clip, int tempIndex, int fps) {
-        int totalFrames = (int)(clip.duration * fps);
-        int startingFrame = (int)(clip.startTime * fps);
-
-        int offsetTotalFrames = totalFrames + startingFrame;
-
-        for (int i = startingFrame; i < offsetTotalFrames; i++) {
-            float time = i / (float)fps;
-
-            float scale = clip.keyframes.getValueAt(time, EditingActivity.VideoProperties.ValueType.ScaleX);
-            float x = clip.keyframes.getValueAt(time, EditingActivity.VideoProperties.ValueType.PosX);
-            float y = clip.keyframes.getValueAt(time, EditingActivity.VideoProperties.ValueType.PosY);
-            float rotation = clip.keyframes.getValueAt(time, EditingActivity.VideoProperties.ValueType.Rot);
-
-            renderFrameToBitmap(context, clip.getAbsolutePath(workingProjectPath), workingProjectPath, scale, x, y, rotation, i);
-        }
-
-        // Audio extracting part
-        String audioFilePath = IOHelper.CombinePath(workingProjectPath, Constants.DEFAULT_CLIP_TEMP_DIRECTORY, tempIndex + "audio.aac");
-        StringBuilder audioCmd = new StringBuilder();
-        audioCmd.append("-i ").append("\"").append(clip.getAbsolutePath(workingProjectPath)).append("\"").append(" -ss ").append(clip.startTime).append(" -t ").append(clip.duration).append(" -vn -acodec copy -y ")
-                .append("\"").append(audioFilePath).append("\"");
-        runAnyCommand(context, audioCmd.toString(), "Copying Audio #" + tempIndex);
-
-        clip.setRenderedName(tempIndex + ".mp4");
-
-        StringBuilder cmd = new StringBuilder();
-        cmd.append("-framerate ").append(fps).append(" -i ")
-                .append("\"").append(IOHelper.CombinePath(workingProjectPath, Constants.DEFAULT_CLIP_TEMP_DIRECTORY, "frames/frame%04d.jpg")).append("\"")
-                .append(" -i ").append("\"").append(audioFilePath).append("\"")
-                .append(" -c:v libx264 -pix_fmt yuv420p -c:a aac -preset slow ").append("-y \"").append(clip.getAbsoluteRenderPath(workingProjectPath)).append("\"");
-
-        runAnyCommand(context, cmd.toString(), "Building Keyframed Clip #" + tempIndex);
-
-        // Stitch frames into video
-//        ProcessBuilder pb = new ProcessBuilder(
-//                "ffmpeg", "-framerate", String.valueOf(fps),
-//                "-i", "frames/frame%04d.png",
-//                "-c:v", "libx264", "-pix_fmt", "yuv420p",
-//                clip.getRenderedPath()
-//        );
-//        pb.inheritIO().start().waitFor();
-    }
-
-    public static void renderFrameToBitmap(Context context, String inputPath, String workingProjectPath, float scale, float x, float y, float rotation, int frameIndex) {
-        String outputPath = IOHelper.CombinePath(workingProjectPath, Constants.DEFAULT_CLIP_TEMP_DIRECTORY, String.format("frames/frame%04d.jpg", frameIndex));
-
-        StringBuilder vf = new StringBuilder();
-
-        // Frame selection by index
-        vf.append("select='eq(n\\,").append(frameIndex).append(")',");
-
-        // Apply scale
-        // -vf "scale=ceil(iw/2)*2:ceil(ih/2)*2"
-        //vf.append("scale=ceil(iw*").append(scale).append("/2)*2").append(":ceil(ih*").append(scale).append("/2)*2").append(",");
-        vf.append("scale=iw*").append(scale).append(":ih*").append(scale).append(",");
-
-        // Apply rotation
-        vf.append("rotate=").append(rotation)
-                .append(":ow=rotw(").append(rotation).append("):oh=roth(").append(rotation).append(")")
-                .append(":fillcolor=0x00000000");
-
-        StringBuilder cmd = new StringBuilder();
-        cmd.append("-i ").append("\"").append(inputPath).append("\"")
-                .append(" -q:v ").append(10) // Lower = better quality, higher = more compression, ranges from 1 (best quality) to 31 (worst). Try 5–10 for good balance.
-                .append(" -vf \"").append(vf).append("\"")
-                .append(" -vsync vfr -frames:v 1 -preset slow -y ")
-                .append("\"").append(outputPath).append("\"");
-
-        runAnyCommand(context, cmd.toString(), "Rendering Frame #" + frameIndex);
-    }
-
-//    public static void renderFrameToBitmap(Context context, String inputPath, String workingProjectPath, float scale, float x, float y, float rotation, int frameIndex) {
-//        String outputPath = IOHelper.CombinePath(workingProjectPath, Constants.DEFAULT_CLIP_TEMP_DIRECTORY, String.format("frames/frame%04d.png", frameIndex));
-//
-////        String scaleExpr = String.format("scale=iw*%.2f:ih*%.2f", scale, scale);
-////        String rotateExpr = String.format("rotate=%.2f:ow=rotw(%.2f):oh=roth(%.2f):fillcolor=0x00000000", rotation, rotation, rotation);
-////        String overlayExpr = String.format("overlay=%d:%d", (int)x, (int)y);
-//        StringBuilder vf = new StringBuilder();
-//
-//        vf.append("scale=iw*").append(scale).append(":ih*").append(scale).append(",");
-//        vf.append("rotate=").append(rotation).append(":ow=rotw(").append(rotation).append("):oh=roth(").append(rotation).append(")")
-//                .append(":fillcolor=0x00000000");
-//
-//
-//        StringBuilder cmd = new StringBuilder();
-//        cmd.append("-i ").append("\"").append(inputPath).append("\"").append(" -vf \"").append(vf).append("\" -frames:v 1 ").append("-y ")
-//                .append("\"").append(outputPath).append("\"");
-//        runAnyCommand(context, cmd.toString());
-////        ProcessBuilder pb = new ProcessBuilder(
-////                "ffmpeg", "-i", inputPath,
-////                "-vf", vf,
-////                "-frames:v", "1",
-////                outputPath
-////        );
-////        pb.inheritIO().start().waitFor();
-//    }
-
-
-
-
     public static void generateExportVideo(Context context, EditingActivity.Timeline timeline, EditingActivity.VideoSettings settings, MainActivity.ProjectData data, Runnable onSuccess) {
         runAnyCommand(context, generateExportCmd(context, settings, timeline, data), "Exporting Video", onSuccess, () -> {
         }, new RunnableImpl() {
@@ -285,18 +184,6 @@ public class FFmpegEdit {
                                 clip.type == EditingActivity.ClipType.IMAGE ?
                                         "-loop 1 -t " + clip.duration + " -framerate " + settings.getFrameRate() + " " :
                                         "";
-
-                        // Before going to the input stream, detect if it has a keyframe properties, if it has,
-                        // render that video beforehand before entering the stream
-                        // TODO: Deprecate the still image rendering. Targeting to put expr onto all component
-                        if (clip.hasAnimatedProperties()) {
-                            renderKeyframedClip(context, data.getProjectPath(), clip, keyframeClipIndex, settings.getFrameRate()); // Pre-render to video
-                            clip.clipName = clip.getRenderedName(); // Replace with new video
-                            clip.type = EditingActivity.ClipType.VIDEO; // Treat as normal video now
-                            keyframeClipIndex++;
-                        }
-
-
 
                         cmd.append(frameFilter).append("-i \"").append(clip.getAbsolutePath(data)).append("\" ");
                         break;
@@ -403,6 +290,24 @@ public class FFmpegEdit {
 
                         // FFmpeg uses radians rotation, so...
                         double radiansRotation = Math.toRadians(clip.rotation);
+
+
+                        // Detect keyframe after which we write our expr compilation
+                        if (clip.hasAnimatedProperties()) {
+//                            renderKeyframedClip(context, data.getProjectPath(), clip, keyframeClipIndex, settings.getFrameRate()); // Pre-render to video
+//                            clip.clipName = clip.getRenderedName(); // Replace with new video
+//                            clip.type = EditingActivity.ClipType.VIDEO; // Treat as normal video now
+//                            keyframeClipIndex++;
+                        }
+                        // Let simulating 4 keyframe type in opacity for example:
+                        // K #1: 1 at 1s
+                        // K #2: 0 at 2s
+                        // K #3: 0 at 3s
+                        // K #4: 1 at 4s
+                        // Kinda like --\_/--
+
+                        // gte(t,5)*lte(t,10)
+                        //colorchannelmixer=aa='if(gte(t,1)*lte(t,2), exp(-0.5*(t-3)), if(gte(t,2)*lte(t,3), 0, if(gte(t,3)*lte(t,4)), 1-exp(-1*t), 1))'
 
 
                         filterComplex.append("[").append(inputIndex).append(":v]")
