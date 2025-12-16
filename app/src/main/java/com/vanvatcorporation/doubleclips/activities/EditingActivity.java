@@ -71,7 +71,6 @@ import com.vanvatcorporation.doubleclips.activities.editing.TextEditSpecificArea
 import com.vanvatcorporation.doubleclips.activities.editing.TransitionEditSpecificAreaScreen;
 import com.vanvatcorporation.doubleclips.activities.editing.VideoPropertiesEditSpecificAreaScreen;
 import com.vanvatcorporation.doubleclips.constants.Constants;
-import com.vanvatcorporation.doubleclips.externalUtils.Random;
 import com.vanvatcorporation.doubleclips.helper.DateHelper;
 import com.vanvatcorporation.doubleclips.helper.IOHelper;
 import com.vanvatcorporation.doubleclips.helper.IOImageHelper;
@@ -3085,7 +3084,7 @@ frameRate = 60;
     public static class AnimatedProperty implements Serializable {
         public List<Keyframe> keyframes = new ArrayList<>();
 
-        public float getValueAt(float playheadTime, VideoProperties.ValueType valueType) {
+        public float getValueAtTime(float playheadTime, VideoProperties.ValueType valueType) {
             if (keyframes.isEmpty()) return 0f;
 
             Keyframe prev = keyframes.get(0);
@@ -3107,6 +3106,11 @@ frameRate = 60;
 
             }
             return keyframes.get(keyframes.size() - 1).value.getValue(valueType);
+        }
+        public float getValueAtPoint(int keyframeIndex, VideoProperties.ValueType valueType) {
+            if (keyframes.isEmpty()) return 0f;
+
+            return keyframes.get(keyframeIndex).value.getValue(valueType);
         }
 
         private float lerp(float a, float b, float t) {
@@ -3151,11 +3155,11 @@ frameRate = 60;
     //Todo: When real-time preview is back to working, consider using this stuff
     protected void useKeyFrameInRealtimeRendering(Clip clip, float playheadTime)
     {
-        float x = clip.keyframes.getValueAt(playheadTime, VideoProperties.ValueType.PosX);
-        float y = clip.keyframes.getValueAt(playheadTime, VideoProperties.ValueType.PosY);
-        float rotation = clip.keyframes.getValueAt(playheadTime, VideoProperties.ValueType.Rot);
-        float scaleX = clip.keyframes.getValueAt(playheadTime, VideoProperties.ValueType.ScaleX);
-        float scaleY = clip.keyframes.getValueAt(playheadTime, VideoProperties.ValueType.ScaleY);
+        float x = clip.keyframes.getValueAtTime(playheadTime, VideoProperties.ValueType.PosX);
+        float y = clip.keyframes.getValueAtTime(playheadTime, VideoProperties.ValueType.PosY);
+        float rotation = clip.keyframes.getValueAtTime(playheadTime, VideoProperties.ValueType.Rot);
+        float scaleX = clip.keyframes.getValueAtTime(playheadTime, VideoProperties.ValueType.ScaleX);
+        float scaleY = clip.keyframes.getValueAtTime(playheadTime, VideoProperties.ValueType.ScaleY);
 
         // Apply transform to canvas or OpenGL
 

@@ -36,8 +36,6 @@
 package com.vanvatcorporation.doubleclips;
 
 import android.content.Context;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 
 import com.arthenica.ffmpegkit.FFmpegKit;
 import com.arthenica.ffmpegkit.ReturnCode;
@@ -292,17 +290,10 @@ public class FFmpegEdit {
                         double radiansRotation = Math.toRadians(clip.rotation);
 
 
-                        // Detect keyframe after which we write our expr compilation
-                        if (clip.hasAnimatedProperties()) {
-//                            renderKeyframedClip(context, data.getProjectPath(), clip, keyframeClipIndex, settings.getFrameRate()); // Pre-render to video
-//                            clip.clipName = clip.getRenderedName(); // Replace with new video
-//                            clip.type = EditingActivity.ClipType.VIDEO; // Treat as normal video now
-//                            keyframeClipIndex++;
-                        }
-                        else
-                        {
-                            clip.mergingVideoPropertiesFromSingleKeyframe();
-                        }
+                        // First we declared the stream of video
+                        filterComplex.append("[").append(inputIndex).append(":v]");
+
+
                         // Let simulating 4 keyframe type in opacity for example:
                         // K #1: 1 at 1s
                         // K #2: 0 at 2s
@@ -314,16 +305,58 @@ public class FFmpegEdit {
                         //colorchannelmixer=aa='if(gte(t,1)*lte(t,2), exp(-0.5*(t-3)), if(gte(t,2)*lte(t,3), 0, if(gte(t,3)*lte(t,4)), 1-exp(-1*t), 1))'
 
 
-                        filterComplex.append("[").append(inputIndex).append(":v]")
-                                .append("scale=iw*").append(clip.scaleX).append(":ih*").append(clip.scaleY).append(",")
-                                //.append("scale=").append(clip.width).append(":").append(clip.height).append(",")
-                                .append("rotate=").append(radiansRotation).append(":ow=rotw(").append(radiansRotation).append("):oh=roth(").append(radiansRotation).append(")")
-                                .append(":fillcolor=0x00000000").append(",")
+
+                        // Detect keyframe after which we write our expr compilation
+                        // In this first if expr: We process scaleX, scaleY, rot, opacity, speed
+                        if (clip.hasAnimatedProperties()) {
+
+                            StringBuilder keyframeExprString = new StringBuilder();
+                            for(int i = 0; i < clip.keyframes.keyframes.size() - 1; i++)
+                            {
+                                EditingActivity.Keyframe prevKeyframe = clip.keyframes.keyframes.get(i);
+                                EditingActivity.Keyframe nextKeyframe = clip.keyframes.keyframes.get(i + 1);
+
+                                keyframeExprString
+                                        .append("'")
+                                        .append("if(")
+                                        .append("gte(t,").append(prevKeyframe.time).append(")")
+                                        .append("*")
+                                        .append("lte(t,").append(nextKeyframe.time).append(")").append(",")
+                                        .append(nextKeyframe.value.getValue(EditingActivity.VideoProperties.ValueType.ScaleX)).append(",")
+                                        .append(clip.scaleX)
+
+                                        .append("'");// TODO: Implement this using the method down below
+                            }
+
+                            filterComplex.append("scale=iw*").append(clip.scaleX).append(":ih*").append(clip.scaleY).append(",")
+                                    //.append("scale=").append(clip.width).append(":").append(clip.height).append(",")
+                                    .append("rotate=").append(radiansRotation).append(":ow=rotw(").append(radiansRotation).append("):oh=roth(").append(radiansRotation).append(")")
+                                    .append(":fillcolor=0x00000000").append(",")
+                                    .append("format=rgba,colorchannelmixer=aa=").append(clip.opacity).append(",")
+                                    .append("setpts='(PTS-STARTPTS)/").append(clip.speed).append("+").append(clip.startTime).append("/TB'").append(",");
+                        }
+                        else
+                        {
+                            // If possible then merge the keyframe to clip
+                            clip.mergingVideoPropertiesFromSingleKeyframe();
+
+                            // And then add to filterComplex no matter
+                            // the clip has merge or there are no keyframe to combine
+
+                            filterComplex.append("scale=iw*").append(clip.scaleX).append(":ih*").append(clip.scaleY).append(",")
+                                    //.append("scale=").append(clip.width).append(":").append(clip.height).append(",")
+                                    .append("rotate=").append(radiansRotation).append(":ow=rotw(").append(radiansRotation).append("):oh=roth(").append(radiansRotation).append(")")
+                                    .append(":fillcolor=0x00000000").append(",")
+                                    .append("format=rgba,colorchannelmixer=aa=").append(clip.opacity).append(",")
+                                    .append("setpts='(PTS-STARTPTS)/").append(clip.speed).append("+").append(clip.startTime).append("/TB'").append(",");
+                        }
+
+
+                        filterComplex
                                 .append(trimFilter).append(",")
                                 // Transition extension: If there has freeze frames, then this line will handle it.
-                                .append("tpad=stop_mode=clone:stop_duration=").append(freezeFrameDuration).append(",")
-                                .append("format=rgba,colorchannelmixer=aa=").append(clip.opacity).append(",")
-                                .append("setpts='(PTS-STARTPTS)/").append(clip.speed).append("+").append(clip.startTime).append("/TB'").append(clipLabel).append(";\n");
+                                .append("tpad=stop_mode=clone:stop_duration=").append(freezeFrameDuration)
+                                .append(clipLabel).append(";\n");
                         // TODO: For robust speed control
                         //'
                         //    if(between(T,0,1.5),
@@ -337,11 +370,23 @@ public class FFmpegEdit {
 
 
 
-
                         // Transition extension: because overlay are just like transparent layer so we add the raw fillingTransitionDuration
-                        filterComplex.append(transparentLabel).append(clipLabel)
-                                .append("overlay=").append(clip.posX).append(":").append(clip.posY)
-                                .append(":enable='between(t,")
+                        filterComplex.append(transparentLabel).append(clipLabel);
+
+                        // In this second if expr: We process posX, posY
+                        if (clip.hasAnimatedProperties()) {
+                            filterComplex.append("overlay=").append(clip.posX).append(":").append(clip.posY);
+                        }
+                        else {
+                            // Because we already merged from the first if expr, we don't have to do it here
+                            //clip.mergingVideoPropertiesFromSingleKeyframe();
+
+
+                            filterComplex.append("overlay=").append(clip.posX).append(":").append(clip.posY);
+
+                        }
+
+                        filterComplex.append(":enable='between(t,")
                                 .append(clip.startTime).append(",")
                                 .append(clip.startTime + clip.duration + fillingTransitionDuration).append(")'").append(",")
                                 .append("fps=").append(settings.getFrameRate())
@@ -500,6 +545,37 @@ public class FFmpegEdit {
         return cmd.toString();
     }
 
+
+    /**
+     *
+     * Get the Expr for keyframe rendering.
+     * @param keyframes Total keyframe of the Clip
+     * @param startIndex Index for prevKeyframe. Put 0 for start.
+     * @param valueType (scaleX, scaleY, posX, posY, Rot)
+     * @return Expression for FFmpeg in String format.
+     *
+     */
+    public static String getKeyframeFFmpegExpr(EditingActivity.Keyframe[] keyframes, int startIndex, EditingActivity.VideoProperties.ValueType valueType)
+    {
+        StringBuilder keyframeExprString = new StringBuilder();
+
+        EditingActivity.Keyframe prevKeyframe = keyframes[startIndex];
+        EditingActivity.Keyframe nextKeyframe = keyframes[startIndex + 1];
+
+
+        keyframeExprString
+                .append("'")
+                .append("if(")
+                .append("gte(t,").append(prevKeyframe.time).append(")")
+                .append("*")
+                .append("lte(t,").append(nextKeyframe.time).append(")").append(",")
+                .append(nextKeyframe.value.getValue(valueType)).append(",")
+                .append(getKeyframeFFmpegExpr(keyframes, startIndex + 1, valueType))
+
+            .append("'");
+
+        return keyframeExprString.toString();
+    }
 
 
 
