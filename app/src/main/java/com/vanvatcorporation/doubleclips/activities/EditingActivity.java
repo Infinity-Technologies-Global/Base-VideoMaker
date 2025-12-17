@@ -1389,7 +1389,7 @@ public class EditingActivity extends AppCompatActivityImpl {
         knotView.setBackgroundColor(Color.RED);
         knotView.setVisibility(View.VISIBLE);
 
-        knotView.setTag(clip);
+        knotView.setTag(R.id.transition_knot_tag, clip);
         // Position it between clips
         int width = 50;
         int height = 50;
@@ -1427,7 +1427,7 @@ public class EditingActivity extends AppCompatActivityImpl {
         knotView.setBackgroundColor(Color.BLACK);
         knotView.setVisibility(View.VISIBLE);
 
-        knotView.setTag(clip);
+        knotView.setTag(R.id.keyframe_knot_tag, clip);
         // Position it between clips
         int width = 12;
         int height = 30;
@@ -1475,18 +1475,18 @@ public class EditingActivity extends AppCompatActivityImpl {
     }
     private void handleKeyframeInteraction(View view) {
         view.setOnClickListener(v -> {
-            if(view.getTag() instanceof Clip)
+            if(view.getTag(R.id.keyframe_knot_tag) instanceof Clip)
             {
-                Clip data = (Clip) view.getTag();
+                Clip data = (Clip) view.getTag(R.id.keyframe_knot_tag);
             }
 
         });
     }
     private void handleKnotInteraction(View view) {
         view.setOnClickListener(v -> {
-            if(view.getTag() instanceof TransitionClip)
+            if(view.getTag(R.id.transition_knot_tag) instanceof TransitionClip)
             {
-                selectingKnot((TransitionClip) view.getTag());
+                selectingKnot((TransitionClip) view.getTag(R.id.transition_knot_tag));
                 editingSpecific(ClipType.TRANSITION);
             }
 
@@ -2324,7 +2324,6 @@ public class EditingActivity extends AppCompatActivityImpl {
                 track.viewRef.trackInfo = track;
 
                 for (Clip clip : track.clips) {
-                    System.err.println(clip.keyframes.keyframes.size());
                     clip.filterNullAfterLoad();
                     instance.addClipToTrackUi(track.viewRef, clip);
                 }
@@ -2570,6 +2569,7 @@ public class EditingActivity extends AppCompatActivityImpl {
             if(type == null) type = ClipType.VIDEO;
             if(videoProperties == null) videoProperties = new VideoProperties();
             if(keyframes == null) keyframes = new AnimatedProperty();
+            if(keyframes.keyframes == null) keyframes.keyframes = new ArrayList<>();
         }
 
 

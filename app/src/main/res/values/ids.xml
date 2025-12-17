@@ -2,4 +2,7 @@
 <resources>
     <item name="drag_ghost" type="id" />
     <item name="drag_track" type="id" />
+
+    <item name="transition_knot_tag" type="id" />
+    <item name="keyframe_knot_tag" type="id" />
 </resources>
