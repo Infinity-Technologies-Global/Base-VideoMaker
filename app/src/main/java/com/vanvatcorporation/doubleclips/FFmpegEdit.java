@@ -288,7 +288,7 @@ public class FFmpegEdit {
                                         "trim=duration=" + (clip.duration + fillingTransitionDuration);
 
                         // FFmpeg uses radians rotation, so...
-                        double radiansRotation = Math.toRadians(clip.rotation);
+                        double radiansRotation = Math.toRadians(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.Rot));
 
 
                         // First we declared the stream of video
@@ -313,17 +313,17 @@ public class FFmpegEdit {
 
 
                             // TODO: Scale is not applied yet. Research zoompan instead.
-                            String scaleXExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, 0, EditingActivity.VideoProperties.ValueType.ScaleX);
-                            String scaleYExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, 0, EditingActivity.VideoProperties.ValueType.ScaleY);
+                            String scaleXExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, EditingActivity.VideoProperties.ValueType.ScaleX);
+                            String scaleYExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, EditingActivity.VideoProperties.ValueType.ScaleY);
 
-                            String rotationExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, 0, EditingActivity.VideoProperties.ValueType.Rot);
+                            String rotationExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, EditingActivity.VideoProperties.ValueType.Rot);
 
-                            filterComplex.append("scale=iw*").append(clip.scaleX).append(":ih*").append(clip.scaleY).append(",")
+                            filterComplex.append("scale=iw*").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.ScaleX)).append(":ih*").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.ScaleY)).append(",")
                                     //.append("scale=").append(clip.width).append(":").append(clip.height).append(",")
                                     .append("rotate='").append(rotationExpr).append("':ow=rotw('").append(rotationExpr).append("'):oh=roth('").append(rotationExpr).append("')")
                                     .append(":fillcolor=0x00000000").append(",")
-                                    .append("format=rgba,colorchannelmixer=aa=").append(clip.opacity).append(",")
-                                    .append("setpts='(PTS-STARTPTS)/").append(clip.speed).append("+").append(clip.startTime).append("/TB'").append(",");
+                                    .append("format=rgba,colorchannelmixer=aa=").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.Opacity)).append(",")
+                                    .append("setpts='(PTS-STARTPTS)/").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.Speed)).append("+").append(clip.startTime).append("/TB'").append(",");
                         }
                         else
                         {
@@ -333,12 +333,12 @@ public class FFmpegEdit {
                             // And then add to filterComplex no matter
                             // the clip has merge or there are no keyframe to combine
 
-                            filterComplex.append("scale=iw*").append(clip.scaleX).append(":ih*").append(clip.scaleY).append(",")
+                            filterComplex.append("scale=iw*").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.ScaleX)).append(":ih*").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.ScaleY)).append(",")
                                     //.append("scale=").append(clip.width).append(":").append(clip.height).append(",")
                                     .append("rotate=").append(radiansRotation).append(":ow=rotw(").append(radiansRotation).append("):oh=roth(").append(radiansRotation).append(")")
                                     .append(":fillcolor=0x00000000").append(",")
-                                    .append("format=rgba,colorchannelmixer=aa=").append(clip.opacity).append(",")
-                                    .append("setpts='(PTS-STARTPTS)/").append(clip.speed).append("+").append(clip.startTime).append("/TB'").append(",");
+                                    .append("format=rgba,colorchannelmixer=aa=").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.Opacity)).append(",")
+                                    .append("setpts='(PTS-STARTPTS)/").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.Speed)).append("+").append(clip.startTime).append("/TB'").append(",");
                         }
 
 
@@ -366,8 +366,8 @@ public class FFmpegEdit {
                         // In this second if expr: We process posX, posY
                         if (clip.hasAnimatedProperties()) {
 
-                            String posXExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, 0, EditingActivity.VideoProperties.ValueType.PosX);
-                            String posYExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, 0, EditingActivity.VideoProperties.ValueType.PosY);
+                            String posXExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, EditingActivity.VideoProperties.ValueType.PosX);
+                            String posYExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, EditingActivity.VideoProperties.ValueType.PosY);
 
                             filterComplex.append("overlay='").append(posXExpr).append("':'").append(posYExpr).append("'");
                         }
@@ -376,7 +376,7 @@ public class FFmpegEdit {
                             //clip.mergingVideoPropertiesFromSingleKeyframe();
 
 
-                            filterComplex.append("overlay=").append(clip.posX).append(":").append(clip.posY);
+                            filterComplex.append("overlay=").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.PosX)).append(":").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.PosY));
 
                         }
 
@@ -549,11 +549,11 @@ public class FFmpegEdit {
      * @return Expression for FFmpeg in String format.
      *
      */
-    public static String getKeyframeFFmpegExpr(List<EditingActivity.Keyframe> keyframes, int startIndex, EditingActivity.VideoProperties.ValueType valueType)
+    public static String getKeyframeFFmpegExpr(List<EditingActivity.Keyframe> keyframes, EditingActivity.Clip clip, int startIndex, EditingActivity.VideoProperties.ValueType valueType)
     {
         StringBuilder keyframeExprString = new StringBuilder();
 
-        if(startIndex + 1 >= keyframes.size()) return "1"; // Default value
+        if(startIndex + 1 >= keyframes.size()) return String.valueOf(clip.videoProperties.getValue(valueType)); // Default value
         // TODO: Set the default value to match the current clip properties. Need rework on the structure.
 
         EditingActivity.Keyframe prevKeyframe = keyframes.get(startIndex);
@@ -565,13 +565,78 @@ public class FFmpegEdit {
                 .append("gte(t,").append(prevKeyframe.time).append(")")
                 .append("*")
                 .append("lte(t,").append(nextKeyframe.time).append(")").append(",")
-                .append(nextKeyframe.value.getValue(valueType)).append(",")
-                .append(getKeyframeFFmpegExpr(keyframes, startIndex + 1, valueType))
+                // insert the expr here
+                // previous: nextKeyframe.value.getValue(valueType)
+                .append(generateEasing(prevKeyframe, nextKeyframe, valueType)).append(",")
+                .append(getKeyframeFFmpegExpr(keyframes, clip, startIndex + 1, valueType))
                 .append(")");
 
         return keyframeExprString.toString();
     }
 
+    public static String generateEasing(EditingActivity.Keyframe prevKey, EditingActivity.Keyframe nextKey, EditingActivity.VideoProperties.ValueType type)
+    {
+        return generateEasing(prevKey.value.getValue(type), nextKey.value.getValue(type), prevKey.time, (nextKey.time - prevKey.time), prevKey.easing);
+    }
+    public static String generateEasing(float prevValue, float nextValue, float offset, float duration, EditingActivity.EasingType type)
+    {
+        StringBuilder expr = new StringBuilder();
+        switch (type)
+        {
+            case LINEAR:
+                expr.append(prevValue).append("+(").append(nextValue).append("-").append(prevValue)
+                        .append(")*").append(getClipRatio(offset, duration));
+                break;
+            case EASE_IN:
+                expr.append(prevValue).append("+(").append(nextValue).append("-").append(prevValue)
+                        .append(")*pow(").append(getClipRatio(offset, duration)).append(",2)");
+                break;
+            case EASE_OUT:
+                expr.append(prevValue).append("+(").append(nextValue).append("-").append(prevValue)
+                        .append(")*pow(").append(getClipRatio(offset, duration)).append(",2)");
+                break;
+            case EASE_IN_OUT:
+                break;
+            case EXPONENTIAL:
+                break;
+            case QUADRATIC:
+                break;
+            case SPRING:
+                break;
+
+        }
+        /**
+         * Linear
+         * expr='start + (end-start) * clip((t-offset)/duration,0,1)'
+         *
+         * Quadratic (Ease in)
+         * expr='start + (end-start) * pow(clip((t-offset)/duration,0,1),2)'
+         *
+         * Quadratic (Ease out)
+         * expr='start + (end-start) * (1 - pow(1-clip((t-offset)/duration,0,1),2))'
+         *
+         * Quadratic (Ease in out)
+         * expr='start + (end-start) * (clip((t-offset)/duration,0,1)<0.5 ?
+         *     2*pow(clip((t-offset)/duration,0,1),2) :
+         *     1 - pow(-2*clip((t-offset)/duration,0,1)+2,2)/2)'
+         *
+         * Exponential (Ease in)
+         * expr='start + (end-start) * (pow(2,10*clip((t-offset)/duration,0,1))-1)/1023'
+         *
+         * Exponential (Ease out)
+         * expr='start + (end-start) * (1 - pow(2,-10*clip((t-offset)/duration,0,1)))'
+         *
+         * Spring
+         * expr='start + (end-start) * (sin(clip((t-offset)/duration)*PI*(0.2+2.5*pow(clip((t-offset)/duration),3)))
+         *     * pow(1-clip((t-offset)/duration),2) + clip((t-offset)/duration))'
+         */
+
+        return "";
+    }
+    public static String getClipRatio(float offset, float duration)
+    {
+        return "clip((t-" + offset + ")/" + duration + ",0,1)";
+    }
 
 
 

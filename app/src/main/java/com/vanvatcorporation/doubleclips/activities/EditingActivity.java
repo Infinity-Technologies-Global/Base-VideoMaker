@@ -1047,13 +1047,13 @@ public class EditingActivity extends AppCompatActivityImpl {
             {
                 selectedClip.clipName = clipEditSpecificAreaScreen.clipNameField.getText().toString();
                 selectedClip.duration = ParserHelper.TryParse(clipEditSpecificAreaScreen.durationContent.getText().toString(), selectedClip.duration);
-                selectedClip.posX = ParserHelper.TryParse(clipEditSpecificAreaScreen.positionXField.getText().toString(), selectedClip.posX);
-                selectedClip.posY = ParserHelper.TryParse(clipEditSpecificAreaScreen.positionYField.getText().toString(), selectedClip.posY);
-                selectedClip.rotation = ParserHelper.TryParse(clipEditSpecificAreaScreen.rotationField.getText().toString(), selectedClip.rotation);
-                selectedClip.scaleX = ParserHelper.TryParse(clipEditSpecificAreaScreen.scaleXField.getText().toString(), selectedClip.scaleX);
-                selectedClip.scaleY = ParserHelper.TryParse(clipEditSpecificAreaScreen.scaleYField.getText().toString(), selectedClip.scaleY);
-                selectedClip.opacity = ParserHelper.TryParse(clipEditSpecificAreaScreen.opacityField.getText().toString(), selectedClip.opacity);
-                selectedClip.speed = ParserHelper.TryParse(clipEditSpecificAreaScreen.speedField.getText().toString(), selectedClip.speed);
+                selectedClip.videoProperties.setValue(ParserHelper.TryParse(clipEditSpecificAreaScreen.positionXField.getText().toString(), selectedClip.videoProperties.getValue(VideoProperties.ValueType.PosX)), VideoProperties.ValueType.PosX);
+                selectedClip.videoProperties.setValue(ParserHelper.TryParse(clipEditSpecificAreaScreen.positionYField.getText().toString(), selectedClip.videoProperties.getValue(VideoProperties.ValueType.PosY)), VideoProperties.ValueType.PosY);
+                selectedClip.videoProperties.setValue(ParserHelper.TryParse(clipEditSpecificAreaScreen.rotationField.getText().toString(), selectedClip.videoProperties.getValue(VideoProperties.ValueType.Rot)), VideoProperties.ValueType.Rot);
+                selectedClip.videoProperties.setValue(ParserHelper.TryParse(clipEditSpecificAreaScreen.scaleXField.getText().toString(), selectedClip.videoProperties.getValue(VideoProperties.ValueType.ScaleX)), VideoProperties.ValueType.ScaleX);
+                selectedClip.videoProperties.setValue(ParserHelper.TryParse(clipEditSpecificAreaScreen.scaleYField.getText().toString(), selectedClip.videoProperties.getValue(VideoProperties.ValueType.ScaleY)), VideoProperties.ValueType.ScaleY);
+                selectedClip.videoProperties.setValue(ParserHelper.TryParse(clipEditSpecificAreaScreen.opacityField.getText().toString(), selectedClip.videoProperties.getValue(VideoProperties.ValueType.Opacity)), VideoProperties.ValueType.Opacity);
+                selectedClip.videoProperties.setValue(ParserHelper.TryParse(clipEditSpecificAreaScreen.speedField.getText().toString(), selectedClip.videoProperties.getValue(VideoProperties.ValueType.Speed)), VideoProperties.ValueType.Speed);
 
                 selectedClip.isMute = clipEditSpecificAreaScreen.muteAudioCheckbox.isChecked();
 
@@ -1069,13 +1069,13 @@ public class EditingActivity extends AppCompatActivityImpl {
             clipEditSpecificAreaScreen.totalDurationText.setText(String.valueOf(selectedClip.originalDuration));
             clipEditSpecificAreaScreen.clipNameField.setText(String.valueOf(selectedClip.clipName));
             clipEditSpecificAreaScreen.durationContent.setText(String.valueOf(selectedClip.duration));
-            clipEditSpecificAreaScreen.positionXField.setText(String.valueOf(selectedClip.posX));
-            clipEditSpecificAreaScreen.positionYField.setText(String.valueOf(selectedClip.posY));
-            clipEditSpecificAreaScreen.rotationField.setText(String.valueOf(selectedClip.rotation));
-            clipEditSpecificAreaScreen.scaleXField.setText(String.valueOf(selectedClip.scaleX));
-            clipEditSpecificAreaScreen.scaleYField.setText(String.valueOf(selectedClip.scaleY));
-            clipEditSpecificAreaScreen.opacityField.setText(String.valueOf(selectedClip.opacity));
-            clipEditSpecificAreaScreen.speedField.setText(String.valueOf(selectedClip.speed));
+            clipEditSpecificAreaScreen.positionXField.setText(String.valueOf(selectedClip.videoProperties.getValue(VideoProperties.ValueType.PosX)));
+            clipEditSpecificAreaScreen.positionYField.setText(String.valueOf(selectedClip.videoProperties.getValue(VideoProperties.ValueType.PosY)));
+            clipEditSpecificAreaScreen.rotationField.setText(String.valueOf(selectedClip.videoProperties.getValue(VideoProperties.ValueType.Rot)));
+            clipEditSpecificAreaScreen.scaleXField.setText(String.valueOf(selectedClip.videoProperties.getValue(VideoProperties.ValueType.ScaleX)));
+            clipEditSpecificAreaScreen.scaleYField.setText(String.valueOf(selectedClip.videoProperties.getValue(VideoProperties.ValueType.ScaleY)));
+            clipEditSpecificAreaScreen.opacityField.setText(String.valueOf(selectedClip.videoProperties.getValue(VideoProperties.ValueType.Opacity)));
+            clipEditSpecificAreaScreen.speedField.setText(String.valueOf(selectedClip.videoProperties.getValue(VideoProperties.ValueType.Speed)));
 
             clipEditSpecificAreaScreen.muteAudioCheckbox.setChecked(selectedClip.isMute);
         };
@@ -1379,10 +1379,10 @@ public class EditingActivity extends AppCompatActivityImpl {
 
 
         clip.keyframes.keyframes.add(new Keyframe(currentTime, new VideoProperties(
-                clip.posX, clip.posY,
-                clip.rotation,
-                clip.scaleX, clip.scaleY,
-                clip.opacity, clip.speed
+                clip.videoProperties.getValue(VideoProperties.ValueType.PosX), clip.videoProperties.getValue(VideoProperties.ValueType.PosY),
+                clip.videoProperties.getValue(VideoProperties.ValueType.Rot),
+                clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX), clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY),
+                clip.videoProperties.getValue(VideoProperties.ValueType.Opacity), clip.videoProperties.getValue(VideoProperties.ValueType.Speed)
         ), EasingType.LINEAR));
 
         handleKeyframeInteraction(knotView);
@@ -2403,19 +2403,7 @@ public class EditingActivity extends AppCompatActivityImpl {
         public int height;
 
         @Expose
-        public float posX;
-        @Expose
-        public float posY;
-        @Expose
-        public float scaleX;
-        @Expose
-        public float scaleY;
-        @Expose
-        public float rotation;
-        @Expose
-        public float opacity;
-        @Expose
-        public float speed;
+        public VideoProperties videoProperties;
 
 
         @Expose
@@ -2466,11 +2454,7 @@ public class EditingActivity extends AppCompatActivityImpl {
             this.width = width;
             this.height = height;
 
-            this.scaleX = 1;
-            this.scaleY = 1;
-
-            this.opacity = 1;
-            this.speed = 1;
+            this.videoProperties = new VideoProperties(0, 0, 0, 1, 1, 1, 1);
             this.isMute = false;
         }
 
@@ -2488,11 +2472,7 @@ public class EditingActivity extends AppCompatActivityImpl {
             this.width = clip.width;
             this.height = clip.height;
 
-            this.scaleX = clip.scaleX;
-            this.scaleY = clip.scaleY;
-
-            this.opacity = clip.opacity;
-            this.speed = clip.speed;
+            this.videoProperties = new VideoProperties(clip.videoProperties);
             this.isMute = clip.isMute;
 
 
@@ -2720,11 +2700,7 @@ public class EditingActivity extends AppCompatActivityImpl {
             activity.revalidationClipView(this);
         }
         public void restate() {
-            posX = 0;
-            posY = 0;
-            scaleX = 1;
-            scaleY = 1;
-            rotation = 0;
+            videoProperties = new VideoProperties(0, 0, 0, 1, 1, 1, 1);
         }
 
         public void mergingVideoPropertiesFromSingleKeyframe() {
@@ -2736,13 +2712,7 @@ public class EditingActivity extends AppCompatActivityImpl {
             }
         }
         public void applyPropertiesToClip(VideoProperties properties) {
-            posX = properties.valuePosX;
-            posY = properties.valuePosY;
-            rotation = properties.valueRot;
-            scaleX = properties.valueScaleX;
-            scaleY = properties.valueScaleY;
-            opacity = properties.valueOpacity;
-            speed = properties.valueSpeed;
+            this.videoProperties = new VideoProperties(properties);
         }
 
 
@@ -3064,6 +3034,28 @@ frameRate = 60;
             }
         }
 
+        public void setValue(float v, ValueType valueType) {
+
+            switch (valueType)
+            {
+                case PosX:
+                    valuePosX = v;
+                case PosY:
+                    valuePosY = v;
+                case Rot:
+                    valueRot = v;
+                case ScaleX:
+                    valueScaleX = v;
+                case ScaleY:
+                    valueScaleY = v;
+                case Opacity:
+                    valueOpacity = v;
+                case Speed:
+                    valueSpeed = v;
+
+            }
+        }
+
         public enum ValueType {
             PosX, PosY, Rot, ScaleX, ScaleY, Opacity, Speed
         }
@@ -3243,11 +3235,11 @@ frameRate = 60;
 
                                     surfaceTexture.setDefaultBufferSize(clip.width, clip.height); // or your target resolution
 
-                                    posX = (EditingActivity.renderToPreviewConversionX(clip.posX, settings.videoWidth));
-                                    posY = (EditingActivity.renderToPreviewConversionY(clip.posY, settings.videoHeight));
-                                    scaleX = (EditingActivity.renderToPreviewConversionScalingX(clip.scaleX, settings.videoWidth));
-                                    scaleY = (EditingActivity.renderToPreviewConversionScalingY(clip.scaleY, settings.videoHeight));
-                                    rot = (clip.rotation);
+                                    posX = (EditingActivity.renderToPreviewConversionX(clip.videoProperties.getValue(VideoProperties.ValueType.PosX), settings.videoWidth));
+                                    posY = (EditingActivity.renderToPreviewConversionY(clip.videoProperties.getValue(VideoProperties.ValueType.PosY), settings.videoHeight));
+                                    scaleX = (EditingActivity.renderToPreviewConversionScalingX(clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX), settings.videoWidth));
+                                    scaleY = (EditingActivity.renderToPreviewConversionScalingY(clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY), settings.videoHeight));
+                                    rot = (clip.videoProperties.getValue(VideoProperties.ValueType.Rot));
 
 
                                     applyTransformation();
@@ -3327,11 +3319,11 @@ frameRate = 60;
                                 // Create a Surface from the TextureView
                                 surfaceTexture.setDefaultBufferSize(clip.width, clip.height); // or your target resolution
 
-                                posX = (EditingActivity.renderToPreviewConversionX(clip.posX, settings.videoWidth));
-                                posY = (EditingActivity.renderToPreviewConversionY(clip.posY, settings.videoHeight));
-                                scaleX = (EditingActivity.renderToPreviewConversionScalingX(clip.scaleX, settings.videoWidth));
-                                scaleY = (EditingActivity.renderToPreviewConversionScalingY(clip.scaleY, settings.videoHeight));
-                                rot = (clip.rotation);
+                                posX = (EditingActivity.renderToPreviewConversionX(clip.videoProperties.getValue(VideoProperties.ValueType.PosX), settings.videoWidth));
+                                posY = (EditingActivity.renderToPreviewConversionY(clip.videoProperties.getValue(VideoProperties.ValueType.PosY), settings.videoHeight));
+                                scaleX = (EditingActivity.renderToPreviewConversionScalingX(clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX), settings.videoWidth));
+                                scaleY = (EditingActivity.renderToPreviewConversionScalingY(clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY), settings.videoHeight));
+                                rot = (clip.videoProperties.getValue(VideoProperties.ValueType.Rot));
 
                                 applyTransformation();
                                 applyPostTransformation();
@@ -3580,15 +3572,15 @@ frameRate = 60;
                     // Move
                     posX -= dx;
                     posY -= dy;
-                    posMatrixX -= dx / clip.scaleX;
-                    posMatrixY -= dy / clip.scaleY;
+                    posMatrixX -= dx / clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX);
+                    posMatrixY -= dy / clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY);
                     applyTransformation();
 
                     // Sync model
-                    clip.posX = EditingActivity.previewToRenderConversionX(posX, settings.videoWidth);
-                    clip.posY = EditingActivity.previewToRenderConversionY(posY, settings.videoHeight);
+                    clip.videoProperties.setValue(EditingActivity.previewToRenderConversionX(posX, settings.videoWidth), VideoProperties.ValueType.PosX);
+                    clip.videoProperties.setValue(EditingActivity.previewToRenderConversionY(posY, settings.videoHeight), VideoProperties.ValueType.PosY);
 
-                    textCanvasControllerInfo.setText("Pos X: " + clip.posX + " | Pos Y: " + clip.posY);
+                    textCanvasControllerInfo.setText("Pos X: " + clip.videoProperties.getValue(VideoProperties.ValueType.PosX) + " | Pos Y: " + clip.videoProperties.getValue(VideoProperties.ValueType.PosY));
                     return true;
                 }
                 @Override public boolean onSingleTapUp(MotionEvent e) {
@@ -3615,15 +3607,15 @@ frameRate = 60;
                     //  only after that we based on the width and height of the following aspect ratio
                     //  and use it for preview scaling inside the screen that smaller than the video. (Clamping)
                     // Sync model
-                    clip.scaleX = EditingActivity.previewToRenderConversionScalingX(scaleX, settings.videoWidth);
-                    clip.scaleY = EditingActivity.previewToRenderConversionScalingY(scaleY, settings.videoHeight);
+                    clip.videoProperties.setValue(EditingActivity.previewToRenderConversionScalingX(scaleX, settings.videoWidth), VideoProperties.ValueType.ScaleX);
+                    clip.videoProperties.setValue(EditingActivity.previewToRenderConversionScalingY(scaleY, settings.videoHeight), VideoProperties.ValueType.ScaleY);
 
                     setPivot();
 
                     textCanvasControllerInfo.setText(
-                                    "Scale X: " + clip.scaleX +
-                                    " | Scale Y: " + clip.scaleY +
-                                    "\n" + "Rot: " + clip.rotation
+                                    "Scale X: " + clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX) +
+                                    " | Scale Y: " + clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY) +
+                                    "\n" + "Rot: " + clip.videoProperties.getValue(VideoProperties.ValueType.Rot)
                     );
 
                     return true;
@@ -3670,12 +3662,12 @@ frameRate = 60;
                                 }
 
                                 applyTransformation();
-                                clip.rotation = rot;
+                                clip.videoProperties.setValue(rot, VideoProperties.ValueType.Rot);
 
                                 textCanvasControllerInfo.setText(
-                                        "Scale X: " + clip.scaleX +
-                                                " | Scale Y: " + clip.scaleY +
-                                                "\n" + "Rot: " + clip.rotation
+                                        "Scale X: " + clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX) +
+                                                " | Scale Y: " + clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY) +
+                                                "\n" + "Rot: " + clip.videoProperties.getValue(VideoProperties.ValueType.Rot)
                                 );
 
                                 lastAngle[0] = angle;
