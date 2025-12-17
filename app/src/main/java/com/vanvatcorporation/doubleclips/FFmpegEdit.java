@@ -584,16 +584,12 @@ public class FFmpegEdit {
         switch (type)
         {
             case LINEAR:
-                expr.append(prevValue).append("+(").append(nextValue).append("-").append(prevValue)
-                        .append(")*").append(getClipRatio(offset, duration));
-                break;
+                return expr.append(prevValue).append("+(").append(nextValue).append("-").append(prevValue)
+                        .append(")*").append(getClipRatio(offset, duration)).toString();
             case EASE_IN:
-                expr.append(prevValue).append("+(").append(nextValue).append("-").append(prevValue)
-                        .append(")*pow(").append(getClipRatio(offset, duration)).append(",2)");
-                break;
+                return expr.append(prevValue).append("+(").append(nextValue).append("-").append(prevValue)
+                        .append(")*pow(").append(getClipRatio(offset, duration)).append(",2)").toString();
             case EASE_OUT:
-                expr.append(prevValue).append("+(").append(nextValue).append("-").append(prevValue)
-                        .append(")*pow(").append(getClipRatio(offset, duration)).append(",2)");
                 break;
             case EASE_IN_OUT:
                 break;

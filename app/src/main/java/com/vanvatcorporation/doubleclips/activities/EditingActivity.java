@@ -2977,12 +2977,19 @@ frameRate = 60;
 
     }
     public static class VideoProperties implements Serializable {
+        @Expose
         public float valuePosX;
+        @Expose
         public float valuePosY;
+        @Expose
         public float valueRot;
+        @Expose
         public float valueScaleX;
+        @Expose
         public float valueScaleY;
+        @Expose
         public float valueOpacity;
+        @Expose
         public float valueSpeed;
 
         public VideoProperties(float valuePosX, float valuePosY,
@@ -3040,18 +3047,25 @@ frameRate = 60;
             {
                 case PosX:
                     valuePosX = v;
+                    break;
                 case PosY:
                     valuePosY = v;
+                    break;
                 case Rot:
                     valueRot = v;
+                    break;
                 case ScaleX:
                     valueScaleX = v;
+                    break;
                 case ScaleY:
                     valueScaleY = v;
+                    break;
                 case Opacity:
                     valueOpacity = v;
+                    break;
                 case Speed:
                     valueSpeed = v;
+                    break;
 
             }
         }
