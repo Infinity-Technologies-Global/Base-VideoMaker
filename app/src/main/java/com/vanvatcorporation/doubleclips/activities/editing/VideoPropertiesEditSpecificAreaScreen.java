@@ -38,6 +38,13 @@ public class VideoPropertiesEditSpecificAreaScreen extends BaseEditSpecificAreaS
         resolutionYField = findViewById(R.id.resolutionYField);
         bitrateField = findViewById(R.id.bitrateField);
 
+
+        onClose.add(() -> {
+            resolutionXField.clearFocus();
+            resolutionYField.clearFocus();
+            bitrateField.clearFocus();
+        });
+
         animationScreen = AnimationScreen.ToBottom;
     }
 }

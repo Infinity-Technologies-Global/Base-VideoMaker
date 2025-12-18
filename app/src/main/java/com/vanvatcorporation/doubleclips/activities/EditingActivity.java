@@ -948,17 +948,17 @@ public class EditingActivity extends AppCompatActivityImpl {
 
         // ===========================       TEXT ZONE       ====================================
 
-        textEditSpecificAreaScreen.onClose = () -> {
+        textEditSpecificAreaScreen.onClose.add(() -> {
             if(selectedClip != null)
             {
                 selectedClip.textContent = textEditSpecificAreaScreen.textEditContent.getText().toString();
                 selectedClip.fontSize = ParserHelper.TryParse(textEditSpecificAreaScreen.textSizeContent.getText().toString(), 28f);
             }
-        };
-        textEditSpecificAreaScreen.onOpen = () -> {
+        });
+        textEditSpecificAreaScreen.onOpen.add(() -> {
             textEditSpecificAreaScreen.textEditContent.setText(selectedClip.textContent);
             textEditSpecificAreaScreen.textSizeContent.setText(String.valueOf(selectedClip.fontSize));
-        };
+        });
 
         // ===========================       TEXT ZONE       ====================================
 
@@ -966,17 +966,17 @@ public class EditingActivity extends AppCompatActivityImpl {
         // ===========================       EFFECT ZONE       ====================================
 
 
-        effectEditSpecificAreaScreen.onClose = () -> {
+        effectEditSpecificAreaScreen.onClose.add(() -> {
             if(selectedClip != null)
             {
                 selectedClip.effect = new EffectTemplate((String) FXCommandEmitter.FXRegistry.effectsFXMap.keySet().toArray()[effectEditSpecificAreaScreen.effectEditContent.getSelectedItemPosition()], ParserHelper.TryParse(effectEditSpecificAreaScreen.effectDurationContent.getText().toString(), 1), 1);
             }
-        };
-        effectEditSpecificAreaScreen.onOpen = () -> {
+        });
+        effectEditSpecificAreaScreen.onOpen.add(() -> {
             List<String> stringEffects = Arrays.asList(FXCommandEmitter.FXRegistry.effectsFXMap.values().toArray(new String[0]));
             effectEditSpecificAreaScreen.effectEditContent.setSelection(stringEffects.indexOf(FXCommandEmitter.FXRegistry.effectsFXMap.get(selectedClip.effect.style)));
             effectEditSpecificAreaScreen.effectDurationContent.setText(String.valueOf(selectedClip.effect.duration));
-        };
+        });
 
         // ===========================       EFFECT ZONE       ====================================
 
@@ -985,7 +985,7 @@ public class EditingActivity extends AppCompatActivityImpl {
 
 
 
-        transitionEditSpecificAreaScreen.onClose = () -> {
+        transitionEditSpecificAreaScreen.onClose.add(() -> {
             if(selectedKnot != null)
             {
                 for (int i = 0; i < timeline.tracks.get(selectedKnot.trackIndex).transitions.size(); i++)
@@ -1005,7 +1005,7 @@ public class EditingActivity extends AppCompatActivityImpl {
                     }
                 }
             }
-        };
+        });
         transitionEditSpecificAreaScreen.applyAllTransitionButton.setOnClickListener(v -> {
             transitionEditSpecificAreaScreen.animateLayout(BaseEditSpecificAreaScreen.AnimationType.Close);
             if(selectedKnot != null)
@@ -1024,12 +1024,12 @@ public class EditingActivity extends AppCompatActivityImpl {
 
             }
         });
-        transitionEditSpecificAreaScreen.onOpen = () -> {
+        transitionEditSpecificAreaScreen.onOpen.add(() -> {
             List<String> stringTransition = Arrays.asList(FXCommandEmitter.FXRegistry.transitionFXMap.values().toArray(new String[0]));
             transitionEditSpecificAreaScreen.transitionEditContent.setSelection(stringTransition.indexOf(FXCommandEmitter.FXRegistry.transitionFXMap.get(selectedKnot.effect.style)));
             transitionEditSpecificAreaScreen.transitionDurationContent.setText(String.valueOf(selectedKnot.effect.duration));
             transitionEditSpecificAreaScreen.transitionModeEditContent.setSelection(selectedKnot.mode.ordinal());
-        };
+        });
 
         // ===========================       TRANSITION ZONE       ====================================
 
@@ -1037,7 +1037,7 @@ public class EditingActivity extends AppCompatActivityImpl {
 
         // ===========================       MULTIPLE CLIPS ZONE       ====================================
 
-        clipsEditSpecificAreaScreen.onClose = () -> {
+        clipsEditSpecificAreaScreen.onClose.add(() -> {
             if(!selectedClips.isEmpty())
             {
                 for (Clip clip : selectedClips) {
@@ -1047,11 +1047,11 @@ public class EditingActivity extends AppCompatActivityImpl {
                 updateClipLayouts();
                 updateCurrentClipEnd();
             }
-        };
-        clipsEditSpecificAreaScreen.onOpen = () -> {
+        });
+        clipsEditSpecificAreaScreen.onOpen.add(() -> {
             // TODO: Didn't change following the endClipTrim/startClipTrim rule yet.
             clipsEditSpecificAreaScreen.clipsDurationContent.setText(String.valueOf(selectedClips.get(0).duration));
-        };
+        });
 
 
         // ===========================       MULTIPLE CLIPS ZONE       ====================================
@@ -1060,7 +1060,7 @@ public class EditingActivity extends AppCompatActivityImpl {
 
         // ===========================       CLIP ZONE       ====================================
 
-        clipEditSpecificAreaScreen.onClose = () -> {
+        clipEditSpecificAreaScreen.onClose.add(() -> {
             if(selectedClip != null)
             {
                 selectedClip.clipName = clipEditSpecificAreaScreen.clipNameField.getText().toString();
@@ -1084,8 +1084,8 @@ public class EditingActivity extends AppCompatActivityImpl {
 
                 clipEditSpecificAreaScreen.keyframeScrollFrame.removeAllViews();
             }
-        };
-        clipEditSpecificAreaScreen.onOpen = () -> {
+        });
+        clipEditSpecificAreaScreen.onOpen.add(() -> {
             clipEditSpecificAreaScreen.totalDurationText.setText(String.valueOf(selectedClip.originalDuration));
             clipEditSpecificAreaScreen.clipNameField.setText(String.valueOf(selectedClip.clipName));
             clipEditSpecificAreaScreen.durationContent.setText(String.valueOf(selectedClip.duration));
@@ -1113,7 +1113,7 @@ public class EditingActivity extends AppCompatActivityImpl {
                     selectedClip.keyframes.keyframes.clear();
                 }
             });
-        };
+        });
 
 
         // ===========================       CLIP ZONE       ====================================
@@ -1122,7 +1122,7 @@ public class EditingActivity extends AppCompatActivityImpl {
 
         // ===========================       VIDEO PROPERTIES ZONE       ====================================
 
-        videoPropertiesEditSpecificAreaScreen.onClose = () -> {
+        videoPropertiesEditSpecificAreaScreen.onClose.add(() -> {
             settings.videoWidth = ParserHelper.TryParse(videoPropertiesEditSpecificAreaScreen.resolutionXField.getText().toString(), 1366);
             settings.videoHeight = ParserHelper.TryParse(videoPropertiesEditSpecificAreaScreen.resolutionYField.getText().toString(), 768);
             settings.crf = ParserHelper.TryParse(videoPropertiesEditSpecificAreaScreen.bitrateField.getText().toString(), 30);
@@ -1133,12 +1133,12 @@ public class EditingActivity extends AppCompatActivityImpl {
             previewViewGroupParams.width = settings.videoWidth;
             previewViewGroupParams.height = settings.videoHeight;
             previewViewGroup.setLayoutParams(previewViewGroupParams);
-        };
-        videoPropertiesEditSpecificAreaScreen.onOpen = () -> {
+        });
+        videoPropertiesEditSpecificAreaScreen.onOpen.add(() -> {
             videoPropertiesEditSpecificAreaScreen.resolutionXField.setText(String.valueOf(settings.getVideoWidth()));
             videoPropertiesEditSpecificAreaScreen.resolutionYField.setText(String.valueOf(settings.getVideoHeight()));
             videoPropertiesEditSpecificAreaScreen.bitrateField.setText(String.valueOf(settings.getCRF()));
-        };
+        });
 
 
         // ===========================       VIDEO PROPERTIES ZONE       ====================================
@@ -1383,13 +1383,14 @@ public class EditingActivity extends AppCompatActivityImpl {
         trackLayout.addView(clipView);
         handleClipInteraction(clipView);
     }
-    public void addKnotTransition(TransitionClip clip, View clipB)
+    public void addKnotTransition(TransitionClip clip, Clip clipA)
     {
         View knotView = new View(this);
         knotView.setBackgroundColor(Color.RED);
         knotView.setVisibility(View.VISIBLE);
 
         knotView.setTag(R.id.transition_knot_tag, clip);
+        knotView.setTag(R.id.clip_knot_tag, clipA);
         // Position it between clips
         int width = 50;
         int height = 50;
@@ -1399,8 +1400,8 @@ public class EditingActivity extends AppCompatActivityImpl {
 
         RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(width, height);
         //params.leftMargin = clipB.getLeft() - (width / 2); // center between clips
-        params.topMargin = clipB.getTop() + (clipB.getHeight() / 2) - (height / 2);
-        knotView.setX(clipB.getX() - (width / 2));
+        params.topMargin = clipA.viewRef.getTop() + (clipA.viewRef.getHeight() / 2) - (height / 2);
+        knotView.setX(clipA.viewRef.getX() + (clipA.duration * pixelsPerSecond) - (width / 2));
         timeline.tracks.get(clip.trackIndex).viewRef.addView(knotView, params);
 
         handleKnotInteraction(knotView);
@@ -1424,21 +1425,23 @@ public class EditingActivity extends AppCompatActivityImpl {
     public void addKeyframeUi(Clip clip, Keyframe keyframe)
     {
         View knotView = new View(this);
-        knotView.setBackgroundColor(Color.BLACK);
+        knotView.setBackgroundColor(Color.BLUE);
         knotView.setVisibility(View.VISIBLE);
 
-        knotView.setTag(R.id.keyframe_knot_tag, clip);
+        knotView.setTag(R.id.keyframe_knot_tag, keyframe);
+        knotView.setTag(R.id.clip_knot_tag, clip);
         // Position it between clips
         int width = 12;
-        int height = 30;
+        int height = clip.viewRef.getHeight();
 
         knotView.setPivotX((float) width /2);
         knotView.setPivotY((float) height /2);
 
         RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(width, height);
         //params.leftMargin = getCurrentTimeInX();
-        params.topMargin = clip.viewRef.getTop() + (clip.viewRef.getHeight() / 2);
-        knotView.setX(getTimeInX(keyframe.time));
+        //params.topMargin = clip.viewRef.getTop() + (clip.viewRef.getHeight() / 2);
+        params.topMargin = clip.viewRef.getTop() + (clip.viewRef.getHeight() / 2) - (height / 2);
+        knotView.setX(getTimeInX(clip.startTime + keyframe.time));
         timeline.tracks.get(clip.trackIndex).viewRef.addView(knotView, params);
 
 
@@ -1475,9 +1478,9 @@ public class EditingActivity extends AppCompatActivityImpl {
     }
     private void handleKeyframeInteraction(View view) {
         view.setOnClickListener(v -> {
-            if(view.getTag(R.id.keyframe_knot_tag) instanceof Clip)
+            if(view.getTag(R.id.keyframe_knot_tag) instanceof Keyframe)
             {
-                Clip data = (Clip) view.getTag(R.id.keyframe_knot_tag);
+                Keyframe data = (Keyframe) view.getTag(R.id.keyframe_knot_tag);
             }
 
         });
@@ -1753,6 +1756,7 @@ public class EditingActivity extends AppCompatActivityImpl {
     void updateTransitionKnot(Track track)
     {
 
+        //TODO: Use endTransition from clipA and toggle visibility and on/off of the transition
         ArrayList<Clip> snappedClipStart = new ArrayList<>();
         ArrayList<Clip> snappedClipEnd = new ArrayList<>();
 
@@ -1913,6 +1917,16 @@ public class EditingActivity extends AppCompatActivityImpl {
                     clip.setX(getTimeInX(data.startTime));
                     clip.setLayoutParams(params);
                 }
+                if(clip.getTag(R.id.transition_knot_tag) instanceof TransitionClip) {
+                    TransitionClip data = (TransitionClip) clip.getTag(R.id.transition_knot_tag);
+                    //clip.setX(getTimeInX(data.time));
+                }
+                if(clip.getTag(R.id.keyframe_knot_tag) instanceof Keyframe) {
+                    Keyframe data = (Keyframe) clip.getTag(R.id.keyframe_knot_tag);
+                    Clip data2 = (Clip) clip.getTag(R.id.clip_knot_tag);
+
+                    clip.setX(getTimeInX(data2.startTime + data.time));
+                }
             }
         }
     }
@@ -1966,9 +1980,13 @@ public class EditingActivity extends AppCompatActivityImpl {
             transition.mode = TransitionClip.TransitionMode.OVERLAP;
             timeline.tracks.get(clipA.trackIndex).addTransition(transition);
 
-            addKnotTransition(transition, clipB.viewRef);
+            addTransitionBridgeUi(transition, clipA);
         }
 
+    }
+    private void addTransitionBridgeUi(TransitionClip transitionClip, Clip clip)
+    {
+        addKnotTransition(transitionClip, clip);
     }
 
 
@@ -2383,9 +2401,16 @@ public class EditingActivity extends AppCompatActivityImpl {
             transitions.add(transition);
         }
         public void removeTransitionUi(TransitionClip transition) {
-            View targetView = viewRef.findViewWithTag(transition);
-            if(targetView != null)
-                viewRef.removeView(targetView);
+
+            for (int i = 0; i < viewRef.getChildCount(); i++) {
+                View targetView = viewRef.getChildAt(i);
+                System.err.println(i);
+
+                if (targetView != null && targetView.getTag(R.id.transition_knot_tag) != null) {
+                    viewRef.removeView(targetView);
+                    break;
+                }
+            }
         }
         public void removeTransition(TransitionClip transition) {
             transitions.remove(transition);
@@ -2465,9 +2490,6 @@ public class EditingActivity extends AppCompatActivityImpl {
 
         @Expose
         public AnimatedProperty keyframes = new AnimatedProperty();
-        // Use for keyframe pre-rendering
-        @Expose
-        public String preRenderedName;
 
         // FX support (for EFFECT type)
         @Expose
@@ -2482,7 +2504,7 @@ public class EditingActivity extends AppCompatActivityImpl {
         //  this will make more sense than begin Transition as no one would merge the beginning of the clip and call it a transition.
         //  Save this endTransition alongside with this clip.
         @Expose
-        public TransitionClip endTransition;
+        public TransitionClip endTransition = null;
 
         /**
          * For VIDEO type.
@@ -2823,13 +2845,7 @@ public class EditingActivity extends AppCompatActivityImpl {
             return keyframes.keyframes.size() == 1;
         }
 
-        public String getRenderedName() {
-            return preRenderedName;
-        }
 
-        public void setRenderedName(String s) {
-            preRenderedName = s;
-        }
         /**
          * Used for FFmpeg and other output that requires original quality.
          *
@@ -2876,13 +2892,6 @@ public class EditingActivity extends AppCompatActivityImpl {
                 path = getAbsolutePath(projectPath);
             return path;
         }
-        public String getAbsoluteRenderPath(MainActivity.ProjectData properties) {
-            return getAbsoluteRenderPath(properties.getProjectPath());
-        }
-        public String getAbsoluteRenderPath(String projectPath) {
-            return IOHelper.CombinePath(projectPath, Constants.DEFAULT_CLIP_DIRECTORY, preRenderedName);
-        }
-
         public float getLocalClipTime(float playheadTime) {
             return playheadTime - startTime;
         }
@@ -3432,6 +3441,26 @@ frameRate = 60;
                             @Override
                             public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
                                 // Create a Surface from the TextureView
+
+                                // For IMAGE rendering
+                                // TODO: WTF sample size 1? Yes for rendering. We don't know how to forcefully extend the 8 old sampleSize
+                                Bitmap image = IOImageHelper.LoadFileAsPNGImage(context, clip.getAbsolutePreviewPath(data), 1);
+
+                                // Resize TextureView to match bitmap size
+                                ViewGroup.LayoutParams params = textureView.getLayoutParams();
+                                params.width = clip.width;
+                                params.height = clip.height;
+                                textureView.setLayoutParams(params);
+
+                                // Draw the bitmap onto the TextureView’s canvas
+                                Canvas canvas = textureView.lockCanvas();
+                                if (canvas != null) {
+                                    //canvas.drawColor(Color.BLACK); // optional background
+                                    canvas.drawBitmap(image, 0, 0, null); // draw at top-left
+                                    textureView.unlockCanvasAndPost(canvas);
+                                }
+
+
                                 surfaceTexture.setDefaultBufferSize(clip.width, clip.height); // or your target resolution
 
                                 posX = (EditingActivity.renderToPreviewConversionX(clip.videoProperties.getValue(VideoProperties.ValueType.PosX), settings.videoWidth));
@@ -3443,22 +3472,6 @@ frameRate = 60;
                                 applyTransformation();
                                 applyPostTransformation();
 
-                                // For IMAGE rendering
-                                Bitmap image = IOImageHelper.LoadFileAsPNGImage(context, clip.getAbsolutePreviewPath(data), 8);
-
-                                // Resize TextureView to match bitmap size
-                                ViewGroup.LayoutParams params = textureView.getLayoutParams();
-                                params.width = image.getWidth();
-                                params.height = image.getHeight();
-                                textureView.setLayoutParams(params);
-
-                                // Draw the bitmap onto the TextureView’s canvas
-                                Canvas canvas = textureView.lockCanvas();
-                                if (canvas != null) {
-                                    //canvas.drawColor(Color.BLACK); // optional background
-                                    canvas.drawBitmap(image, 0, 0, null); // draw at top-left
-                                    textureView.unlockCanvasAndPost(canvas);
-                                }
                             }
 
                             @Override

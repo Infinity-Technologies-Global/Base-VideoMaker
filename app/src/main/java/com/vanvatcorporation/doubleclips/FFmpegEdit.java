@@ -590,7 +590,8 @@ public class FFmpegEdit {
                 return expr.append(prevValue).append("+(").append(nextValue).append("-").append(prevValue)
                         .append(")*pow(").append(getClipRatio(offset, duration)).append(",2)").toString();
             case EASE_OUT:
-                break;
+                return expr.append(prevValue).append("+(").append(nextValue).append("-").append(prevValue)
+                        .append(")*(1-pow(1-").append(getClipRatio(offset, duration)).append(",2))").toString();
             case EASE_IN_OUT:
                 break;
             case EXPONENTIAL:

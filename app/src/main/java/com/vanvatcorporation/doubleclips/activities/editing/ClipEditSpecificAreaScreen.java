@@ -56,6 +56,19 @@ public class ClipEditSpecificAreaScreen extends BaseEditSpecificAreaScreen {
         opacityField = findViewById(R.id.opacityField);
         speedField = findViewById(R.id.speedField);
         muteAudioCheckbox = findViewById(R.id.muteAudioCheckbox);
+
+        // Clear focus after edit
+        onClose.add(() -> {
+            clipNameField.clearFocus();
+            durationContent.clearFocus();
+            positionXField.clearFocus();
+            positionYField.clearFocus();
+            rotationField.clearFocus();
+            scaleXField.clearFocus();
+            scaleYField.clearFocus();
+            opacityField.clearFocus();
+            speedField.clearFocus();
+        });
     }
 
     public void createKeyframeElement(EditingActivity.Keyframe keyframe, Runnable onClickKeyframe)

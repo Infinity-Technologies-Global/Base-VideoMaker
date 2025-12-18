@@ -51,7 +51,15 @@ public class TransitionEditSpecificAreaScreen extends BaseEditSpecificAreaScreen
 
         transitionEditContent.setAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, FXCommandEmitter.FXRegistry.transitionFXMap.values().toArray(new String[0])));
         transitionModeEditContent.setAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, EditingActivity.TransitionClip.TransitionMode.values()));
+
+
+        onClose.add(() -> {
+            transitionEditContent.clearFocus();
+            transitionDurationContent.clearFocus();
+        });
     }
+
+
 
 
 

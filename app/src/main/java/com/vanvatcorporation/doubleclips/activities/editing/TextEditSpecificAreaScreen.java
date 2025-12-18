@@ -37,6 +37,12 @@ public class TextEditSpecificAreaScreen extends BaseEditSpecificAreaScreen {
         super.init();
         textEditContent = findViewById(R.id.textContent);
         textSizeContent = findViewById(R.id.sizeContent);
+
+
+        onClose.add(() -> {
+            textEditContent.clearFocus();
+            textSizeContent.clearFocus();
+        });
     }
 
 

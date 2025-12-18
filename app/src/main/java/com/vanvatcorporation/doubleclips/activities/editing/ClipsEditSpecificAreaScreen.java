@@ -35,6 +35,10 @@ public class ClipsEditSpecificAreaScreen extends BaseEditSpecificAreaScreen {
     {
         super.init();
         clipsDurationContent = findViewById(R.id.durationContent);
+
+        onClose.add(() -> {
+            clipsDurationContent.clearFocus();
+        });
     }
 
 }

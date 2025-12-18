@@ -12,12 +12,15 @@ import android.widget.RelativeLayout;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.vanvatcorporation.doubleclips.R;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class BaseEditSpecificAreaScreen extends RelativeLayout {
 
     public ShapeableImageView windowBackground;
     public ImageButton closeWindowButton;
-    public Runnable onClose;
-    public Runnable onOpen;
+    public ArrayList<Runnable> onClose = new ArrayList<>();
+    public ArrayList<Runnable> onOpen = new ArrayList<>();
 
     public AnimationScreen animationScreen = AnimationScreen.ToTop;
 
@@ -59,13 +62,17 @@ public class BaseEditSpecificAreaScreen extends RelativeLayout {
     {
         animateLayout(AnimationType.Open);
 
-        onOpen.run();
+        for (Runnable run : onOpen) {
+            run.run();
+        }
     }
     public void close()
     {
         animateLayout(AnimationType.Close);
 
-        onClose.run();
+        for (Runnable run : onClose) {
+            run.run();
+        }
     }
 
 

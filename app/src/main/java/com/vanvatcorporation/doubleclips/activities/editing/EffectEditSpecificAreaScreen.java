@@ -48,6 +48,10 @@ public class EffectEditSpecificAreaScreen extends BaseEditSpecificAreaScreen {
 
         effectEditContent.setAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, FXCommandEmitter.FXRegistry.effectsFXMap.values().toArray(new String[0])));
 
+        onClose.add(() -> {
+            effectEditContent.clearFocus();
+            effectDurationContent.clearFocus();
+        });
     }
 
 
