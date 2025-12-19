@@ -1,6 +1,6 @@
 package com.vanvatcorporation.doubleclips.activities;
 
-import static com.vanvatcorporation.doubleclips.FFmpegEdit.generateExportCmd;
+import static com.vanvatcorporation.doubleclips.FFmpegEdit.generateExportCmdFull;
 import static com.vanvatcorporation.doubleclips.FFmpegEdit.runAnyCommand;
 
 import android.app.Activity;
@@ -12,14 +12,11 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
-import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -27,34 +24,17 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 
 import com.arthenica.ffmpegkit.FFmpegKit;
-import com.arthenica.ffmpegkit.FFmpegKitConfig;
-import com.arthenica.ffmpegkit.FFmpegSession;
-import com.arthenica.ffmpegkit.FFprobeKit;
 import com.arthenica.ffmpegkit.Log;
-import com.arthenica.ffmpegkit.LogCallback;
-import com.arthenica.ffmpegkit.MediaInformationSession;
 import com.arthenica.ffmpegkit.Statistics;
-import com.arthenica.ffmpegkit.StatisticsCallback;
 import com.vanvatcorporation.doubleclips.AdsHandler;
 import com.vanvatcorporation.doubleclips.FFmpegEdit;
-import com.vanvatcorporation.doubleclips.FXCommandEmitter;
 import com.vanvatcorporation.doubleclips.R;
-import com.vanvatcorporation.doubleclips.activities.editing.BaseEditSpecificAreaScreen;
-import com.vanvatcorporation.doubleclips.activities.editing.ClipEditSpecificAreaScreen;
-import com.vanvatcorporation.doubleclips.activities.editing.ClipsEditSpecificAreaScreen;
-import com.vanvatcorporation.doubleclips.activities.editing.EffectEditSpecificAreaScreen;
-import com.vanvatcorporation.doubleclips.activities.editing.TextEditSpecificAreaScreen;
-import com.vanvatcorporation.doubleclips.activities.editing.TransitionEditSpecificAreaScreen;
-import com.vanvatcorporation.doubleclips.activities.editing.VideoPropertiesEditSpecificAreaScreen;
 import com.vanvatcorporation.doubleclips.activities.export.VideoPropertiesExportSpecificAreaScreen;
 import com.vanvatcorporation.doubleclips.constants.Constants;
 import com.vanvatcorporation.doubleclips.helper.IOHelper;
 import com.vanvatcorporation.doubleclips.helper.ParserHelper;
 import com.vanvatcorporation.doubleclips.impl.AppCompatActivityImpl;
 import com.vanvatcorporation.doubleclips.impl.java.RunnableImpl;
-
-import java.util.Arrays;
-import java.util.List;
 
 public class ExportActivity extends AppCompatActivityImpl {
 
@@ -249,7 +229,7 @@ public class ExportActivity extends AppCompatActivityImpl {
     {
 
         runLogUpdate();
-        String cmd = generateExportCmd(this, settings, timeline, properties);
+        String cmd = generateExportCmdFull(this, settings, timeline, properties);
         commandText.setText(cmd);
     }
 

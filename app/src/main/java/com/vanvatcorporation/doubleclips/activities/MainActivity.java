@@ -32,7 +32,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.google.android.gms.ads.MobileAds;
 import com.google.gson.Gson;
 import com.vanvatcorporation.doubleclips.AdsHandler;
 import com.vanvatcorporation.doubleclips.BuildConfig;
@@ -40,7 +39,6 @@ import com.vanvatcorporation.doubleclips.FFmpegEdit;
 import com.vanvatcorporation.doubleclips.R;
 import com.vanvatcorporation.doubleclips.UncaughtExceptionHandler;
 import com.vanvatcorporation.doubleclips.constants.Constants;
-import com.vanvatcorporation.doubleclips.constants.RunnableConstants;
 import com.vanvatcorporation.doubleclips.ext.rajawali.RajawaliExample;
 import com.vanvatcorporation.doubleclips.helper.CompressionHelper;
 import com.vanvatcorporation.doubleclips.helper.DateHelper;
@@ -54,11 +52,9 @@ import com.vanvatcorporation.doubleclips.impl.NavigationIconLayout;
 import com.vanvatcorporation.doubleclips.impl.ViewPagerImpl;
 import com.vanvatcorporation.doubleclips.impl.java.RunnableImpl2;
 import com.vanvatcorporation.doubleclips.manager.LoggingManager;
-import com.vanvatcorporation.doubleclips.services.RunnableTaskService;
 
 import java.io.File;
 import java.io.Serializable;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -616,7 +612,7 @@ public class MainActivity extends AppCompatActivityImpl {
                                 EditingActivity.VideoSettings.FfmpegTune.ZEROLATENCY);
                         EditingActivity.Timeline timeline = EditingActivity.Timeline.loadRawTimeline(context, projectItem);
                         String ffmpegCmdPath = IOHelper.CombinePath(projectItem.getProjectPath(), "ffmpegCmd.txt");
-                        IOHelper.writeToFile(context, ffmpegCmdPath, FFmpegEdit.generateExportCmd(context, videoSettings, timeline, projectItem));
+                        IOHelper.writeToFile(context, ffmpegCmdPath, FFmpegEdit.generateExportCmdFull(context, videoSettings, timeline, projectItem));
 
 
                         MainActivity.this.zippingProject(projectItem);
