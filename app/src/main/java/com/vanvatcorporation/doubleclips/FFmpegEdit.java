@@ -566,9 +566,9 @@ public class FFmpegEdit {
 
         keyframeExprString
                 .append("if(")
-                .append("gte(t,").append(prevKeyframe.time).append(")")
+                .append("gte(t,").append(prevKeyframe.getLocalTime()).append(")")
                 .append("*")
-                .append("lte(t,").append(nextKeyframe.time).append(")").append(",")
+                .append("lte(t,").append(nextKeyframe.getLocalTime()).append(")").append(",")
                 // insert the expr here
                 // previous: nextKeyframe.value.getValue(valueType)
                 .append(generateEasing(prevKeyframe, nextKeyframe, clip, valueType)).append(",")
@@ -580,7 +580,7 @@ public class FFmpegEdit {
 
     public static String generateEasing(EditingActivity.Keyframe prevKey, EditingActivity.Keyframe nextKey, EditingActivity.Clip clip, EditingActivity.VideoProperties.ValueType type)
     {
-        return generateEasing(prevKey.value.getValue(type), nextKey.value.getValue(type), prevKey.time, (nextKey.time - prevKey.time), prevKey.easing);
+        return generateEasing(prevKey.value.getValue(type), nextKey.value.getValue(type), prevKey.getLocalTime(), (nextKey.getLocalTime() - prevKey.getLocalTime()), prevKey.easing);
     }
     public static String generateEasing(float prevValue, float nextValue, float offset, float duration, EditingActivity.EasingType type)
     {

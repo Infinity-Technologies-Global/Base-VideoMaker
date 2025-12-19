@@ -1104,7 +1104,7 @@ public class EditingActivity extends AppCompatActivityImpl {
             for(Keyframe keyframe : selectedClip.keyframes.keyframes)
             {
                 clipEditSpecificAreaScreen.createKeyframeElement(keyframe, () -> {
-                    setCurrentTime(keyframe.time);
+                    setCurrentTime(keyframe.getGlobalTime(selectedClip));
                 });
             }
 
@@ -1442,7 +1442,7 @@ public class EditingActivity extends AppCompatActivityImpl {
         //params.leftMargin = getCurrentTimeInX();
         //params.topMargin = clip.viewRef.getTop() + (clip.viewRef.getHeight() / 2);
         params.topMargin = clip.viewRef.getTop() + (clip.viewRef.getHeight() / 2) - (height / 2);
-        knotView.setX(getTimeInX(clip.startTime + keyframe.time));
+        knotView.setX(getTimeInX(keyframe.getGlobalTime(clip)));
         timeline.tracks.get(clip.trackIndex).viewRef.addView(knotView, params);
 
 
@@ -1926,7 +1926,7 @@ public class EditingActivity extends AppCompatActivityImpl {
                     Keyframe data = (Keyframe) clip.getTag(R.id.keyframe_knot_tag);
                     Clip data2 = (Clip) clip.getTag(R.id.clip_knot_tag);
 
-                    clip.setX(getTimeInX(data2.startTime + data.time));
+                    clip.setX(getTimeInX(data.getGlobalTime(data2)));
                 }
             }
         }
@@ -3184,7 +3184,7 @@ frameRate = 60;
     }
     public static class Keyframe implements Serializable {
         @Expose
-        public float time; // seconds
+        private float time; // seconds, in local clip time
         @Expose
         public VideoProperties value;
         @Expose
@@ -3197,26 +3197,38 @@ frameRate = 60;
             this.value = value;
             this.easing = easing;
         }
+
+        public float getLocalTime()
+        {
+            return time;
+        }
+        public float getGlobalTime(Clip clip)
+        {
+            return time + clip.startTime;
+        }
     }
     public static class AnimatedProperty implements Serializable {
 
         @Expose
         public List<Keyframe> keyframes = new ArrayList<>();
 
-        public float getValueAtTime(float playheadTime, VideoProperties.ValueType valueType) {
-            if (keyframes.isEmpty()) return 0f;
+        public float getValueAtTime(Clip clip, float playheadTime, VideoProperties.ValueType valueType) {
+            if (keyframes.isEmpty()) return -1;
+
+            // preprocessing the global time to match the local time of the clip
+            playheadTime -= clip.startTime;
 
             Keyframe prev = keyframes.get(0);
             for (Keyframe next : keyframes) {
-                if (playheadTime < next.time) {
-                    float t = (playheadTime - prev.time) / (next.time - prev.time);
+                if (playheadTime < next.getLocalTime()) {
+                    float t = (playheadTime - prev.getLocalTime()) / (next.getLocalTime() - prev.getLocalTime());
                     t = Math.max(0f, Math.min(1f, t));
 
                     float prevValue = prev.value.getValue(valueType);
                     float nextValue = next.value.getValue(valueType);
 
 
-                    return lerp(prevValue, nextValue, ease(t, next.easing)); // linear interpolation
+                    return lerp(prevValue, nextValue, ease(t, prev.easing)); // linear interpolation
                 }
                 prev = next;
 
@@ -3269,19 +3281,6 @@ frameRate = 60;
 
     public enum EasingType {
         LINEAR, EASE_IN, EASE_OUT, EASE_IN_OUT, EXPONENTIAL, SPRING, QUADRATIC
-    }
-
-    //Todo: When real-time preview is back to working, consider using this stuff
-    protected void useKeyFrameInRealtimeRendering(Clip clip, float playheadTime)
-    {
-        float x = clip.keyframes.getValueAtTime(playheadTime, VideoProperties.ValueType.PosX);
-        float y = clip.keyframes.getValueAtTime(playheadTime, VideoProperties.ValueType.PosY);
-        float rotation = clip.keyframes.getValueAtTime(playheadTime, VideoProperties.ValueType.Rot);
-        float scaleX = clip.keyframes.getValueAtTime(playheadTime, VideoProperties.ValueType.ScaleX);
-        float scaleY = clip.keyframes.getValueAtTime(playheadTime, VideoProperties.ValueType.ScaleY);
-
-        // Apply transform to canvas or OpenGL
-
     }
 
 
@@ -3623,6 +3622,24 @@ frameRate = 60;
 
             try {
 
+                if(textureView != null)
+                {
+                    float x = clip.keyframes.getValueAtTime(clip, playheadTime, VideoProperties.ValueType.PosX);
+                    float y = clip.keyframes.getValueAtTime(clip, playheadTime, VideoProperties.ValueType.PosY);
+                    float rotation = clip.keyframes.getValueAtTime(clip, playheadTime, VideoProperties.ValueType.Rot);
+                    float sx = clip.keyframes.getValueAtTime(clip, playheadTime, VideoProperties.ValueType.ScaleX);
+                    float sy = clip.keyframes.getValueAtTime(clip, playheadTime, VideoProperties.ValueType.ScaleY);
+
+                    posX = x == -1 ? posX : x;
+                    posY = y == -1 ? posY : y;
+                    rot = rotation == -1 ? rot : rotation;
+                    scaleX = sx == -1 ? scaleX : sx;
+                    scaleY = sy == -1 ? scaleY : sy;
+
+                    applyPostTransformation();
+                    //applyPostMatrixTransformation();
+                }
+
                 switch (clip.type)
                 {
                     case VIDEO:
@@ -3846,6 +3863,15 @@ frameRate = 60;
                 textureView.setScaleY(scaleY);
                 textureView.setRotation(rot);
             });
+        }
+        private void applyPostMatrixTransformation() {
+            matrix.reset();
+            matrix.setScale(scaleX, scaleY);
+            matrix.setRotate(rot);
+            matrix.setTranslate(posX, posY);
+
+            textureView.setTransform(matrix);
+            textureView.invalidate();
         }
 
         private float normalizeAngle(float a) {
