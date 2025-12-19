@@ -166,6 +166,10 @@ public class FFmpegEdit {
 
         int keyframeClipIndex = 0;
         // --- Inserting file path into -i ---
+
+        // TODO: Future optimization. We cut the clip input to 30 each command, and later did a recursion to render all of the part.
+        //  Because the stream process are just like track. We process 30 of 50 clip in track 1, then next command will process the rest 20
+        //  and the other track too. Divide it into parts and display it as shown in the multipart ExportActivity (2 progress bar)
         for (EditingActivity.Track track : timeline.tracks) {
             for (EditingActivity.Clip clip : track.clips) {
 
@@ -288,7 +292,7 @@ public class FFmpegEdit {
                                         "trim=duration=" + (clip.duration + fillingTransitionDuration);
 
                         // FFmpeg uses radians rotation, so...
-                        double radiansRotation = Math.toRadians(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.Rot));
+                        double radiansRotation = clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.RotInRadians);
 
 
                         // First we declared the stream of video
@@ -316,7 +320,7 @@ public class FFmpegEdit {
                             String scaleXExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, EditingActivity.VideoProperties.ValueType.ScaleX);
                             String scaleYExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, EditingActivity.VideoProperties.ValueType.ScaleY);
 
-                            String rotationExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, EditingActivity.VideoProperties.ValueType.Rot);
+                            String rotationExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, EditingActivity.VideoProperties.ValueType.RotInRadians);
 
                             filterComplex.append("scale=iw*").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.ScaleX)).append(":ih*").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.ScaleY)).append(",")
                                     //.append("scale=").append(clip.width).append(":").append(clip.height).append(",")
@@ -562,9 +566,9 @@ public class FFmpegEdit {
 
         keyframeExprString
                 .append("if(")
-                .append("gte(t,").append(prevKeyframe.time + clip.startTime).append(")")
+                .append("gte(t,").append(prevKeyframe.time).append(")")
                 .append("*")
-                .append("lte(t,").append(nextKeyframe.time + clip.startTime).append(")").append(",")
+                .append("lte(t,").append(nextKeyframe.time).append(")").append(",")
                 // insert the expr here
                 // previous: nextKeyframe.value.getValue(valueType)
                 .append(generateEasing(prevKeyframe, nextKeyframe, clip, valueType)).append(",")
@@ -576,7 +580,7 @@ public class FFmpegEdit {
 
     public static String generateEasing(EditingActivity.Keyframe prevKey, EditingActivity.Keyframe nextKey, EditingActivity.Clip clip, EditingActivity.VideoProperties.ValueType type)
     {
-        return generateEasing(prevKey.value.getValue(type), nextKey.value.getValue(type), prevKey.time + clip.startTime, (nextKey.time - prevKey.time), prevKey.easing);
+        return generateEasing(prevKey.value.getValue(type), nextKey.value.getValue(type), prevKey.time, (nextKey.time - prevKey.time), prevKey.easing);
     }
     public static String generateEasing(float prevValue, float nextValue, float offset, float duration, EditingActivity.EasingType type)
     {
@@ -646,6 +650,11 @@ public class FFmpegEdit {
         private final ArrayList<String> usableTag = new ArrayList<>();
         private final Map<EditingActivity.Clip, String> tagsMapToUsableTagIndex = new HashMap<>();
         private final Map<EditingActivity.Clip, EditingActivity.Clip> tagsMergedClipMap = new HashMap<>();
+
+        public int getTagCount()
+        {
+            return usableTag.size();
+        }
 
         public FilterComplexInfo useTag(int index) {
             if(index < 0 || index >= usableTag.size()) return null;

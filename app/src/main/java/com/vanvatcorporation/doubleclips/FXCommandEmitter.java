@@ -75,11 +75,15 @@ public class FXCommandEmitter {
 //        String outputLabel = "[transition_" +
 //                fromTag.tag.replace("[", "").replace("]", "") + "_" +
 //                toTag.tag.replace("[", "").replace("]", "") + "]";
-        String outputLabel = "[transition_" +
-                fromTag.tag.replace("[transition_", "")
-                        .replace("[trans-video-", "").replace("]", "") + "_" +
-                toTag.tag.replace("[transition_", "")
-                        .replace("[trans-video-", "").replace("]", "") + "]";
+
+
+        // Output is long
+//        String outputLabel = "[transition_" +
+//                fromTag.tag.replace("[transition_", "")
+//                        .replace("[trans-video-", "").replace("]", "") + "_" +
+//                toTag.tag.replace("[transition_", "")
+//                        .replace("[trans-video-", "").replace("]", "") + "]";
+        String outputLabel = "[phase" + tags.getTagCount() + "]";
 
 
 

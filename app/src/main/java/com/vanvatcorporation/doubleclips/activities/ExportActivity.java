@@ -4,15 +4,20 @@ import static com.vanvatcorporation.doubleclips.FFmpegEdit.generateExportCmd;
 import static com.vanvatcorporation.doubleclips.FFmpegEdit.runAnyCommand;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -32,12 +37,24 @@ import com.arthenica.ffmpegkit.Statistics;
 import com.arthenica.ffmpegkit.StatisticsCallback;
 import com.vanvatcorporation.doubleclips.AdsHandler;
 import com.vanvatcorporation.doubleclips.FFmpegEdit;
+import com.vanvatcorporation.doubleclips.FXCommandEmitter;
 import com.vanvatcorporation.doubleclips.R;
+import com.vanvatcorporation.doubleclips.activities.editing.BaseEditSpecificAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.editing.ClipEditSpecificAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.editing.ClipsEditSpecificAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.editing.EffectEditSpecificAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.editing.TextEditSpecificAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.editing.TransitionEditSpecificAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.editing.VideoPropertiesEditSpecificAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.export.VideoPropertiesExportSpecificAreaScreen;
 import com.vanvatcorporation.doubleclips.constants.Constants;
 import com.vanvatcorporation.doubleclips.helper.IOHelper;
 import com.vanvatcorporation.doubleclips.helper.ParserHelper;
 import com.vanvatcorporation.doubleclips.impl.AppCompatActivityImpl;
 import com.vanvatcorporation.doubleclips.impl.java.RunnableImpl;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class ExportActivity extends AppCompatActivityImpl {
 
@@ -46,11 +63,15 @@ public class ExportActivity extends AppCompatActivityImpl {
     EditingActivity.VideoSettings settings;
 
 
+    private VideoPropertiesExportSpecificAreaScreen videoPropertiesExportSpecificAreaScreen;
+
+    RelativeLayout modifyZone;
+
     ProgressBar statusBar, globalStatusBar;
     TextView logText, statusText, globalStatusText;
-    EditText widthText, heightText, frameRateText, crfText, commandText;
+    EditText commandText;
     ScrollView logScroll;
-    Spinner presetSpinner, tuneSpinner;
+    CheckBox logCheckbox;
 
 
     private ActivityResultLauncher<Intent> filePickerLauncher = registerForActivityResult(
@@ -118,49 +139,33 @@ public class ExportActivity extends AppCompatActivityImpl {
         timeline = (EditingActivity.Timeline) createrBundle.getSerializable("ProjectTimeline");
         settings = (EditingActivity.VideoSettings) createrBundle.getSerializable("ProjectSettings");
 
+
+        findViewById(R.id.backButton).setOnClickListener(v -> {
+            finish();
+        });
+        findViewById(R.id.settingsButton).setOnClickListener(v -> {
+            videoPropertiesExportSpecificAreaScreen.open();
+        });
         findViewById(R.id.generateCmdButton).setOnClickListener(v -> {
             generateCommand();
         });
         findViewById(R.id.exportButton).setOnClickListener(v -> {
             exportClip();
         });
+
+        modifyZone = findViewById(R.id.modifyZone);
+
         logText = findViewById(R.id.logText);
         statusBar = findViewById(R.id.statusBar);
         globalStatusBar = findViewById(R.id.globalStatusBar);
         statusText = findViewById(R.id.statusText);
         globalStatusText = findViewById(R.id.globalStatusText);
         logScroll = findViewById(R.id.logScroll);
+        logCheckbox = findViewById(R.id.logCheckbox);
 
-        widthText = findViewById(R.id.exportWidth);
-        heightText = findViewById(R.id.exportHeight);
-        frameRateText = findViewById(R.id.exportFrameRate);
-        crfText = findViewById(R.id.exportCRF);
         commandText = findViewById(R.id.exportCommand);
 
-        presetSpinner = findViewById(R.id.exportPreset);
-        presetSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new String[]{
-                EditingActivity.VideoSettings.FfmpegPreset.PLACEBO,
-                EditingActivity.VideoSettings.FfmpegPreset.VERYSLOW,
-                EditingActivity.VideoSettings.FfmpegPreset.SLOWER,
-                EditingActivity.VideoSettings.FfmpegPreset.SLOW,
-                EditingActivity.VideoSettings.FfmpegPreset.MEDIUM,
-                EditingActivity.VideoSettings.FfmpegPreset.FAST,
-                EditingActivity.VideoSettings.FfmpegPreset.FASTER,
-                EditingActivity.VideoSettings.FfmpegPreset.VERYFAST,
-                EditingActivity.VideoSettings.FfmpegPreset.SUPERFAST,
-                EditingActivity.VideoSettings.FfmpegPreset.ULTRAFAST
-        }));
-        presetSpinner.setSelection(9); // ULTRAFAST
-        tuneSpinner = findViewById(R.id.exportTune);
-        tuneSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, new String[]{
-                EditingActivity.VideoSettings.FfmpegTune.FILM,
-                EditingActivity.VideoSettings.FfmpegTune.ANIMATION,
-                EditingActivity.VideoSettings.FfmpegTune.GRAIN,
-                EditingActivity.VideoSettings.FfmpegTune.STILLIMAGE,
-                EditingActivity.VideoSettings.FfmpegTune.FASTDECODE,
-                EditingActivity.VideoSettings.FfmpegTune.ZEROLATENCY
-        }));
-        tuneSpinner.setSelection(5); // ZEROLATENCY
+
 
 
 
@@ -168,9 +173,73 @@ public class ExportActivity extends AppCompatActivityImpl {
         String inputPath = IOHelper.CombinePath(properties.getProjectPath(), Constants.DEFAULT_EXPORT_CLIP_FILENAME);
         if(IOHelper.isFileExist(inputPath))
         {
-            exportClipTo();
+            new AlertDialog.Builder(this)
+                    .setTitle("You have an unexported video!")
+                    .setMessage("Would you like to export it now?")
+                    .setPositiveButton("Yes", (dialog, which) -> {
+
+                        exportClipTo();
+                        dialog.dismiss();
+            })
+                    .setNegativeButton("No", (dialog, which) -> {dialog.dismiss();})
+                    .show();
         }
+
+
+
+        setupSpecificEdit();
+
     }
+
+
+
+    private void setupSpecificEdit()
+    {
+
+
+
+        // ===========================       VIDEO PROPERTIES ZONE       ====================================
+        videoPropertiesExportSpecificAreaScreen = (VideoPropertiesExportSpecificAreaScreen) LayoutInflater.from(this).inflate(R.layout.view_export_specific_video_properties, null);
+        modifyZone.addView(videoPropertiesExportSpecificAreaScreen);
+        // ===========================       VIDEO PROPERTIES ZONE       ====================================
+
+
+
+
+
+
+
+
+
+
+        // ===========================       VIDEO PROPERTIES ZONE       ====================================
+
+        videoPropertiesExportSpecificAreaScreen.onClose.add(() -> {
+            settings.videoWidth = ParserHelper.TryParse(videoPropertiesExportSpecificAreaScreen.resolutionXField.getText().toString(), settings.videoWidth);
+            settings.videoHeight = ParserHelper.TryParse(videoPropertiesExportSpecificAreaScreen.resolutionYField.getText().toString(), settings.videoHeight);
+            settings.frameRate = ParserHelper.TryParse(videoPropertiesExportSpecificAreaScreen.frameRateText.getText().toString(), settings.frameRate);
+            settings.crf = ParserHelper.TryParse(videoPropertiesExportSpecificAreaScreen.crfText.getText().toString(), settings.crf);
+            settings.preset = videoPropertiesExportSpecificAreaScreen.presetSpinner.getSelectedItem().toString();
+            settings.tune = videoPropertiesExportSpecificAreaScreen.tuneSpinner.getSelectedItem().toString();
+        });
+        videoPropertiesExportSpecificAreaScreen.onOpen.add(() -> {
+            videoPropertiesExportSpecificAreaScreen.resolutionXField.setText(String.valueOf(settings.getVideoWidth()));
+            videoPropertiesExportSpecificAreaScreen.resolutionYField.setText(String.valueOf(settings.getVideoHeight()));
+            videoPropertiesExportSpecificAreaScreen.crfText.setText(String.valueOf(settings.getCRF()));
+            videoPropertiesExportSpecificAreaScreen.presetSpinner.setSelection(videoPropertiesExportSpecificAreaScreen.presetAdapter.getPosition(settings.preset));
+            videoPropertiesExportSpecificAreaScreen.tuneSpinner.setSelection(videoPropertiesExportSpecificAreaScreen.tuneAdapter.getPosition(settings.tune));
+
+        });
+
+
+        // ===========================       VIDEO PROPERTIES ZONE       ====================================
+
+
+    }
+
+
+
+
     private void runLogUpdate() {
         isLogUpdateRunning = true;
         logUpdateHandler.post(logUpdateRunnable);
@@ -178,21 +247,9 @@ public class ExportActivity extends AppCompatActivityImpl {
 
     private void generateCommand()
     {
-        EditingActivity.VideoSettings overrideSettings = new EditingActivity.VideoSettings(
-                ParserHelper.TryParse(widthText.getText().toString(), settings.videoWidth),
-                ParserHelper.TryParse(heightText.getText().toString(), settings.videoHeight),
-                ParserHelper.TryParse(frameRateText.getText().toString(), settings.frameRate),
-                ParserHelper.TryParse(crfText.getText().toString(), settings.crf),
-                presetSpinner.getSelectedItem().toString(),
-                tuneSpinner.getSelectedItem().toString()
-        );
-        widthText.setText(String.valueOf(overrideSettings.videoWidth));
-        heightText.setText(String.valueOf(overrideSettings.videoHeight));
-        frameRateText.setText(String.valueOf(overrideSettings.frameRate));
-        crfText.setText(String.valueOf(overrideSettings.crf));
 
         runLogUpdate();
-        String cmd = generateExportCmd(this, overrideSettings, timeline, properties);
+        String cmd = generateExportCmd(this, settings, timeline, properties);
         commandText.setText(cmd);
     }
 
@@ -206,7 +263,8 @@ public class ExportActivity extends AppCompatActivityImpl {
             generateCommand();
 
         String cmd = commandText.getText().toString();
-        logText.setText(cmd);
+        // No need. Already in the EditText
+        //logText.setText(cmd);
 
         if(!isLogUpdateRunning)
             runLogUpdate();
@@ -221,10 +279,16 @@ public class ExportActivity extends AppCompatActivityImpl {
                     @Override
                     public <T> void runWithParam(T param) {
                         Log log = (Log) param;
-                        logScroll.post(() -> {
-                            logText.setText(logText.getText() + "\n" + log.getMessage());
-                            logScroll.fullScroll(View.FOCUS_DOWN);
-                        });
+                        if(logCheckbox.isChecked())
+                        {
+                            logText.post(() -> {
+                                String logStr = logText.getText() + "\n" + log.getMessage();
+                                if(logStr.length() > Constants.DEFAULT_LOGGING_LIMIT_CHARACTERS)
+                                    logStr = logStr.substring(logStr.length() - Constants.DEFAULT_LOGGING_LIMIT_CHARACTERS);
+                                logText.setText(logStr);
+                                logScroll.fullScroll(View.FOCUS_DOWN);
+                            });
+                        }
                     }
                 }, new RunnableImpl() {
                     @Override

@@ -15,6 +15,7 @@ public class Constants {
     public static final String DEFAULT_PREVIEW_CLIP_DIRECTORY = "PreviewClips";
     public static final String DEFAULT_CLIP_TEMP_DIRECTORY = "Clips/Temp";
     public static final int SAMPLE_SIZE_PREVIEW_CLIP = 16;
+    public static final int DEFAULT_LOGGING_LIMIT_CHARACTERS = 10000;
     public static final int DEFAULT_DEBUG_LOGGING_SIZE = 1048576;
     public static final float CANVAS_ROTATE_SNAP_THRESHOLD_DEGREE = 3f; // degrees
     public static final float CANVAS_ROTATE_SNAP_DEGREE = 90f;

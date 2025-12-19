@@ -881,6 +881,7 @@ public class EditingActivity extends AppCompatActivityImpl {
                 for (Clip clip : clips) {
                     if(clip != selectedClip)
                     {
+                        clip.keyframes.keyframes.clear();
                         clip.keyframes.keyframes.addAll(selectedClip.keyframes.keyframes);
                         //TODO: Fetch the addKeyframesUi again to match the preview
                     }
@@ -3132,6 +3133,8 @@ frameRate = 60;
                     return valuePosY;
                 case Rot:
                     return valueRot;
+                case RotInRadians:
+                    return (float) Math.toRadians(valueRot);
                 case ScaleX:
                     return valueScaleX;
                 case ScaleY:
@@ -3176,7 +3179,7 @@ frameRate = 60;
         }
 
         public enum ValueType {
-            PosX, PosY, Rot, ScaleX, ScaleY, Opacity, Speed
+            PosX, PosY, Rot, RotInRadians, ScaleX, ScaleY, Opacity, Speed
         }
     }
     public static class Keyframe implements Serializable {
