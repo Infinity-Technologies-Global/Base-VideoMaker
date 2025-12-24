@@ -9,11 +9,25 @@ const MARKDOWN_FILES = {
     'TIMELINE_SCRUB_PREVIEW.md': './TIMELINE_SCRUB_PREVIEW.md'
 };
 
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
+// Initialize - wait for all scripts to load
+function initializeApp() {
+    // Check if required libraries are loaded
+    if (typeof marked === 'undefined') {
+        console.error('marked.js not loaded');
+        return;
+    }
+    
     initializeNavigation();
     loadDefaultDocument();
-});
+}
+
+// Wait for DOM and scripts to be ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+    // DOM already loaded, wait a bit for scripts
+    setTimeout(initializeApp, 100);
+}
 
 // Initialize navigation
 function initializeNavigation() {
@@ -67,28 +81,47 @@ async function loadDocument(fileName) {
         }
         
         const markdown = await response.text();
+        
+        // Check if hljs is available
+        const hasHljs = typeof hljs !== 'undefined';
+        
         const html = marked.parse(markdown, {
             breaks: true,
             gfm: true,
             highlight: function(code, lang) {
+                if (!hasHljs) {
+                    return code; // Return plain code if hljs not available
+                }
                 if (lang && hljs.getLanguage(lang)) {
                     try {
                         return hljs.highlight(code, { language: lang }).value;
                     } catch (err) {
                         console.error('Highlight error:', err);
+                        return code;
                     }
                 }
-                return hljs.highlightAuto(code).value;
+                try {
+                    return hljs.highlightAuto(code).value;
+                } catch (err) {
+                    console.error('Highlight auto error:', err);
+                    return code;
+                }
             }
         });
         
         // Render content
         contentDiv.innerHTML = `<div class="markdown-content">${html}</div>`;
         
-        // Process code blocks
-        contentDiv.querySelectorAll('pre code').forEach((block) => {
-            hljs.highlightElement(block);
-        });
+        // Process code blocks only if hljs is available
+        if (hasHljs) {
+            contentDiv.querySelectorAll('pre code').forEach((block) => {
+                try {
+                    hljs.highlightElement(block);
+                } catch (err) {
+                    console.error('Highlight element error:', err);
+                }
+            });
+        }
         
         // Process internal links
         processInternalLinks(contentDiv);
