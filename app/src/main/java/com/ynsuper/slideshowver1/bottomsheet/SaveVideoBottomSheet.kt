@@ -9,8 +9,10 @@ import android.widget.Toast
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.ynsuper.slideshowver1.R
 import com.ynsuper.slideshowver1.callback.SaveStateListener
-import kotlinx.android.synthetic.main.fragment_save_option.*
-import kotlinx.android.synthetic.main.item_layout_edit_top_view.*
+import android.widget.TextView
+import android.widget.ImageView
+import android.widget.RadioGroup
+import android.widget.RadioButton
 
 class SaveVideoBottomSheet : BottomSheetDialogFragment() {
 
@@ -40,19 +42,26 @@ class SaveVideoBottomSheet : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        initView()
+        initView(view)
 
     }
 
-    private fun initView() {
-        text_name_top_bar.setText("Resolution")
-        image_submit_menu.visibility = View.GONE
+    private fun initView(view: View) {
+        val textNameTopBar: TextView = view.findViewById(R.id.text_name_top_bar)
+        val imageSubmitMenu: ImageView = view.findViewById(R.id.image_submit_menu)
+        val textExport: TextView = view.findViewById(R.id.text_export)
+        val radioGroup: RadioGroup = view.findViewById(R.id.radio_group)
+        val radio1: RadioButton = view.findViewById(R.id.radio1)
+        val radio2: RadioButton = view.findViewById(R.id.radio2)
+        
+        textNameTopBar.text = "Resolution"
+        imageSubmitMenu.visibility = View.GONE
 
 //        image_close_menu.setOnClickListener {
 //            dismiss()
 //        }
-        text_export.setOnClickListener {
-            if (radio_group.checkedRadioButtonId == -1) {
+        textExport.setOnClickListener {
+            if (radioGroup.checkedRadioButtonId == -1) {
                 Toast.makeText(context, "Please select a resolution!!!", Toast.LENGTH_SHORT).show()
             } else {
                 var width = 0

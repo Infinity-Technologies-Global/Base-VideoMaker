@@ -11,10 +11,12 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.ynsuper.slideshowver1.R
 import com.ynsuper.slideshowver1.util.entity.StoryEntity
-import kotlinx.android.synthetic.main.item_video.view.*
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
+import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.TextView
 
 
 class StoryListAdapter(
@@ -71,8 +73,12 @@ class StoryListAdapter(
     }
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-
-        private val popupMenu = PopupMenu(itemView.context, itemView.more)
+        private val moreButton: ImageButton = view.findViewById(R.id.more)
+        private val thumbnailView: ImageView = view.findViewById(R.id.thumbnail)
+        private val titleTextView: TextView = view.findViewById(R.id.title)
+        private val subtitleTextView: TextView = view.findViewById(R.id.subtitle)
+        
+        private val popupMenu = PopupMenu(itemView.context, moreButton)
 
         init {
             popupMenu.inflate(R.menu.more)
@@ -82,11 +88,11 @@ class StoryListAdapter(
 
             }
 
-            itemView.more.setOnClickListener {
+            moreButton.setOnClickListener {
                 popupMenu.show()
             }
 
-            itemView.thumbnail.setOnClickListener {
+            thumbnailView.setOnClickListener {
                 onItemClicked(items[adapterPosition])
             }
             popupMenu.setOnMenuItemClickListener {
@@ -111,9 +117,9 @@ class StoryListAdapter(
             val relativeTime = DateUtils.getRelativeTimeSpanString(item.createdAt).toString()
             retriver.setDataSource(item.path)
             val duration =
-                retriver.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION).toLong()
-            itemView.title.text = item.title
-//            itemView.title.text = SpannableStringBuilder(item.title)
+                retriver.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong() ?: 0L
+            titleTextView.text = item.title
+//            titleTextView.text = SpannableStringBuilder(item.title)
 //                .append(" \n")
 //                .scale(.8f) {
 //                    color(Color.parseColor("#3a3a3a")) {
@@ -121,8 +127,8 @@ class StoryListAdapter(
 //                    }
 //                }
 
-            itemView.subtitle.text = formatDuration(duration)
-//            itemView.subtitle.setText(
+            subtitleTextView.text = formatDuration(duration)
+//            subtitleTextView.setText(
 //                SpannableStringBuilder(formatDate(item.createdAt) + " \n")
 //                    .color(Color.BLACK) { append(formatDuration(duration)) }
 //            )
@@ -131,7 +137,7 @@ class StoryListAdapter(
             Glide.with(itemView)
                 .load(item.path)
                 .centerCrop()
-                .into(itemView.thumbnail)
+                .into(thumbnailView)
 
         }
 

@@ -5,7 +5,11 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.util.AttributeSet
 import android.util.TypedValue
+import android.view.View
 import android.widget.AutoCompleteTextView
+import android.widget.CheckBox
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.annotation.Px
 import androidx.core.widget.addTextChangedListener
 import com.skydoves.colorpickerview.ColorEnvelope
@@ -20,8 +24,6 @@ import com.ynsuper.slideshowver1.view.adapter.FontFamilyAdapter
 import com.ynsuper.slideshowver1.view.sticker.QuoteState
 import com.ynsuper.slideshowver1.view.sticker.StickerView
 import com.ynsuper.slideshowver1.viewmodel.SlideShowViewModel
-import kotlinx.android.synthetic.main.item_layout_edit_top_view.view.*
-import kotlinx.android.synthetic.main.layout_text_quote.view.*
 import kotlin.math.roundToInt
 
 class TextQuoteViewLayout : BaseCustomConstraintLayout {
@@ -30,8 +32,13 @@ class TextQuoteViewLayout : BaseCustomConstraintLayout {
     private lateinit var topBarController: TopBarController
     private lateinit var slideShowViewModel: SlideShowViewModel
     private var listener: QuoteListener? = null
-
     private var state: QuoteState? = null
+
+    private lateinit var textNameTopBar: TextView
+    private lateinit var checkboxTextAll: CheckBox
+    private lateinit var editTextQuote: TextView
+    private lateinit var colorPickerView: View
+    private lateinit var imageSubmitMenu: ImageView
 
 
     constructor(context: Context?) : super(context) {
@@ -55,7 +62,7 @@ class TextQuoteViewLayout : BaseCustomConstraintLayout {
 
 
     fun setTopBarName(name: String) {
-        text_name_top_bar.text = name
+        textNameTopBar.text = name
     }
 
     private var bgColor = Color.WHITE
@@ -71,6 +78,13 @@ class TextQuoteViewLayout : BaseCustomConstraintLayout {
 
     private fun initView() {
         listener = context as SlideShowActivity
+
+        textNameTopBar = findViewById(R.id.text_name_top_bar)
+        checkboxTextAll = findViewById(R.id.checkbox_text_all)
+        editTextQuote = findViewById(R.id.editText)
+        colorPickerView = findViewById(R.id.colorPicker)
+        imageSubmitMenu = findViewById(R.id.image_submit_menu)
+
         setTopBarName(context.getString(R.string.text_quote))
 
         val fontLoader = FontLoader(context.assets)
@@ -86,18 +100,18 @@ class TextQuoteViewLayout : BaseCustomConstraintLayout {
             preview.setTypeface(currentFont!!.getTypeface(context.assets))
         }
 
-        colorPicker.setOnClickListener {
+        colorPickerView.setOnClickListener {
             showColorPicker()
         }
-        image_submit_menu.setOnClickListener {
+        imageSubmitMenu.setOnClickListener {
             saveBitmap()
             topBarController.clickSubmitTopBar()
         }
 
-        editText.addTextChangedListener {
+        editTextQuote.addTextChangedListener {
             preview.setText(it.toString())
         }
-        checkbox_text_all.setOnCheckedChangeListener { buttonView, isChecked ->
+        checkboxTextAll.setOnCheckedChangeListener { _, isChecked ->
             isApplyForAll = isChecked
         }
 
@@ -117,11 +131,11 @@ class TextQuoteViewLayout : BaseCustomConstraintLayout {
         state?.applyTo(context.assets, preview)
 
         state?.textColor?.let {
-            colorPicker.setBackgroundColor(it)
+            colorPickerView.setBackgroundColor(it)
         }
 
         state?.text.let {
-            editText.setText(it)
+            editTextQuote.text = it
         }
 
         state?.fontFamily?.let {
@@ -174,9 +188,8 @@ class TextQuoteViewLayout : BaseCustomConstraintLayout {
             .setTitle("Color Picker")
             .setPreferenceName("pref-color")
             .setPositiveButton("Confirm", object : ColorEnvelopeListener {
-                override fun onColorSelected(envelope: ColorEnvelope?, fromUser: Boolean) {
-                    if (envelope == null) return
-                    colorPicker.setBackgroundColor(envelope.color)
+                override fun onColorSelected(envelope: ColorEnvelope, fromUser: Boolean) {
+                    colorPickerView.setBackgroundColor(envelope.color)
                     preview.setTextColor(envelope.color)
                 }
             })

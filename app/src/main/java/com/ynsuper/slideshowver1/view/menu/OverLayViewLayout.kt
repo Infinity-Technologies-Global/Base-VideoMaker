@@ -17,8 +17,9 @@ import com.ynsuper.slideshowver1.callback.TopBarController
 import com.ynsuper.slideshowver1.util.FilterUtils.OVERLAY_CONFIG
 import com.ynsuper.slideshowver1.view.SlideShowActivity
 import com.ynsuper.slideshowver1.view.adapter.FilterViewAdapter
-import kotlinx.android.synthetic.main.item_layout_edit_top_view.view.*
-import kotlinx.android.synthetic.main.layout_overlay.view.*
+import androidx.recyclerview.widget.RecyclerView
+import android.widget.ImageView
+import android.widget.TextView
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
@@ -32,6 +33,9 @@ class OverLayViewLayout : BaseCustomConstraintLayout {
 
     private val lstBitmapWithOverlay: ArrayList<Bitmap> = ArrayList()
 
+    private lateinit var overlayRecyclerView: RecyclerView
+    private lateinit var submitImageView: ImageView
+    private lateinit var topBarTitleTextView: TextView
 
     constructor(context: Context?) : super(context) {
         setLayoutInflate(R.layout.layout_overlay)
@@ -53,12 +57,23 @@ class OverLayViewLayout : BaseCustomConstraintLayout {
     }
 
     private fun initView() {
-        setTopBarName(context.getString(R.string.text_frame))
+        bindViews()
+        setTopBarNameInternal(context.getString(R.string.text_frame))
         LoadImageFrame().execute()
-        image_submit_menu.setOnClickListener {
+        submitImageView.setOnClickListener {
 
             topBarController.clickSubmitTopBar()
         }
+    }
+
+    private fun bindViews() {
+        overlayRecyclerView = findViewById(R.id.rvOverlayView)
+        submitImageView = findViewById(R.id.image_submit_menu)
+        topBarTitleTextView = findViewById(R.id.text_name_top_bar)
+    }
+
+    private fun setTopBarNameInternal(name: String) {
+        topBarTitleTextView.text = name
     }
 
     inner class LoadImageFrame : AsyncTask<Void, Void, Void>() {
@@ -77,15 +92,15 @@ class OverLayViewLayout : BaseCustomConstraintLayout {
 
         override fun onPostExecute(void: Void?) {
             val llmOverlay = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
-            rvOverlayView.layoutManager = llmOverlay
-            rvOverlayView.setHasFixedSize(true)
+            overlayRecyclerView.layoutManager = llmOverlay
+            overlayRecyclerView.setHasFixedSize(true)
             mFilterViewAdapter = FilterViewAdapter(
                 lstBitmapWithOverlay,
                 context as SlideShowActivity, context,
                 OVERLAY_CONFIG.toMutableList()
             )
 
-            rvOverlayView.adapter = mFilterViewAdapter
+            overlayRecyclerView.adapter = mFilterViewAdapter
 //        compareOverlay.setVisibility(VISIBLE)
 
         }
@@ -139,7 +154,7 @@ class OverLayViewLayout : BaseCustomConstraintLayout {
 
 
     fun setTopBarName(name: String) {
-        text_name_top_bar.text = name
+        setTopBarNameInternal(name)
     }
 
 

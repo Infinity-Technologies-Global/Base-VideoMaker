@@ -18,8 +18,7 @@ import androidx.databinding.DataBindingUtil
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.gun0912.tedonactivityresult.model.ActivityResult
-import com.tedpark.tedonactivityresult.rx2.TedRxOnActivityResult
+import io.reactivex.subjects.PublishSubject
 import gun0912.tedimagepicker.adapter.AlbumAdapter
 import gun0912.tedimagepicker.adapter.GridSpacingItemDecoration
 import gun0912.tedimagepicker.adapter.MediaAdapter
@@ -59,6 +58,8 @@ internal class TedImagePickerActivity : AppCompatActivity() {
     private lateinit var disposable: Disposable
 
     private var selectedPosition = 0
+    private var cameraResultUri: Uri? = null
+    private val CAMERA_REQUEST_CODE = 1001
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -157,6 +158,14 @@ internal class TedImagePickerActivity : AppCompatActivity() {
 
         builder = bundle?.getParcelable(EXTRA_BUILDER)
             ?: TedImagePickerBaseBuilder<TedImagePickerBaseBuilder<*>>()
+        
+        // Restore listeners from static holder
+        TedImagePickerBaseBuilder.getListeners()?.let { holder ->
+            Log.d("TedImagePicker", "Restoring listeners from holder")
+            builder.onSelectedListener = holder.onSelectedListener
+            builder.onMultiSelectedListener = holder.onMultiSelectedListener
+            builder.onErrorListener = holder.onErrorListener
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -270,19 +279,23 @@ internal class TedImagePickerActivity : AppCompatActivity() {
             builder.mediaType,
             builder.savedDirectoryName
         )
-        TedRxOnActivityResult.with(this@TedImagePickerActivity)
-            .startActivityForResult(cameraIntent)
-            .subscribe { activityResult: ActivityResult ->
-                if (activityResult.resultCode == Activity.RESULT_OK) {
-                    MediaUtil.scanMedia(this, uri)
-                        .subscribeOn(Schedulers.io())
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe {
-                            loadMedia(true)
-                            onMediaClick(uri)
-                        }
-                }
+        cameraResultUri = uri
+        startActivityForResult(cameraIntent, CAMERA_REQUEST_CODE)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == CAMERA_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+            cameraResultUri?.let { uri ->
+                MediaUtil.scanMedia(this, uri)
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe {
+                        loadMedia(true)
+                        onMediaClick(uri)
+                    }
             }
+        }
     }
 
 
@@ -348,6 +361,8 @@ internal class TedImagePickerActivity : AppCompatActivity() {
             putExtra(EXTRA_SELECTED_URI, uri)
         }
         setResult(Activity.RESULT_OK, data)
+        // Call builder callback directly
+        builder.onSelectedListener?.onSelected(uri)
         finish()
     }
 
@@ -364,13 +379,16 @@ internal class TedImagePickerActivity : AppCompatActivity() {
 
     private fun onMultiMediaDone() {
 
-
+        Log.d("TedImagePicker", "onMultiMediaDone: started")
         val selectedUriList = mediaAdapter.selectedUriList
+        Log.d("TedImagePicker", "onMultiMediaDone: selected ${selectedUriList.size} items")
+        
         if (selectedUriList.size < builder.minCount) {
             val message = builder.minCountMessage ?: getString(builder.minCountMessageResId)
+            Log.d("TedImagePicker", "onMultiMediaDone: below min count, showing toast")
             ToastUtil.showToast(message)
         } else {
-
+            Log.d("TedImagePicker", "onMultiMediaDone: creating result intent")
             val data = Intent().apply {
                 putParcelableArrayListExtra(
                     EXTRA_SELECTED_URI_LIST,
@@ -378,6 +396,11 @@ internal class TedImagePickerActivity : AppCompatActivity() {
                 )
             }
             setResult(Activity.RESULT_OK, data)
+            
+            // Call builder callback directly
+            Log.d("TedImagePicker", "onMultiMediaDone: calling builder callback")
+            builder.onMultiSelectedListener?.onSelected(selectedUriList)
+            Log.d("TedImagePicker", "onMultiMediaDone: finishing activity")
             finish()
         }
 
@@ -454,6 +477,8 @@ internal class TedImagePickerActivity : AppCompatActivity() {
         if (!disposable.isDisposed) {
             disposable.dispose()
         }
+        // Clear static listeners to avoid memory leak
+        TedImagePickerBaseBuilder.clearListeners()
         super.onDestroy()
     }
 

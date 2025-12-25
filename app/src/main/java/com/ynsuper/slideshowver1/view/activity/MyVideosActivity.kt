@@ -6,7 +6,6 @@ import com.ynsuper.slideshowver1.R
 import com.ynsuper.slideshowver1.base.BaseActivity
 import com.ynsuper.slideshowver1.databinding.ActivityMyVideosBinding
 import com.ynsuper.slideshowver1.viewmodel.MyVideosViewModel
-import kotlinx.android.synthetic.main.activity_my_videos.*
 
 class MyVideosActivity : BaseActivity() {
 
@@ -27,7 +26,7 @@ class MyVideosActivity : BaseActivity() {
             viewModel?.setCurrentActivity(this@MyVideosActivity)
             viewModel?.loadDataSaved()
         }
-        image_back.setOnClickListener {
+        binding.imageBack.setOnClickListener {
             viewModel?.backImageClick()
         }
     }

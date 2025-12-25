@@ -68,6 +68,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.*
 import java.util.concurrent.TimeUnit
+import android.media.MediaMetadataRetriever
 import kotlin.collections.ArrayList
 
 
@@ -507,28 +508,59 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
         Single.just(items)
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
-            .map { items ->
-                items.map {
-                    val inputStream = context.contentResolver.openInputStream(it.uriImage)
-                    val file = File.createTempFile("filename", null, context.cacheDir)
-                    val fileOutputStream = FileOutputStream(file)
-                    IOUtils.copy(inputStream, fileOutputStream)
-                    // set chat luong anh
-                    val compressedFile = compressor.setQuality(100)
-                        .setCompressFormat(Bitmap.CompressFormat.JPEG)
-                        .compressToFile(file, "photos-${UUID.randomUUID()}.jpg")
-                    SlideEntity(
-                        createdAt = System.currentTimeMillis(),
-                        path = compressedFile.path
-                    )
+            .map { inputItems ->
+                inputItems.map { model ->
+                    if (model.isVideo) {
+                        createSlideFromVideo(model.uriImage)
+                    } else {
+                        createSlideFromImage(model.uriImage)
+                    }
                 }
-            }.subscribeBy {
-                slides.addAll(it)
+            }
+            .subscribeBy { newSlides ->
+                slides.addAll(newSlides)
                 slideAdapter.notifyDataSetChanged()
                 dispatchUpdates()
                 dispatchDraw()
             }.willBeDisposed()
+    }
 
+    private fun createSlideFromImage(uri: Uri): SlideEntity {
+        val inputStream = context.contentResolver.openInputStream(uri)
+        val tempFile = File.createTempFile("image_src", null, context.cacheDir)
+        val fileOutputStream = FileOutputStream(tempFile)
+        IOUtils.copy(inputStream, fileOutputStream)
+        inputStream?.close()
+        fileOutputStream.flush()
+        fileOutputStream.close()
+
+        val compressedFile = compressor.setQuality(100)
+            .setCompressFormat(Bitmap.CompressFormat.JPEG)
+            .compressToFile(tempFile, "photos-${UUID.randomUUID()}.jpg")
+
+        return SlideEntity(
+            createdAt = System.currentTimeMillis(),
+            path = compressedFile.path
+        )
+    }
+
+    private fun createSlideFromVideo(uri: Uri): SlideEntity {
+        val retriever = MediaMetadataRetriever()
+        retriever.setDataSource(context, uri)
+        val frame: Bitmap =
+            retriever.getFrameAtTime(0) ?: throw IllegalStateException("Cannot retrieve frame from video: $uri")
+
+        val outputFile = File(context.cacheDir, "video-frame-${UUID.randomUUID()}.jpg")
+        val fileOutputStream = FileOutputStream(outputFile)
+        frame.compress(Bitmap.CompressFormat.JPEG, 100, fileOutputStream)
+        fileOutputStream.flush()
+        fileOutputStream.close()
+        retriever.release()
+
+        return SlideEntity(
+            createdAt = System.currentTimeMillis(),
+            path = outputFile.path
+        )
     }
 
     fun setAudio(audioEntity: AudioEntity) {
@@ -537,7 +569,11 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
     }
 
     fun loadDataImage(listImage: ArrayList<ImageModel>?) {
-        applyData(listImage!!)
+        if (listImage == null || listImage.isEmpty()) {
+            Toast.makeText(context, "No media selected", Toast.LENGTH_SHORT).show()
+            return
+        }
+        applyData(listImage)
     }
 
     @SuppressLint("CheckResult")
@@ -1006,19 +1042,17 @@ class SlideShowViewModel : BaseViewModel(), TopBarController, IHorizontalListCha
     }
 
     fun addMoreScene() {
-        context?.let { data ->
+        context.let { data ->
             TedImagePicker.with(data)
+                .image()
                 .startMultiImage { uriList ->
                     val arrImageModel = ArrayList<ImageModel>()
                     for (uri in uriList) {
-                        arrImageModel.add(ImageModel(uri))
+                        arrImageModel.add(ImageModel(uri, isVideo = false))
                     }
                     loadDataImage(arrImageModel)
                 }
-        } ?: run {
-            Log.v(Constant.YNSUPER_TAG, "Permission is granted");
         }
-
     }
 
     fun onBackgroundConfigChage(state: OptionState) {

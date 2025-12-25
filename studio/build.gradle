@@ -1,13 +1,14 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-android-extensions'
 apply from: '../dependencies.gradle'
 
 
 android {
+    namespace "com.ynsuper.studio"
     compileSdkVersion versions.compileSdk
+    buildToolsVersion versions.buildTools
+    
     defaultConfig {
-        buildToolsVersion versions.buildTools
         minSdkVersion versions.minSdk
         targetSdkVersion versions.compileSdk
         versionCode versions.publishVersionCode
@@ -22,11 +23,14 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = '1.8'
-        targetCompatibility = '1.8'
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
     }
 
-    lintOptions {
+    lint {
         abortOnError false
     }
 
@@ -43,12 +47,12 @@ dependencies {
     implementation "androidx.appcompat:appcompat:$versions.androidx"
     implementation "androidx.core:core-ktx:$versions.androidx"
 
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:" + versions.kotlin
-    implementation 'com.google.android.exoplayer:exoplayer-core:2.10.5'
-    api 'androidx.lifecycle:lifecycle-common-java8:2.1.0'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:" + versions.kotlin
+    implementation 'com.google.android.exoplayer:exoplayer-core:2.19.1'
+    api 'androidx.lifecycle:lifecycle-common-java8:2.8.6'
 
     implementation 'io.reactivex.rxjava2:rxandroid:2.1.1'
-    implementation 'io.reactivex.rxjava2:rxjava:2.2.13'
+    implementation 'io.reactivex.rxjava2:rxjava:2.2.21'
     implementation "io.reactivex.rxjava2:rxkotlin:2.4.0"
 
 }

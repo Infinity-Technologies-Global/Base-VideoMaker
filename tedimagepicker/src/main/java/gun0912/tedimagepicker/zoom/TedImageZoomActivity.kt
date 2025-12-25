@@ -37,32 +37,27 @@ internal class TedImageZoomActivity : AppCompatActivity() {
     }
 
     private fun loadImage(onLoadingFinished: () -> Unit) {
-        val listener = object : RequestListener<Drawable> {
-            override fun onLoadFailed(
-                e: GlideException?,
-                model: Any?,
-                target: Target<Drawable>?,
-                isFirstResource: Boolean
-            ): Boolean {
-                onLoadingFinished()
-                return false
-            }
-
-            override fun onResourceReady(
-                resource: Drawable?,
-                model: Any?,
-                target: Target<Drawable>?,
-                dataSource: DataSource?,
-                isFirstResource: Boolean
-            ): Boolean {
-                onLoadingFinished()
-                return false
-            }
-        }
         Glide.with(this)
             .load(uri)
             .apply(RequestOptions().dontTransform())
-            .listener(listener)
+            .listener(object : RequestListener<Drawable> {
+                override fun onLoadFailed(
+                    e: GlideException?,
+                    model: Any?,
+                    target: Target<Drawable?>,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    return false                }
+
+                override fun onResourceReady(
+                    resource: Drawable,
+                    model: Any,
+                    target: Target<Drawable?>?,
+                    dataSource: DataSource,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    return false                }
+            })
             .into(binding.ivMedia)
     }
 

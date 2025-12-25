@@ -137,7 +137,7 @@ public class BitmapUtils {
             istr = assetManager.open(filePath);
             bitmap = BitmapFactory.decodeStream(istr);
         } catch (IOException e) {
-             Log.d("Ynsuper", "IOException getBitmapFromAsset:"+ e.getLocalizedMessage());
+//             Log.d("Ynsuper", "IOException getBitmapFromAsset:"+ e.getLocalizedMessage());
         }
 
         return bitmap;

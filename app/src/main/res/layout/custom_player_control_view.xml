@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.media3.ui.DefaultTimeBar
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:bar_height="4dp"
+    app:buffered_color="#33FFFFFF"
+    app:played_color="#FF5722"
+    app:unplayed_color="#66FFFFFF"
+    app:scrubber_color="#FF5722"
+    app:scrubber_dragged_size="16dp"
+    app:scrubber_enabled_size="14dp"
+    app:ad_marker_color="#FFFF00"
+    app:played_ad_marker_color="#FFFF00" />
+

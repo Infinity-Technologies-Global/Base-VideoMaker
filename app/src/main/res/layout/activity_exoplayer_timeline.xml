@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    tools:context=".timeline.view.ExoPlayerTimelineActivity">
+
+    <!-- Player View for videos -->
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/playerView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#000000"
+        android:layerType="hardware"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/timelineContainer"
+        app:surface_type="surface_view"
+        app:use_controller="false"
+        app:show_buffering="when_playing"
+        app:resize_mode="fit"
+        android:visibility="gone" />
+
+    <!-- ImageView for images -->
+    <ImageView
+        android:id="@+id/imageView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:scaleType="centerCrop"
+        android:background="#000000"
+        android:layerType="hardware"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/timelineContainer" />
+
+    <!-- Timeline Container with Time Markers -->
+    <FrameLayout
+        android:id="@+id/timelineContainer"
+        android:layout_width="0dp"
+        android:layout_height="200dp"
+        android:background="#1E1E1E"
+        app:layout_constraintBottom_toTopOf="@id/controlLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+        
+        <!-- Timeline View (HorizontalThumbnailListView) -->
+        <HorizontalScrollView
+            android:id="@+id/scrollViewTimeline"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+            
+            <com.ynsuper.slideshowver1.view.custom_view.HorizontalThumbnailListView
+                android:id="@+id/horizontalThumbnailListView"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                app:paddingStartWidth="50dp"
+                app:paddingEndWidth="50dp"
+                app:paddingVerticalHeight="10dp"
+                app:groupPaddingWidth="5dp"
+                app:imageWidth="80dp"
+                app:imageHeight="80dp"
+                app:selectedGroupBg="@drawable/selected_group_bg" />
+                
+        </HorizontalScrollView>
+        
+            
+    </FrameLayout>
+    
+    <!-- Playhead indicator (center line) - non-clickable overlay -->
+    <View
+        android:id="@+id/playheadIndicator"
+        android:layout_width="2dp"
+        android:layout_height="0dp"
+        android:background="#FF0000"
+        android:clickable="false"
+        android:focusable="false"
+        android:elevation="2dp"
+        app:layout_constraintTop_toTopOf="@id/timelineContainer"
+        app:layout_constraintBottom_toBottomOf="@id/timelineContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+
+    <!-- Control Layout -->
+    <LinearLayout
+        android:id="@+id/controlLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center"
+        android:background="#2D2D2D"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+        <Button
+            android:id="@+id/btnPlayPause"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Play"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#4CAF50"
+            android:padding="12dp" />
+
+        <TextView
+            android:id="@+id/tvTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="0:00 / 0:00"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+

@@ -39,9 +39,9 @@ import com.ynsuper.slideshowver1.dao.md5
 import com.ynsuper.slideshowver1.util.text.TextBitmap
 import com.ynsuper.slideshowver1.view.StickerView
 import io.reactivex.Single
-import kotlinx.android.synthetic.main.top_tab_view.view.*
 import java.util.*
 import kotlin.math.abs
+import android.graphics.SurfaceTexture
 
 
 class VideoComposer(private val context: Context) : StudioDrawable {
@@ -403,11 +403,11 @@ class VideoComposer(private val context: Context) : StudioDrawable {
             }
         }
 
-        override fun onSurfaceTextureUpdated(surfaceTexture: SurfaceTexture?) {
+        override fun onSurfaceTextureUpdated(surfaceTexture: SurfaceTexture) {
 
         }
 
-        override fun onSurfaceTextureDestroyed(surfaceTexture: SurfaceTexture?): Boolean {
+        override fun onSurfaceTextureDestroyed(surfaceTexture: SurfaceTexture): Boolean {
             release()
             return false
         }
@@ -417,8 +417,6 @@ class VideoComposer(private val context: Context) : StudioDrawable {
             width: Int,
             height: Int
         ) {
-            if (surfaceTexture == null) return
-
             this@VideoComposer.width = width
             this@VideoComposer.height = height
 

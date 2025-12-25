@@ -8,8 +8,7 @@ import com.ynsuper.slideshowver1.databinding.ActivityMyVideosBinding
 import com.ynsuper.slideshowver1.databinding.ActivityProFeatureBinding
 import com.ynsuper.slideshowver1.viewmodel.MyVideosViewModel
 import com.ynsuper.slideshowver1.viewmodel.ProViewModel
-import kotlinx.android.synthetic.main.activity_my_videos.*
-import kotlinx.android.synthetic.main.activity_pro_feature.*
+
 
 class ProActivity : BaseActivity() {
     private val binding by binding<ActivityProFeatureBinding>(R.layout.activity_pro_feature)
@@ -28,7 +27,7 @@ class ProActivity : BaseActivity() {
             viewModel?.setBinding(binding)
             viewModel?.setCurrentActivity(this@ProActivity)
         }
-        imageBack.setOnClickListener {
+        binding.imageBack.setOnClickListener {
             viewModel?.backImageClick()
         }
     }

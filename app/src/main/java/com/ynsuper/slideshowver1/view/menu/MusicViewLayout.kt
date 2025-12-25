@@ -5,9 +5,13 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.View
 import android.widget.ImageView
+import android.widget.ListView
 import android.widget.ProgressBar
 import android.widget.SeekBar
 import android.widget.Toast
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager.widget.ViewPager
 import com.ynsuper.slideshowver1.R
 import com.ynsuper.slideshowver1.adapter.MusicAdapter
 import com.ynsuper.slideshowver1.adapter.SoundManager
@@ -24,9 +28,6 @@ import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.rxkotlin.subscribeBy
 import io.reactivex.schedulers.Schedulers
-import kotlinx.android.synthetic.main.fragment_album_music.view.*
-import kotlinx.android.synthetic.main.item_layout_edit_top_view.view.image_close_menu
-import kotlinx.android.synthetic.main.layout_music_view.view.*
 import okhttp3.ResponseBody
 import okio.BufferedSink
 import okio.buffer
@@ -45,6 +46,18 @@ class MusicViewLayout : BaseCustomConstraintLayout, MusicAdapter.OnSongClickList
     private var categoryListMusic: AlbumMusicModel? = null
     private lateinit var musicViewPagerAdapter: MusicViewPagerAdapter
     private lateinit var topbarController: TopBarController
+
+    private lateinit var viewPager: ViewPager
+    private lateinit var tabLayoutMusic: com.google.android.material.tabs.TabLayout
+    private lateinit var imageCloseMenu: ImageView
+    private lateinit var containerSeekbar: ConstraintLayout
+    private lateinit var progressLoadMusic: ProgressBar
+    private lateinit var playButton: ImageView
+    private lateinit var seekBar: SeekBar
+    private lateinit var durationTextView: android.widget.TextView
+    private lateinit var totalTimeTextView: android.widget.TextView
+    private lateinit var recyclerViewAlbum: RecyclerView
+    private lateinit var musicListView: ListView
 
     constructor(context: Context?) : super(context) {
         init(context)
@@ -77,15 +90,30 @@ class MusicViewLayout : BaseCustomConstraintLayout, MusicAdapter.OnSongClickList
             (context as SlideShowActivity).supportFragmentManager,
             this
         )
-        viewpager.adapter = musicViewPagerAdapter
-        tab_layout_music.setupWithViewPager(viewpager)
+        bindViews()
+        viewPager.adapter = musicViewPagerAdapter
+        tabLayoutMusic.setupWithViewPager(viewPager)
         categoryListMusic?.let { musicViewPagerAdapter.setCategoryList(it) }
-        image_close_menu.visibility = View.VISIBLE
-        image_close_menu.setOnClickListener {
+        imageCloseMenu.visibility = View.VISIBLE
+        imageCloseMenu.setOnClickListener {
             SoundManager.getInstance(context).stopSound()
             topbarController.clickCloseTopBar()
         }
         setSelectedSongListener()
+    }
+
+    private fun bindViews() {
+        viewPager = findViewById(R.id.viewpager)
+        tabLayoutMusic = findViewById(R.id.tab_layout_music)
+        imageCloseMenu = findViewById(R.id.image_close_menu)
+        containerSeekbar = findViewById(R.id.container_seekbar)
+        progressLoadMusic = findViewById(R.id.progress_load_music)
+        playButton = findViewById(R.id.btn_play_music)
+        seekBar = findViewById(R.id.seek_bar)
+        durationTextView = findViewById(R.id.txtTimeDuration)
+        totalTimeTextView = findViewById(R.id.txtTimeTotal)
+        recyclerViewAlbum = findViewById(R.id.recyclerViewAlbum)
+        musicListView = findViewById(R.id.list_view_music)
     }
 
     private fun handleSaveMp3ToDisk(
@@ -184,9 +212,9 @@ class MusicViewLayout : BaseCustomConstraintLayout, MusicAdapter.OnSongClickList
     }
 
     fun changeImageCloseToBack() {
-        image_close_menu.setImageResource(R.drawable.ic_arrow_back_black_24dp)
-        image_close_menu.setOnClickListener {
-            container_seekbar?.visibility = View.GONE
+        imageCloseMenu.setImageResource(R.drawable.ic_arrow_back_black_24dp)
+        imageCloseMenu.setOnClickListener {
+            containerSeekbar.visibility = View.GONE
             SoundManager.getInstance(context).stopSound()
             if (context is SlideShowActivity) {
                 (context as SlideShowActivity).changeBackToCloseImage()
@@ -195,12 +223,12 @@ class MusicViewLayout : BaseCustomConstraintLayout, MusicAdapter.OnSongClickList
     }
 
     fun changeBackToCloseImage() {
-        image_close_menu.setImageResource(R.drawable.ic_close_black_24dp)
-        image_close_menu.setOnClickListener {
+        imageCloseMenu.setImageResource(R.drawable.ic_close_black_24dp)
+        imageCloseMenu.setOnClickListener {
             topbarController.clickCloseTopBar()
         }
         recyclerViewAlbum.visibility = View.VISIBLE
-        list_view_music.visibility = View.INVISIBLE
+        musicListView.visibility = View.INVISIBLE
     }
 
     fun createTimeLabel(time: Int): String? {
@@ -255,9 +283,9 @@ class MusicViewLayout : BaseCustomConstraintLayout, MusicAdapter.OnSongClickList
     }
 
     private fun playSong(url: String?, name: String?) {
-        container_seekbar.visibility = View.VISIBLE
-        progress_load_music.visibility = View.VISIBLE
-        btn_play_music.visibility = View.INVISIBLE
+        containerSeekbar.visibility = View.VISIBLE
+        progressLoadMusic.visibility = View.VISIBLE
+        playButton.visibility = View.INVISIBLE
 
         val soundManager = SoundManager.getInstance(context)
         Thread(Runnable {
@@ -265,10 +293,10 @@ class MusicViewLayout : BaseCustomConstraintLayout, MusicAdapter.OnSongClickList
         }).start()
 
         soundManager.getmMediaPlayer().setOnPreparedListener {
-            progress_load_music.visibility = View.INVISIBLE
-            btn_play_music.visibility = View.VISIBLE
-            seek_bar!!.max = soundManager.getmMediaPlayer()!!.duration
-            seek_bar!!.setOnSeekBarChangeListener(
+            progressLoadMusic.visibility = View.INVISIBLE
+            playButton.visibility = View.VISIBLE
+            seekBar.max = soundManager.getmMediaPlayer()!!.duration
+            seekBar.setOnSeekBarChangeListener(
                 object : SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(
                         seekBar: SeekBar,
@@ -280,7 +308,7 @@ class MusicViewLayout : BaseCustomConstraintLayout, MusicAdapter.OnSongClickList
                             seekBar.progress = progress
                         }
                         seekBar.max = soundManager.getmMediaPlayer()!!.duration
-                        txtTimeDuration!!.text =
+                        durationTextView.text =
                             createTimeLabel(soundManager.getmMediaPlayer()!!.currentPosition)
                     }
 
@@ -289,11 +317,11 @@ class MusicViewLayout : BaseCustomConstraintLayout, MusicAdapter.OnSongClickList
                 }
             )
 
-            txtTimeTotal!!.text = createTimeLabel(soundManager.getmMediaPlayer().duration)
+            totalTimeTextView.text = createTimeLabel(soundManager.getmMediaPlayer().duration)
             val handler = android.os.Handler()
             val runnable = object : Runnable {
                 override fun run() {
-                    seek_bar.progress = soundManager!!.getmMediaPlayer().currentPosition
+                    seekBar.progress = soundManager.getmMediaPlayer().currentPosition
 //                    binding?.txtTimeDuration!!.text =
 //                        createTimeLabel(soundManager.getmMediaPlayer()!!.currentPosition)
                     handler.postDelayed(this, 1000)
@@ -303,23 +331,27 @@ class MusicViewLayout : BaseCustomConstraintLayout, MusicAdapter.OnSongClickList
                 soundManager.startSound()
             }
 
-            if (soundManager.getmMediaPlayer().isPlaying) btn_play_music!!.setImageDrawable(
-                context!!.getDrawable(
+            if (soundManager.getmMediaPlayer().isPlaying) playButton.setImageDrawable(
+                context.getDrawable(
                     R.drawable.ic_round_pause_24
                 )
             )
 
 
-            btn_play_music!!.setOnClickListener(View.OnClickListener {
+            playButton.setOnClickListener {
                 if (soundManager.getmMediaPlayer()!!.isPlaying) {
                     soundManager.pauseSound()
-                    btn_play_music!!.setImageDrawable(context!!.getDrawable(R.drawable.ic_icon_awesome_play))
+                    playButton.setImageDrawable(
+                        context.getDrawable(R.drawable.ic_icon_awesome_play)
+                    )
                 } else {
                     soundManager.startSound()
-                    btn_play_music!!.setImageDrawable(context!!.getDrawable(R.drawable.ic_round_pause_24))
+                    playButton.setImageDrawable(
+                        context.getDrawable(R.drawable.ic_round_pause_24)
+                    )
 
                 }
-            })
+            }
             handler.post(runnable)
         }
     }

@@ -20,7 +20,6 @@ import com.google.android.gms.ads.rewarded.RewardItem;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.ynsuper.slideshowver1.R;
 import com.ynsuper.slideshowver1.ads.AdConfig;
-import com.ynsuper.slideshowver1.ads.RewardedAdLoader;
 import com.ynsuper.slideshowver1.callback.IUnzipFile;
 import com.ynsuper.slideshowver1.model.StickerModel;
 import com.ynsuper.slideshowver1.util.Constants;
@@ -38,7 +37,6 @@ public class UnlockItemDialogFragment extends BottomSheetDialogFragment {
     private ImageView imageThumb;
     private Button buttonUnlock;
     private StickerModel mSticker;
-    private RewardedAdLoader rewardedAdLoader;
 
     public UnlockItemDialogFragment(Context context,
                                     Fragment fragment,
@@ -48,7 +46,6 @@ public class UnlockItemDialogFragment extends BottomSheetDialogFragment {
         this.mSticker = sticker;
         this.mContext = context;
         this.mFragment = fragment;
-        rewardedAdLoader = new RewardedAdLoader();
     }
 
     public static UnlockItemDialogFragment newInstance(Context context,
@@ -92,33 +89,17 @@ public class UnlockItemDialogFragment extends BottomSheetDialogFragment {
             @Override
             public void onClick(View v) {
 //                Toast.makeText(getContext(), "Show QC tai day", Toast.LENGTH_SHORT).show();
+                new DownloadStickerFromUrl(getActivity(), new IUnzipFile() {
+                    @Override
+                    public void unZipSuccess(String zipFile) {
+                        Toast.makeText(mContext, R.string.text_download_success, Toast.LENGTH_SHORT).show();
+                    }
+                }).execute(Constants.URL_BASE_CLOUD_IMAGE_EDIT +
+                        mSticker.getUrlZip()
 
-                rewardedAdLoader.setAdsId(getContext(), AdConfig.AD_ADMOB_STORE_ASSETS_REWARDED);
-                rewardedAdLoader.loadRewardedAd(eventRewardedAdCallback);
+                );
             }
         });
     }
-
-    private RewardedAdLoader.EventRewardedAdCallback eventRewardedAdCallback = new RewardedAdLoader.EventRewardedAdCallback() {
-        @Override
-        public void onAdClosed() {
-
-        }
-
-        @Override
-        public void onUserEarnedReward(@NotNull RewardItem reward) {
-            Timber.d("onUserEarnedReward:%s", reward.getAmount());
-
-            new DownloadStickerFromUrl(getActivity(), new IUnzipFile() {
-                @Override
-                public void unZipSuccess(String zipFile) {
-                    Toast.makeText(mContext, R.string.text_download_success, Toast.LENGTH_SHORT).show();
-                }
-            }).execute(Constants.URL_BASE_CLOUD_IMAGE_EDIT +
-                    mSticker.getUrlZip()
-
-            );
-        }
-    };
 
 }

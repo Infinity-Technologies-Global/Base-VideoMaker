@@ -7,12 +7,15 @@ import androidx.recyclerview.widget.RecyclerView
 import com.ynsuper.slideshowver1.R
 import com.ynsuper.slideshowver1.base.BaseCustomConstraintLayout
 import com.ynsuper.slideshowver1.callback.TopBarController
-import kotlinx.android.synthetic.main.item_layout_edit_top_view.view.*
-import kotlinx.android.synthetic.main.layout_template_view.view.*
+import android.widget.TextView
+import android.widget.ImageView
 
 class TransitionViewLayout : BaseCustomConstraintLayout {
 
     private lateinit var topBarController: TopBarController
+    private lateinit var textNameTopBarView: TextView
+    private lateinit var imageSubmitMenuView: ImageView
+    private lateinit var recyclerViewTransitionsView: RecyclerView
 
     constructor(context: Context?) : super(context) {
         init(context)
@@ -43,13 +46,20 @@ class TransitionViewLayout : BaseCustomConstraintLayout {
     }
 
     fun setTopBarName(name: String){
-        text_name_top_bar.text = name
+        textNameTopBarView.text = name
     }
     private fun initView() {
+        bindViews()
         setTopBarName(context.getString(R.string.text_transition))
-        image_submit_menu.setOnClickListener {
+        imageSubmitMenuView.setOnClickListener {
             topBarController.clickSubmitTopBar()
         }
+    }
+    
+    private fun bindViews() {
+        textNameTopBarView = findViewById(R.id.text_name_top_bar)
+        imageSubmitMenuView = findViewById(R.id.image_submit_menu)
+        recyclerViewTransitionsView = findViewById(R.id.recyclerViewTransitions)
     }
 
     fun setTopbarController(topbarController: TopBarController) {
@@ -57,6 +67,6 @@ class TransitionViewLayout : BaseCustomConstraintLayout {
     }
 
     fun getRecycleViewTransitions(): RecyclerView {
-        return recyclerViewTransitions
+        return recyclerViewTransitionsView
     }
 }

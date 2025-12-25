@@ -4,7 +4,8 @@ import android.content.Context
 import android.util.Log
 import com.facebook.ads.AdSettings
 import com.facebook.ads.AudienceNetworkAds
-import com.ynsuper.slideshowver1.BuildConfig.DEBUG
+import com.facebook.ads.BuildConfig
+
 
 class AudienceNetworkInitializeHelper : AudienceNetworkAds.InitListener {
 
@@ -23,7 +24,7 @@ class AudienceNetworkInitializeHelper : AudienceNetworkAds.InitListener {
          */
         internal fun initialize(context: Context) {
             if (!AudienceNetworkAds.isInitialized(context)) {
-                if (DEBUG) {
+                if (BuildConfig.DEBUG) {
                     AdSettings.turnOnSDKDebugger(context)
 //                    AdSettings.addTestDevice("eae660ba-4730-4641-92b2-ea5558eb5663");
 //                    AdSettings.addTestDevice("b0bf6730-4d26-4efd-80f3-028e6bef4e0d");

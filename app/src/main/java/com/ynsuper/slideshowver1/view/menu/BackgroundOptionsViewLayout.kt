@@ -5,7 +5,11 @@ import android.os.Handler
 import android.os.Parcel
 import android.os.Parcelable
 import android.util.AttributeSet
+import android.widget.CheckBox
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.SeekBar
+import android.widget.TextView
 import androidx.annotation.IdRes
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.ynsuper.slideshowver1.R
@@ -15,14 +19,24 @@ import com.ynsuper.slideshowver1.callback.SceneOptionStateListener
 import com.ynsuper.slideshowver1.callback.TopBarController
 import com.ynsuper.slideshowver1.util.Constants
 import com.ynsuper.slideshowver1.view.SlideShowActivity
-import kotlinx.android.synthetic.main.fragment_background_option.view.*
-import kotlinx.android.synthetic.main.item_layout_edit_top_view.view.*
 
 class BackgroundOptionsViewLayout : BaseCustomConstraintLayout {
     private lateinit var colorTextAdapter: ColorTextAdapter
     private lateinit var topBarController: TopBarController
     private var state: OptionState? = null
     private var listener: SceneOptionStateListener? = null
+
+    private lateinit var checkboxBlurView: CheckBox
+    private lateinit var seekBarBlurView: SeekBar
+    private lateinit var groupFillView: RadioGroup
+    private lateinit var fitCenterView: RadioButton
+    private lateinit var fitEndView: RadioButton
+    private lateinit var fitStartView: RadioButton
+    private lateinit var fillCenterView: RadioButton
+    private lateinit var fillEndView: RadioButton
+    private lateinit var fillStartView: RadioButton
+    private lateinit var recyclerBackgroundColorView: androidx.recyclerview.widget.RecyclerView
+    private lateinit var textNameTopBarView: TextView
 
     constructor(context: Context?) : super(context) {
         init(context)
@@ -52,11 +66,23 @@ class BackgroundOptionsViewLayout : BaseCustomConstraintLayout {
 
     private fun initView() {
         listener = context as SlideShowActivity
+        textNameTopBarView = findViewById(R.id.text_name_top_bar)
+        checkboxBlurView = findViewById(R.id.checkboxBlur)
+        seekBarBlurView = findViewById(R.id.seekBarBlur)
+        groupFillView = findViewById(R.id.groupfill)
+        fitCenterView = findViewById(R.id.fitCenter)
+        fitEndView = findViewById(R.id.fitEnd)
+        fitStartView = findViewById(R.id.fitStart)
+        fillCenterView = findViewById(R.id.fillCenter)
+        fillEndView = findViewById(R.id.fillEnd)
+        fillStartView = findViewById(R.id.fillStart)
+        recyclerBackgroundColorView = findViewById(R.id.recycleBackgroundColor)
+
         setTopBarName(context.getString(R.string.text_background))
         setColorTextAdapter()
 
-        checkboxBlur.isChecked = state?.blur == true
-        seekBarBlur.progress = state?.progressBlur!!
+        checkboxBlurView.isChecked = state?.blur == true
+        seekBarBlurView.progress = state?.progressBlur!!
         for (i in 0 until Constants.getColorText().size - 1) {
             if (state?.color == context.resources.getColor(Constants.getColorText()[i].idColor)) {
                 colorTextAdapter.selectedPosition = i
@@ -67,10 +93,10 @@ class BackgroundOptionsViewLayout : BaseCustomConstraintLayout {
 
 
 
-        checkboxBlur.setOnCheckedChangeListener { buttonView, isChecked ->
+        checkboxBlurView.setOnCheckedChangeListener { _, _ ->
             saveState()
         }
-        seekBarBlur.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+        seekBarBlurView.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
 
             }
@@ -87,13 +113,8 @@ class BackgroundOptionsViewLayout : BaseCustomConstraintLayout {
             }
 
         })
-        groupfill.setOnCheckedChangeListener { group, checkedId ->
+        groupFillView.setOnCheckedChangeListener { _, _ ->
             saveState()
-        }
-        image_submit_menu.setOnClickListener {
-//            saveState()
-            topBarController.clickSubmitTopBar()
-
         }
 
     }
@@ -102,15 +123,15 @@ class BackgroundOptionsViewLayout : BaseCustomConstraintLayout {
         colorTextAdapter = ColorTextAdapter(
             Constants.getColorText(),
             context
-        ) { view, position ->
+        ) { _, position ->
             state?.color = resources.getColor(Constants.getColorText().get(position).getIdColor())
             saveState()
         }
-        recycleBackgroundColor.setAdapter(colorTextAdapter)
-        recycleBackgroundColor.setHasFixedSize(true)
+        recyclerBackgroundColorView.adapter = colorTextAdapter
+        recyclerBackgroundColorView.setHasFixedSize(true)
         val linearLayoutManagerColor = LinearLayoutManager(context)
         linearLayoutManagerColor.orientation = LinearLayoutManager.HORIZONTAL
-        recycleBackgroundColor.layoutManager = linearLayoutManagerColor
+        recyclerBackgroundColorView.layoutManager = linearLayoutManagerColor
     }
 
 
@@ -118,7 +139,7 @@ class BackgroundOptionsViewLayout : BaseCustomConstraintLayout {
         this.state?.let {
             listener?.onBackGroundConfigChange(
                 it.copy(
-                    blur = checkboxBlur.isChecked,
+                    blur = checkboxBlurView.isChecked,
                     crop = currentCrop()
                 )
             )
@@ -126,18 +147,18 @@ class BackgroundOptionsViewLayout : BaseCustomConstraintLayout {
     }
 
     private fun currentCrop(): String {
-        if (fitCenter.isChecked) return "fit-center"
-        if (fitEnd.isChecked) return "fit-end"
-        if (fitStart.isChecked) return "fit-start"
-        if (fillCenter.isChecked) return "fill-center"
-        if (fillEnd.isChecked) return "fill-end"
-        if (fillStart.isChecked) return "fill-start"
+        if (fitCenterView.isChecked) return "fit-center"
+        if (fitEndView.isChecked) return "fit-end"
+        if (fitStartView.isChecked) return "fit-start"
+        if (fillCenterView.isChecked) return "fill-center"
+        if (fillEndView.isChecked) return "fill-end"
+        if (fillStartView.isChecked) return "fill-start"
         return "fit-center"
     }
 
     private fun setState() {
         state?.let { s ->
-            groupfill.check(getCheckedId(s.crop!!))
+            groupFillView.check(getCheckedId(s.crop!!))
 
         }
     }
@@ -166,7 +187,7 @@ class BackgroundOptionsViewLayout : BaseCustomConstraintLayout {
     }
 
     fun setTopBarName(name: String) {
-        text_name_top_bar.text = name
+        textNameTopBarView.text = name
     }
 
 

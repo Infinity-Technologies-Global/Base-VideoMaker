@@ -21,15 +21,16 @@ import com.ynsuper.slideshowver1.callback.SceneOptionStateListener
 import com.ynsuper.slideshowver1.databinding.ActivitySlideshowBinding
 import com.ynsuper.slideshowver1.model.ImageModel
 import com.ynsuper.slideshowver1.util.Constant
+import com.ynsuper.slideshowver1.util.PermissionHelper
 import com.ynsuper.slideshowver1.util.entity.AudioEntity
+import android.content.pm.PackageManager
+import android.widget.Toast
 import com.ynsuper.slideshowver1.view.menu.BackgroundOptionsViewLayout
 import com.ynsuper.slideshowver1.view.menu.DurationViewLayout
 import com.ynsuper.slideshowver1.view.menu.MusicViewLayout
 import com.ynsuper.slideshowver1.view.menu.TextQuoteViewLayout
 import com.ynsuper.slideshowver1.view.sticker.QuoteState
 import com.ynsuper.slideshowver1.viewmodel.SlideShowViewModel
-import kotlinx.android.synthetic.main.activity_slideshow.*
-import kotlinx.android.synthetic.main.layout_menu_bar.*
 import org.apache.commons.io.IOUtils
 import java.io.File
 import java.io.FileOutputStream
@@ -47,12 +48,31 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d(Constant.YNSUPER_TAG, "SlideShowActivity onCreate: started")
+        checkAndRequestAudioPermission()
         initView()
         initEvent()
 
     }
+    
+    private fun checkAndRequestAudioPermission() {
+        if (!PermissionHelper.hasAudioPermission(this)) {
+            Log.d(Constant.YNSUPER_TAG, "SlideShowActivity: requesting audio permission")
+            PermissionHelper.requestAudioPermission(this)
+        }
+    }
 
     private fun initView() {
+        Log.d(Constant.YNSUPER_TAG, "SlideShowActivity initView: started")
+        
+        val imageList = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableArrayListExtra(Constant.EXTRA_ARRAY_IMAGE, ImageModel::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableArrayListExtra<ImageModel>(Constant.EXTRA_ARRAY_IMAGE)
+        }
+        
+        Log.d(Constant.YNSUPER_TAG, "SlideShowActivity: received ${imageList?.size ?: 0} images")
 
         binding.apply {
             lifecycleOwner = this@SlideShowActivity
@@ -61,7 +81,7 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
             binding.slideShowViewModel = viewModel
             viewModel.setBinding(binding)
             viewModel.initDataBase(this@SlideShowActivity)
-            viewModel.loadDataImage(intent.getParcelableArrayListExtra<ImageModel>(Constant.EXTRA_ARRAY_IMAGE))
+            viewModel.loadDataImage(imageList)
             viewModel.loadTextQuote()
             viewModel.loadDataMusic()
 
@@ -69,6 +89,7 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
             mViews = ArrayList()
 
         }
+        Log.d(Constant.YNSUPER_TAG, "SlideShowActivity initView: completed")
     }
 
 
@@ -80,19 +101,19 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
     }
 
     private fun initEvent() {
-        layout_menu_ratio.setOnClickListener { viewModel.selectMenuRatio() }
-        layout_menu_background.setOnClickListener { viewModel.selectMenuBackground() }
-        layout__menu_transition.setOnClickListener { viewModel.selectMenuTransition() }
-        layout_menu_music.setOnClickListener { viewModel.selectMenuMusic() }
-        layout_menu_duration.setOnClickListener { viewModel.selectMenuSpeed() }
-        layout_menu_sticker.setOnClickListener { viewModel.selectMenuSticker() }
-        layout_menu_effect.setOnClickListener { viewModel.selectMenuOverlay() }
-        layout_menu_filter.setOnClickListener { viewModel.selectMenuFilter() }
-        layout_menu_text.setOnClickListener { viewModel.selectMenuText() }
-        image_add_image.setOnClickListener { viewModel.showAddImageSheet() }
-        image_save_draft.setOnClickListener { viewModel.saveDraft() }
-        image_save_video.setOnClickListener { viewModel.saveVideo() }
-        image_back.setOnClickListener { finish() }
+        binding.root.findViewById<View>(R.id.layout_menu_ratio).setOnClickListener { viewModel.selectMenuRatio() }
+        binding.root.findViewById<View>(R.id.layout_menu_background).setOnClickListener { viewModel.selectMenuBackground() }
+        binding.root.findViewById<View>(R.id.layout__menu_transition).setOnClickListener { viewModel.selectMenuTransition() }
+        binding.root.findViewById<View>(R.id.layout_menu_music).setOnClickListener { viewModel.selectMenuMusic() }
+        binding.root.findViewById<View>(R.id.layout_menu_duration).setOnClickListener { viewModel.selectMenuSpeed() }
+        binding.root.findViewById<View>(R.id.layout_menu_sticker).setOnClickListener { viewModel.selectMenuSticker() }
+        binding.root.findViewById<View>(R.id.layout_menu_effect).setOnClickListener { viewModel.selectMenuOverlay() }
+        binding.root.findViewById<View>(R.id.layout_menu_filter).setOnClickListener { viewModel.selectMenuFilter() }
+        binding.root.findViewById<View>(R.id.layout_menu_text).setOnClickListener { viewModel.selectMenuText() }
+        binding.root.findViewById<View>(R.id.image_add_image).setOnClickListener { viewModel.showAddImageSheet() }
+        binding.imageSaveDraft.setOnClickListener { viewModel.saveDraft() }
+        binding.imageSaveVideo.setOnClickListener { viewModel.saveVideo() }
+        binding.imageBack.setOnClickListener { finish() }
     }
 
 
@@ -101,28 +122,52 @@ class SlideShowActivity : BaseActivity(), SceneOptionStateListener,
         if (requestCode == 1 && resultCode == Activity.RESULT_OK) {
             val audioFile = data?.data ?: return
 
-            val inputStream = contentResolver.openInputStream(audioFile) ?: return
-            val cursor = contentResolver.query(audioFile, null, null, null, null)
-            val nameColumn = cursor!!.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-            cursor.moveToFirst()
-            val name = cursor.getString(nameColumn)
+            try {
+                val inputStream = contentResolver.openInputStream(audioFile) ?: return
+                val cursor = contentResolver.query(audioFile, null, null, null, null)
+                val nameColumn = cursor!!.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                cursor.moveToFirst()
+                val name = cursor.getString(nameColumn)
 
-            val outputFile = File(externalCacheDir, "audio-${UUID.randomUUID()}" + name)
-            val fileOutputStream = FileOutputStream(outputFile)
-            IOUtils.copy(inputStream, fileOutputStream)
-            inputStream.close()
-            fileOutputStream.flush()
-            fileOutputStream.close()
-            cursor.close()
+                val outputFile = File(externalCacheDir, "audio-${UUID.randomUUID()}" + name)
+                val fileOutputStream = FileOutputStream(outputFile)
+                IOUtils.copy(inputStream, fileOutputStream)
+                inputStream.close()
+                fileOutputStream.flush()
+                fileOutputStream.close()
+                cursor.close()
 
-            val audio = AudioEntity(path = outputFile.path)
-            viewModel.setAudio(audio)
+                val audio = AudioEntity(path = outputFile.path)
+                viewModel.setAudio(audio)
+                Log.d(Constant.YNSUPER_TAG, "Audio file saved: ${outputFile.path}")
+            } catch (e: Exception) {
+                Log.e(Constant.YNSUPER_TAG, "Error loading audio file: ${e.message}", e)
+                Toast.makeText(this, "Không thể tải file audio: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            PermissionHelper.REQUEST_CODE_AUDIO_PERMISSION -> {
+                if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                    Log.d(Constant.YNSUPER_TAG, "Audio permission granted")
+                } else {
+                    Log.w(Constant.YNSUPER_TAG, "Audio permission denied")
+                    Toast.makeText(this, "Cần quyền truy cập audio để phát nhạc", Toast.LENGTH_LONG).show()
+                }
+            }
         }
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        viewModel?.liveDataCategory.observe(this, viewModel.changeCategoryMusicList)
+        viewModel.liveDataCategory.observe(this, viewModel.changeCategoryMusicList)
     }
 
 

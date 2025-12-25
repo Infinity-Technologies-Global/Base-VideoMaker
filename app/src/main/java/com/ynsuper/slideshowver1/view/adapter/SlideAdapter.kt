@@ -7,8 +7,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.ynsuper.slideshowver1.R
 import com.ynsuper.slideshowver1.util.entity.SlideEntity
-import kotlinx.android.synthetic.main.item_story.view.*
 import java.io.File
+import android.widget.ImageView
 
 class SlideAdapter(var items: List<SlideEntity>) : RecyclerView.Adapter<SlideAdapter.SlideViewHolder>() {
 
@@ -57,6 +57,7 @@ class SlideAdapter(var items: List<SlideEntity>) : RecyclerView.Adapter<SlideAda
     }
 
     inner class SlideViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        private val imageView: ImageView = view.findViewById(R.id.imageView)
 
         init {
             itemView.setOnClickListener {
@@ -75,9 +76,9 @@ class SlideAdapter(var items: List<SlideEntity>) : RecyclerView.Adapter<SlideAda
             Glide.with(itemView)
                 .load(File(item.path))
                 .centerCrop()
-                .into(itemView.imageView)
+                .into(imageView)
 
-            itemView.imageView.alpha = if (itemView.isSelected) 1f else .7f
+            imageView.alpha = if (itemView.isSelected) 1f else .7f
         }
     }
 }

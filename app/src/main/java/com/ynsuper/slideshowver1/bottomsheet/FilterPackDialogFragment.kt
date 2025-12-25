@@ -18,14 +18,34 @@ import androidx.core.view.forEach
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.seanghay.studio.gles.shader.filter.pack.PackFilter
 import com.ynsuper.slideshowver1.R
-import kotlinx.android.synthetic.main.item_layout_edit_top_view.*
-import kotlinx.android.synthetic.main.layout_filter.*
+import android.widget.ImageView
 
 class FilterPackDialogFragment : BottomSheetDialogFragment(), SeekBar.OnSeekBarChangeListener {
 
     private var listener: FilterPackListener? = null
     private val labelTextViews = mutableMapOf<String, TextView>()
     private var filterPack: PackFilter? = null
+    
+    private lateinit var imageSubmitMenu: ImageView
+    private lateinit var buttonReset: ImageView
+    private lateinit var layoutBrightness: ViewGroup
+    private lateinit var layoutContrast: ViewGroup
+    private lateinit var layoutSaturation: ViewGroup
+    private lateinit var layoutTint: ViewGroup
+    private lateinit var layoutGamma: ViewGroup
+    private lateinit var layoutWarmth: ViewGroup
+    private lateinit var layoutVibrant: ViewGroup
+    private lateinit var layoutSepia: ViewGroup
+    private lateinit var layoutIntensity: ViewGroup
+    private lateinit var layoutFilterBrightness: ViewGroup
+    private lateinit var layoutFilterContrast: ViewGroup
+    private lateinit var layoutFilterSaturation: ViewGroup
+    private lateinit var layoutFilterTint: ViewGroup
+    private lateinit var layoutFilterGamma: ViewGroup
+    private lateinit var layoutFilterWarmth: ViewGroup
+    private lateinit var layoutFilterVibrant: ViewGroup
+    private lateinit var layoutFilterSepia: ViewGroup
+    private lateinit var layoutFilterIntensity: ViewGroup
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -45,13 +65,15 @@ class FilterPackDialogFragment : BottomSheetDialogFragment(), SeekBar.OnSeekBarC
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        bindViews(view)
+
         val packFilter = arguments?.getParcelable<PackFilter>(KEY_FILTER_PACK)
             ?: throw NullPointerException("PackFilter was null")
         this.filterPack = packFilter
 
         traverseLabels(view)
         setValues(filterPack)
-        layout_filter_brightness.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+        layoutFilterBrightness.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
 
         buttonReset.visibility = View.VISIBLE
         seekBars.forEach {
@@ -66,98 +88,121 @@ class FilterPackDialogFragment : BottomSheetDialogFragment(), SeekBar.OnSeekBarC
 //
 //        }
 
-        image_submit_menu.setOnClickListener {
+        imageSubmitMenu.setOnClickListener {
             saveAndClose()
         }
 
-        layout_filter_brightness.setOnClickListener {
+        layoutFilterBrightness.setOnClickListener {
             resetColor()
             hideAllViewSeekBar()
-            layout_brightness.visibility = View.VISIBLE
-            layout_filter_brightness.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+            layoutBrightness.visibility = View.VISIBLE
+            layoutFilterBrightness.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
 
         }
-        layout_filter_contrast.setOnClickListener {
+        layoutFilterContrast.setOnClickListener {
             resetColor()
             hideAllViewSeekBar()
-            layout_contrast.visibility = View.VISIBLE
-            layout_filter_contrast.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+            layoutContrast.visibility = View.VISIBLE
+            layoutFilterContrast.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
 
         }
-        layout_filter_saturation.setOnClickListener {
+        layoutFilterSaturation.setOnClickListener {
             resetColor()
             hideAllViewSeekBar()
-            layout_saturation.visibility = View.VISIBLE
-            layout_filter_saturation.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+            layoutSaturation.visibility = View.VISIBLE
+            layoutFilterSaturation.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
 
         }
-        layout_filter_tint.setOnClickListener {
+        layoutFilterTint.setOnClickListener {
             resetColor()
             hideAllViewSeekBar()
-            layout_tint.visibility = View.VISIBLE
-            layout_filter_tint.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+            layoutTint.visibility = View.VISIBLE
+            layoutFilterTint.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
 
         }
-        layout_filter_gamma.setOnClickListener {
+        layoutFilterGamma.setOnClickListener {
             resetColor()
             hideAllViewSeekBar()
-            layout_gamma.visibility = View.VISIBLE
-            layout_filter_gamma.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+            layoutGamma.visibility = View.VISIBLE
+            layoutFilterGamma.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
 
         }
-        layout_filter_warmth.setOnClickListener {
+        layoutFilterWarmth.setOnClickListener {
             resetColor()
             hideAllViewSeekBar()
-            layout_warmth.visibility = View.VISIBLE
-            layout_filter_warmth.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+            layoutWarmth.visibility = View.VISIBLE
+            layoutFilterWarmth.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
 
         }
-        layout_filter_vibrant.setOnClickListener {
+        layoutFilterVibrant.setOnClickListener {
             resetColor()
             hideAllViewSeekBar()
-            layout_vibrant.visibility = View.VISIBLE
-            layout_filter_vibrant.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+            layoutVibrant.visibility = View.VISIBLE
+            layoutFilterVibrant.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
 
         }
-        layout_filter_sepia.setOnClickListener {
+        layoutFilterSepia.setOnClickListener {
             resetColor()
             hideAllViewSeekBar()
-            layout_sepia.visibility = View.VISIBLE
-            layout_filter_sepia.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+            layoutSepia.visibility = View.VISIBLE
+            layoutFilterSepia.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
 
         }
-        layout_filter_intensity.setOnClickListener {
+        layoutFilterIntensity.setOnClickListener {
             resetColor()
             hideAllViewSeekBar()
-            layout_intensity.visibility = View.VISIBLE
-            layout_filter_intensity.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
+            layoutIntensity.visibility = View.VISIBLE
+            layoutFilterIntensity.setBackgroundColor(resources.getColor(R.color.colorPrimaryDark))
         }
 
 
+    }
+    
+    private fun bindViews(view: View) {
+        imageSubmitMenu = view.findViewById(R.id.image_submit_menu)
+        buttonReset = view.findViewById(R.id.buttonReset)
+        layoutBrightness = view.findViewById(R.id.layout_brightness)
+        layoutContrast = view.findViewById(R.id.layout_contrast)
+        layoutSaturation = view.findViewById(R.id.layout_saturation)
+        layoutTint = view.findViewById(R.id.layout_tint)
+        layoutGamma = view.findViewById(R.id.layout_gamma)
+        layoutWarmth = view.findViewById(R.id.layout_warmth)
+        layoutVibrant = view.findViewById(R.id.layout_vibrant)
+        layoutSepia = view.findViewById(R.id.layout_sepia)
+        layoutIntensity = view.findViewById(R.id.layout_intensity)
+        layoutFilterBrightness = view.findViewById(R.id.layout_filter_brightness)
+        layoutFilterContrast = view.findViewById(R.id.layout_filter_contrast)
+        layoutFilterSaturation = view.findViewById(R.id.layout_filter_saturation)
+        layoutFilterTint = view.findViewById(R.id.layout_filter_tint)
+        layoutFilterGamma = view.findViewById(R.id.layout_filter_gamma)
+        layoutFilterWarmth = view.findViewById(R.id.layout_filter_warmth)
+        layoutFilterVibrant = view.findViewById(R.id.layout_filter_vibrant)
+        layoutFilterSepia = view.findViewById(R.id.layout_filter_sepia)
+        layoutFilterIntensity = view.findViewById(R.id.layout_filter_intensity)
     }
 
     private fun hideAllViewSeekBar() {
-        layout_brightness.visibility = View.GONE
-        layout_contrast.visibility = View.GONE
-        layout_saturation.visibility = View.GONE
-        layout_tint.visibility = View.GONE
-        layout_gamma.visibility = View.GONE
-        layout_warmth.visibility = View.GONE
-        layout_vibrant.visibility = View.GONE
-        layout_sepia.visibility = View.GONE
-        layout_intensity.visibility = View.GONE
+        layoutBrightness.visibility = View.GONE
+        layoutContrast.visibility = View.GONE
+        layoutSaturation.visibility = View.GONE
+        layoutTint.visibility = View.GONE
+        layoutGamma.visibility = View.GONE
+        layoutWarmth.visibility = View.GONE
+        layoutVibrant.visibility = View.GONE
+        layoutSepia.visibility = View.GONE
+        layoutIntensity.visibility = View.GONE
     }
 
     private fun resetColor() {
-        layout_filter_brightness.setBackgroundColor(resources.getColor(R.color.color_main_edit))
-        layout_filter_contrast.setBackgroundColor(resources.getColor(R.color.color_main_edit))
-        layout_filter_saturation.setBackgroundColor(resources.getColor(R.color.color_main_edit))
-        layout_filter_tint.setBackgroundColor(resources.getColor(R.color.color_main_edit))
-        layout_filter_gamma.setBackgroundColor(resources.getColor(R.color.color_main_edit))
-        layout_filter_warmth.setBackgroundColor(resources.getColor(R.color.color_main_edit))
-        layout_filter_vibrant.setBackgroundColor(resources.getColor(R.color.color_main_edit))
-        layout_filter_sepia.setBackgroundColor(resources.getColor(R.color.color_main_edit))
-        layout_filter_intensity.setBackgroundColor(resources.getColor(R.color.color_main_edit))
+        layoutFilterBrightness.setBackgroundColor(resources.getColor(R.color.color_main_edit))
+        layoutFilterContrast.setBackgroundColor(resources.getColor(R.color.color_main_edit))
+        layoutFilterSaturation.setBackgroundColor(resources.getColor(R.color.color_main_edit))
+        layoutFilterTint.setBackgroundColor(resources.getColor(R.color.color_main_edit))
+        layoutFilterGamma.setBackgroundColor(resources.getColor(R.color.color_main_edit))
+        layoutFilterWarmth.setBackgroundColor(resources.getColor(R.color.color_main_edit))
+        layoutFilterVibrant.setBackgroundColor(resources.getColor(R.color.color_main_edit))
+        layoutFilterSepia.setBackgroundColor(resources.getColor(R.color.color_main_edit))
+        layoutFilterIntensity.setBackgroundColor(resources.getColor(R.color.color_main_edit))
 
     }
 

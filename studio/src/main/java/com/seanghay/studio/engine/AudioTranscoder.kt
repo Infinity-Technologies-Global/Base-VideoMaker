@@ -107,7 +107,7 @@ class AudioTransCoder {
             for (i in 0 until numTracks) {
                 val format = extractor!!.getTrackFormat(i)
                 val mine = format.getString(MediaFormat.KEY_MIME)
-                if (!TextUtils.isEmpty(mine) && mine.startsWith("audio")) {
+                if (!TextUtils.isEmpty(mine) && mine != null && mine.startsWith("audio")) {
                     extractor!!.selectTrack(i)
                     if (mDurationMs == 0L) {
                         try {

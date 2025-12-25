@@ -11,10 +11,12 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.ynsuper.slideshowver1.R
 import com.ynsuper.slideshowver1.util.entity.SlideEntity
-import kotlinx.android.synthetic.main.item_video.view.*
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
+import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.TextView
 
 
 class DraftListAdapter(
@@ -70,8 +72,11 @@ class DraftListAdapter(
     }
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-
-        private val popupMenu = PopupMenu(itemView.context, itemView.more)
+        private val moreButton: ImageButton = view.findViewById(R.id.more)
+        private val thumbnailView: ImageView = view.findViewById(R.id.thumbnail)
+        private val titleTextView: TextView = view.findViewById(R.id.title)
+        
+        private val popupMenu = PopupMenu(itemView.context, moreButton)
 
         init {
             popupMenu.inflate(R.menu.more)
@@ -80,11 +85,11 @@ class DraftListAdapter(
                 onItemClicked(items[adapterPosition])
             }
 
-            itemView.more.setOnClickListener {
+            moreButton.setOnClickListener {
                 popupMenu.show()
             }
 
-            itemView.thumbnail.setOnClickListener {
+            thumbnailView.setOnClickListener {
                 onItemClicked(items[adapterPosition])
             }
             popupMenu.setOnMenuItemClickListener {
@@ -99,11 +104,11 @@ class DraftListAdapter(
         fun bind(item: SlideEntity) {
 
             val relativeTime = DateUtils.getRelativeTimeSpanString(item.createdAt).toString()
-            itemView.title.text = relativeTime
+            titleTextView.text = relativeTime
             Glide.with(itemView)
                 .load(item.path)
                 .centerCrop()
-                .into(itemView.thumbnail)
+                .into(thumbnailView)
 
 
         }

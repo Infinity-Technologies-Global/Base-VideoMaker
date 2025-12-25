@@ -113,17 +113,17 @@ class MyVideosViewModel : BaseViewModel() {
 
 
 
-        dialog.getWindow()?.setBackgroundDrawableResource(android.R.color.transparent);
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog?.getWindow()?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog?.window?.requestFeature(Window.FEATURE_NO_TITLE)
 
-        alertDialogBuilder.show()
+        dialog?.show()
         activity!!.findViewById<TextView>(R.id.text_comfirm)?.setOnClickListener {
             appDatabase?.storyDao()?.delete(story)
             File(story.path).deleteRecursively()
-            dialog.hide()
+            dialog?.hide()
         }
         activity!!.findViewById<TextView>(R.id.text_cancel)?.setOnClickListener {
-            dialog.hide()
+            dialog?.hide()
         }
     }
 

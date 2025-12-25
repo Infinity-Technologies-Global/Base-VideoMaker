@@ -1,13 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.ynsuper.slideshowver1">
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-
+    
+    <!-- Storage permissions for Android 10 and below -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    
+    <!-- Media permissions for Android 13+ (API 33+) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <application
         android:name=".MyApplication"
         android:allowBackup="true"
@@ -19,6 +28,10 @@
         android:theme="@style/AppTheme"
         android:largeHeap="true"
         android:usesCleartextTraffic="true">
+        <property
+            android:name="android.adservices.AD_SERVICES_CONFIG"
+            android:resource="@xml/gma_ad_services_config"
+            tools:replace="android:resource" />
 
         <provider
             android:name=".base.GenericFileProvider"
@@ -27,19 +40,39 @@
             android:grantUriPermissions="true">
 
             <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:name="androidx.core.FILE_PROVIDER_PATHS"
                 android:resource="@xml/provider_paths" />
         </provider>
 
 
-        <activity android:name=".MainActivity">
-
+        <activity 
+            android:name=".MainActivity"
+            android:exported="false">
         </activity>
-        <activity android:name=".view.SlideShowActivity" />
-        <activity android:name=".view.activity.MyVideosActivity" />
-        <activity android:name=".view.activity.ProActivity" />
+        
+        <activity 
+            android:name=".view.SlideShowActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize" />
+            
+        <activity 
+            android:name=".view.activity.MyVideosActivity"
+            android:exported="false" />
+            
+        <activity 
+            android:name=".view.activity.ProActivity"
+            android:exported="false" />
+            
+        <activity 
+            android:name=".timeline.view.ExoPlayerTimelineActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize" />
 
-        <activity android:name=".view.SplashScreenActivity">
+        <activity 
+            android:name=".view.SplashScreenActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

@@ -11,8 +11,8 @@ import androidx.annotation.AnimRes
 import androidx.annotation.ColorRes
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import com.tedpark.tedonactivityresult.rx2.TedRxOnActivityResult
-import com.tedpark.tedpermission.rx2.TedRx2Permission
+import com.gun0912.tedpermission.TedPermissionResult
+import com.gun0912.tedpermission.rx2.TedPermission
 import gun0912.tedimagepicker.R
 import gun0912.tedimagepicker.TedImagePickerActivity
 import gun0912.tedimagepicker.builder.listener.OnErrorListener
@@ -75,44 +75,77 @@ open class TedImagePickerBaseBuilder<out B : TedImagePickerBaseBuilder<B>>(
     internal var finishExitAnim: Int? = null
 ) : Parcelable {
 
+    companion object {
+        // Static holder to preserve callbacks across activity lifecycle
+        private var listenerHolder: ListenerHolder? = null
+        
+        internal fun setListeners(
+            onSelected: OnSelectedListener?,
+            onMultiSelected: OnMultiSelectedListener?,
+            onError: OnErrorListener?
+        ) {
+            listenerHolder = ListenerHolder(onSelected, onMultiSelected, onError)
+        }
+        
+        internal fun getListeners(): ListenerHolder? = listenerHolder
+        
+        internal fun clearListeners() {
+            listenerHolder = null
+        }
+    }
+    
+    internal data class ListenerHolder(
+        val onSelectedListener: OnSelectedListener?,
+        val onMultiSelectedListener: OnMultiSelectedListener?,
+        val onErrorListener: OnErrorListener?
+    )
 
     @IgnoredOnParcel
-    protected var onSelectedListener: OnSelectedListener? = null
+    internal var onSelectedListener: OnSelectedListener? = null
 
     @IgnoredOnParcel
-    protected var onMultiSelectedListener: OnMultiSelectedListener? = null
+    internal var onMultiSelectedListener: OnMultiSelectedListener? = null
 
     @IgnoredOnParcel
-    protected var onErrorListener: OnErrorListener? = null
+    internal var onErrorListener: OnErrorListener? = null
 
     @SuppressLint("CheckResult")
     protected fun startInternal(context: Context) {
         ToastUtil.context = context
+        
+        // Save listeners to static holder before starting activity
+        setListeners(onSelectedListener, onMultiSelectedListener, onErrorListener)
+        
         checkPermission(context)
-            .subscribe({ permissionResult ->
-                if (permissionResult.isGranted) {
+            .subscribe({ tedPermissionResult: TedPermissionResult ->
+                if (tedPermissionResult.isGranted) {
                     startActivity(context)
                 } else {
-                    onErrorListener?.onError("Permission denied")
+                    val deniedPermissions = tedPermissionResult.deniedPermissions?.joinToString(", ") ?: "Unknown"
+                    onErrorListener?.onError("Permission denied: $deniedPermissions")
                 }
-            }, { throwable -> onErrorListener?.onError(throwable.localizedMessage) })
+            }, { throwable -> onErrorListener?.onError(throwable.message ?: throwable.toString()) })
     }
 
-    private fun checkPermission(context: Context) = TedRx2Permission.with(context)
-        .setPermissions(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-        .request()
+    private fun checkPermission(context: Context): io.reactivex.Single<TedPermissionResult> {
+        val permissions = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            arrayOf(Manifest.permission.READ_MEDIA_IMAGES)
+        } else {
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        }
+        return TedPermission.create()
+            .setPermissions(*permissions)
+            .request()
+    }
 
     private fun startActivity(context: Context) {
-        TedImagePickerActivity.getIntent(context, this)
-            .run {
-                TedRxOnActivityResult.with(context).startActivityForResult(this)
-            }.run {
-                subscribe({ activityResult ->
-                    if (activityResult.resultCode == Activity.RESULT_OK) {
-                        onComplete(activityResult.data)
-                    }
-                }, { throwable -> onErrorListener?.onError(throwable.localizedMessage) })
-            }
+        if (context !is Activity) {
+            onErrorListener?.onError("Context must be an Activity")
+            return
+        }
+        val intent = TedImagePickerActivity.getIntent(context, this)
+        context.startActivity(intent)
+        // Result handling is done directly in TedImagePickerActivity by calling builder callbacks
     }
 
     private fun onComplete(data: Intent) {

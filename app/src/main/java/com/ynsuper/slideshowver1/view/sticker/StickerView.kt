@@ -85,6 +85,7 @@ class StickerView : FrameLayout, QuoteDesigner {
 
     private val touchListener: OnTouchListener = object : OnTouchListener {
         override fun onTouch(view: View?, e: MotionEvent?): Boolean {
+            if (e == null) return false
             return moveGestureDetector.onTouchEvent(e)
                     && scaleGestureDetector.onTouchEvent(e)
                     && rotateGestureDetector.onTouchEvent(e)
@@ -110,9 +111,8 @@ class StickerView : FrameLayout, QuoteDesigner {
         updateQuote()
     }
 
-    override fun onDraw(canvas: Canvas?) {
+    override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        if (canvas == null) return
         drawText(canvas)
     }
 
@@ -248,8 +248,7 @@ class StickerView : FrameLayout, QuoteDesigner {
     }
 
     private inner class ScaleGestureListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-        override fun onScale(detector: ScaleGestureDetector?): Boolean {
-            if (detector == null) return false
+        override fun onScale(detector: ScaleGestureDetector): Boolean {
             scaleFactor += detector.scaleFactor - 1f
             invalidate()
             return true

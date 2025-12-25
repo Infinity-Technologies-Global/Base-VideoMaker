@@ -15,7 +15,7 @@ import com.bumptech.glide.util.Util
 import com.seanghay.studio.gles.transition.Transition
 import com.ynsuper.slideshowver1.R
 import com.ynsuper.slideshowver1.util.Util.toPx
-import kotlinx.android.synthetic.main.item_transition.view.*
+import android.widget.TextView
 
 class TransitionsAdapter(
     var items: List<Transition>
@@ -78,6 +78,7 @@ class TransitionsAdapter(
 
     inner class TransitionViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         var imagePreview: AppCompatImageView? = null
+        private val textTransitionView: TextView = view.findViewById(R.id.text_transition)
 
         init {
             itemView.setOnClickListener {
@@ -92,11 +93,9 @@ class TransitionsAdapter(
         }
 
         fun bind(transition: Transition) {
-            with(itemView) {
-                imagePreview = itemView.findViewById(R.id.image_preview)
-                text_transition.text = transition.name
-                isSelected = selectedAt == adapterPosition
-            }
+            imagePreview = itemView.findViewById(R.id.image_preview)
+            textTransitionView.text = transition.name
+            itemView.isSelected = selectedAt == adapterPosition
         }
     }
 }

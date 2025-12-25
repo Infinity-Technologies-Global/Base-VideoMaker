@@ -4,17 +4,17 @@ import android.content.Context
 import android.os.Parcel
 import android.os.Parcelable
 import android.util.AttributeSet
-import android.widget.SeekBar
 import androidx.annotation.FloatRange
 import com.ynsuper.slideshowver1.R
 import com.ynsuper.slideshowver1.base.BaseCustomConstraintLayout
 import com.ynsuper.slideshowver1.callback.SceneOptionStateListener
 import com.ynsuper.slideshowver1.callback.TopBarController
 import com.ynsuper.slideshowver1.view.SlideShowActivity
-import kotlinx.android.synthetic.main.fragment_duration_option.view.*
-import kotlinx.android.synthetic.main.item_layout_edit_top_view.view.*
 import java.util.concurrent.TimeUnit
 import kotlin.math.max
+import android.widget.SeekBar
+import android.widget.TextView
+import android.widget.ImageView
 
 class DurationViewLayout : BaseCustomConstraintLayout {
     private lateinit var topBarController: TopBarController
@@ -22,6 +22,11 @@ class DurationViewLayout : BaseCustomConstraintLayout {
     private var listener: SceneOptionStateListener? = null
     private val MAX_DURATION = 20 * 1000L // 10 seconds
     private val MIN_DURATION = 2 * 1000L // 2 seconds
+    
+    private lateinit var seekBarDurationView: SeekBar
+    private lateinit var durationTextView: TextView
+    private lateinit var imageSubmitMenuView: ImageView
+    private lateinit var textNameTopBarView: TextView
 
     constructor(context: Context?) : super(context) {
         setLayoutInflate(R.layout.fragment_duration_option)
@@ -43,9 +48,10 @@ class DurationViewLayout : BaseCustomConstraintLayout {
     }
 
     private fun initView() {
+        bindViews()
         updateDuration()
         setTopBarName(context.getString(R.string.text_duration))
-        seekBarDuration.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+        seekBarDurationView.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 updateDuration()
             }
@@ -59,9 +65,16 @@ class DurationViewLayout : BaseCustomConstraintLayout {
             }
         })
 
-        image_submit_menu.setOnClickListener {
+        imageSubmitMenuView.setOnClickListener {
             topBarController.clickSubmitTopBar()
         }
+    }
+    
+    private fun bindViews() {
+        seekBarDurationView = findViewById(R.id.seekBarDuration)
+        durationTextView = findViewById(R.id.duration)
+        imageSubmitMenuView = findViewById(R.id.image_submit_menu)
+        textNameTopBarView = findViewById(R.id.text_name_top_bar)
     }
 
 
@@ -81,7 +94,7 @@ class DurationViewLayout : BaseCustomConstraintLayout {
         listener = context as SlideShowActivity
 
         state?.let { s ->
-            seekBarDuration.progress = calcProgress(s.duration)
+            seekBarDurationView.progress = calcProgress(s.duration)
 
         }
     }
@@ -89,8 +102,8 @@ class DurationViewLayout : BaseCustomConstraintLayout {
 
     private fun updateDuration() {
         val d =
-            calculateDuration(seekBarDuration.progress.toFloat() / seekBarDuration.max.toFloat())
-        duration.text = formatDuration(d)
+            calculateDuration(seekBarDurationView.progress.toFloat() / seekBarDurationView.max.toFloat())
+        durationTextView.text = formatDuration(d)
         this.state?.duration = d
         saveState()
 
@@ -125,7 +138,7 @@ class DurationViewLayout : BaseCustomConstraintLayout {
     }
 
     fun setTopBarName(name: String) {
-        text_name_top_bar.text = name
+        textNameTopBarView.text = name
     }
 
 
