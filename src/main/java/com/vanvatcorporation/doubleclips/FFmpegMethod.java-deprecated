@@ -112,7 +112,7 @@ file '/storage/emulated/0/Movies/part2.mp4'
     }
 
 
-    public static void generatePreviewVideo(Context context, EditingActivity.Timeline timeline, EditingActivity.VideoSettings settings, MainActivity.ProjectData data, Runnable onSuccess) {
+    public static void generatePreviewVideo(Context context, EditingActivity.Timeline timeline, EditingActivity.VideoSettings settings, MainAreaScreen.ProjectData data, Runnable onSuccess) {
         runAnyCommand(context, generatePreviewCmd(settings, timeline, data), onSuccess, () -> {
                 },
                 new RunnableImpl() {
@@ -129,7 +129,7 @@ file '/storage/emulated/0/Movies/part2.mp4'
     }
 
 
-    public static String generatePreviewCmd(EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainActivity.ProjectData data) {
+    public static String generatePreviewCmd(EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainAreaScreen.ProjectData data) {
         StringBuilder cmd = new StringBuilder();
         cmd.append("-f lavfi -i color=c=black:s=")
                 .append(settings.getVideoWidth()).append("x").append(settings.getVideoHeight())
@@ -226,7 +226,7 @@ file '/storage/emulated/0/Movies/part2.mp4'
     }
 
 
-    public static void generateExportVideo(Context context, EditingActivity.Timeline timeline, EditingActivity.VideoSettings settings, MainActivity.ProjectData data, Runnable onSuccess) {
+    public static void generateExportVideo(Context context, EditingActivity.Timeline timeline, EditingActivity.VideoSettings settings, MainAreaScreen.ProjectData data, Runnable onSuccess) {
         runAnyCommand(context, generateExportCmd(settings, timeline, data), onSuccess, () -> {
         }, new RunnableImpl() {
             @Override
@@ -241,7 +241,7 @@ file '/storage/emulated/0/Movies/part2.mp4'
         });
     }
 
-    public static String generateExportCmd(EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainActivity.ProjectData data) {
+    public static String generateExportCmd(EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainAreaScreen.ProjectData data) {
         StringBuilder cmd = new StringBuilder();
         cmd.append("-f lavfi -i color=c=black:s=")
                 .append(settings.getVideoWidth()).append("x").append(settings.getVideoHeight())

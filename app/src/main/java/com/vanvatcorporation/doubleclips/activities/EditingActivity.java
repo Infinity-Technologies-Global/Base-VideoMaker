@@ -70,6 +70,7 @@ import com.vanvatcorporation.doubleclips.activities.editing.EffectEditSpecificAr
 import com.vanvatcorporation.doubleclips.activities.editing.TextEditSpecificAreaScreen;
 import com.vanvatcorporation.doubleclips.activities.editing.TransitionEditSpecificAreaScreen;
 import com.vanvatcorporation.doubleclips.activities.editing.VideoPropertiesEditSpecificAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.main.MainAreaScreen;
 import com.vanvatcorporation.doubleclips.constants.Constants;
 import com.vanvatcorporation.doubleclips.helper.DateHelper;
 import com.vanvatcorporation.doubleclips.helper.IOHelper;
@@ -103,7 +104,7 @@ public class EditingActivity extends AppCompatActivityImpl {
 
     //List<Track> trackList = new ArrayList<>();
     Timeline timeline = new Timeline();
-    MainActivity.ProjectData properties;
+    MainAreaScreen.ProjectData properties;
     VideoSettings settings;
 
     private LinearLayout timelineTracksContainer, rulerContainer, trackInfoLayout;
@@ -505,7 +506,7 @@ public class EditingActivity extends AppCompatActivityImpl {
         super.onCreate(savedInstanceState);
 
 
-        properties = (MainActivity.ProjectData) createrBundle.getSerializable("ProjectProperties");
+        properties = (MainAreaScreen.ProjectData) createrBundle.getSerializable("ProjectProperties");
 
         //settings = new VideoSettings(1280, 720, 30, 30, VideoSettings.FfmpegPreset.MEDIUM, VideoSettings.FfmpegTune.ZEROLATENCY);
         assert properties != null;
@@ -1765,7 +1766,8 @@ public class EditingActivity extends AppCompatActivityImpl {
 
 //                              ArrayList<View> sortedTrackClips = IntStream.range(0, dragContext.currentTrack.viewRef.getChildCount()).mapToObj(i -> dragContext.currentTrack.viewRef.getChildAt(i)).filter(clipView -> clipView.getTag() instanceof Clip).collect(Collectors.toCollection(ArrayList::new));
 
-        track.clearTransition();
+//        track.clearTransition();
+        track.disableTransitions();
 
         // Check for snapped track
         for (int i = 1; i < track.clips.size(); i++) {
@@ -1972,16 +1974,22 @@ public class EditingActivity extends AppCompatActivityImpl {
     {
         //if (clipA.startTime + clipA.duration == clipB.startTime)
         {
-            TransitionClip transition = new TransitionClip();
-            transition.trackIndex = clipA.trackIndex;
-            transition.startTime = clipB.startTime - transitionDuration / 2;
-            transition.duration = transitionDuration;
-            transition.effect = new EffectTemplate("fade", transitionDuration, transition.startTime);
-            transition.mode = TransitionClip.TransitionMode.OVERLAP;
+            // If null then define new transition, else keep the transition from the clip.
+            if(clipA.endTransition == null)
+            {
+                TransitionClip transition = new TransitionClip();
+                transition.trackIndex = clipA.trackIndex;
+                transition.startTime = clipB.startTime - transitionDuration / 2;
+                transition.duration = transitionDuration;
+                transition.effect = new EffectTemplate("fade", transitionDuration, transition.startTime);
+                transition.mode = TransitionClip.TransitionMode.OVERLAP;
 
-            clipA.endTransition = transition;
+                clipA.endTransition = transition;
+            }
 
-            addTransitionBridgeUi(transition, clipA);
+            clipA.endTransitionEnabled = true;
+
+            addTransitionBridgeUi(clipA.endTransition, clipA);
         }
 
     }
@@ -2289,7 +2297,7 @@ public class EditingActivity extends AppCompatActivityImpl {
 
 
 
-        public static void saveTimeline(Context context, Timeline timeline, MainActivity.ProjectData data, VideoSettings settings)
+        public static void saveTimeline(Context context, Timeline timeline, MainAreaScreen.ProjectData data, VideoSettings settings)
         {
             float max = 0;
             for (Track trackCpn : timeline.tracks) {
@@ -2326,12 +2334,12 @@ public class EditingActivity extends AppCompatActivityImpl {
 
 
         }
-        public static Timeline loadRawTimeline(Context context, MainActivity.ProjectData data)
+        public static Timeline loadRawTimeline(Context context, MainAreaScreen.ProjectData data)
         {
             String json = IOHelper.readFromFile(context, IOHelper.CombinePath(data.getProjectPath(), Constants.DEFAULT_TIMELINE_FILENAME));
             return new Gson().fromJson(json, Timeline.class);
         }
-        public static Timeline loadTimeline(Context context, EditingActivity instance, MainActivity.ProjectData data)
+        public static Timeline loadTimeline(Context context, EditingActivity instance, MainAreaScreen.ProjectData data)
         {
             return loadTimeline(context, instance, loadRawTimeline(context, data));
         }
@@ -2399,15 +2407,20 @@ public class EditingActivity extends AppCompatActivityImpl {
         public void clearTransition() {
             for (Clip clip : clips) {
                 clip.endTransition = null;
-                removeTransitionUi(clip.endTransition);
             }
+            removeTransitionUi();
+        }
+        public void disableTransitions() {
+            for (Clip clip : clips) {
+                clip.endTransitionEnabled = false;
+            }
+            removeTransitionUi();
         }
 
-        public void removeTransitionUi(TransitionClip transition) {
+        public void removeTransitionUi() {
 
             for (int i = 0; i < viewRef.getChildCount(); i++) {
                 View targetView = viewRef.getChildAt(i);
-                System.err.println(i);
 
                 if (targetView != null && targetView.getTag(R.id.transition_knot_tag) != null) {
                     viewRef.removeView(targetView);
@@ -2488,6 +2501,8 @@ public class EditingActivity extends AppCompatActivityImpl {
         //  Save this endTransition alongside with this clip.
         @Expose
         public TransitionClip endTransition = null;
+        @Expose
+        public boolean endTransitionEnabled = false;
 
         /**
          * For VIDEO type.
@@ -2805,6 +2820,10 @@ public class EditingActivity extends AppCompatActivityImpl {
         public void applyPropertiesToClip(VideoProperties properties) {
             this.videoProperties = new VideoProperties(properties);
         }
+        public boolean isClipTransitionAvailable()
+        {
+            return endTransitionEnabled && endTransition != null;
+        }
 
 
 
@@ -2835,7 +2854,7 @@ public class EditingActivity extends AppCompatActivityImpl {
          * @param properties The Project Data.
          * @return The path for original file.
          */
-        public String getAbsolutePath(MainActivity.ProjectData properties) {
+        public String getAbsolutePath(MainAreaScreen.ProjectData properties) {
             return getAbsolutePath(properties.getProjectPath());
         }
         public String getAbsolutePath(String projectPath) {
@@ -2847,7 +2866,7 @@ public class EditingActivity extends AppCompatActivityImpl {
          * @param properties The Project Data.
          * @return The path for preview file.
          */
-        public String getAbsolutePreviewPath(MainActivity.ProjectData properties) {
+        public String getAbsolutePreviewPath(MainAreaScreen.ProjectData properties) {
             return getAbsolutePreviewPath(properties.getProjectPath());
         }
         public String getAbsolutePreviewPath(String projectPath) {
@@ -2864,7 +2883,7 @@ public class EditingActivity extends AppCompatActivityImpl {
          * @param properties The Project Data.
          * @return The path for preview file.
          */
-        public String getAbsolutePreviewPath(MainActivity.ProjectData properties, String previewExtension) {
+        public String getAbsolutePreviewPath(MainAreaScreen.ProjectData properties, String previewExtension) {
             return getAbsolutePreviewPath(properties.getProjectPath(), previewExtension);
         }
         public String getAbsolutePreviewPath(String projectPath, String previewExtension) {
@@ -2993,10 +3012,10 @@ public class EditingActivity extends AppCompatActivityImpl {
             return tune;
         }
 
-        public void saveSettings(Context context, MainActivity.ProjectData data) {
+        public void saveSettings(Context context, MainAreaScreen.ProjectData data) {
             IOHelper.writeToFile(context, IOHelper.CombinePath(data.getProjectPath(), Constants.DEFAULT_VIDEO_SETTINGS_FILENAME), new Gson().toJson(this));
         }
-        public void loadSettingsFromProject(Context context, MainActivity.ProjectData data)
+        public void loadSettingsFromProject(Context context, MainAreaScreen.ProjectData data)
         {
             VideoSettings loadSettings = loadSettings(context, data);
             this.videoWidth = loadSettings.videoWidth;
@@ -3007,7 +3026,7 @@ public class EditingActivity extends AppCompatActivityImpl {
             this.preset = loadSettings.preset;
             this.tune = loadSettings.tune;
         }
-        public static VideoSettings loadSettings(Context context, MainActivity.ProjectData data) {
+        public static VideoSettings loadSettings(Context context, MainAreaScreen.ProjectData data) {
             return new Gson().fromJson(IOHelper.readFromFile(context, IOHelper.CombinePath(data.getProjectPath(), Constants.DEFAULT_VIDEO_SETTINGS_FILENAME)), VideoSettings.class);
         }
 
@@ -3296,7 +3315,7 @@ frameRate = 60;
         private float posMatrixX = 0, posMatrixY = 0;
 
 
-        public ClipRenderer(Context context, Clip clip, MainActivity.ProjectData data, VideoSettings settings, EditingActivity editingActivity, FrameLayout previewViewGroup, TextView textCanvasControllerInfo) {
+        public ClipRenderer(Context context, Clip clip, MainAreaScreen.ProjectData data, VideoSettings settings, EditingActivity editingActivity, FrameLayout previewViewGroup, TextView textCanvasControllerInfo) {
             this.context = context;
             this.clip = clip;
 
@@ -3909,7 +3928,7 @@ frameRate = 60;
             this.context = context;
         }
 
-        public void buildTimeline(Timeline timeline, MainActivity.ProjectData properties, VideoSettings settings, EditingActivity editingActivity, FrameLayout previewViewGroup, TextView textCanvasControllerInfo)
+        public void buildTimeline(Timeline timeline, MainAreaScreen.ProjectData properties, VideoSettings settings, EditingActivity editingActivity, FrameLayout previewViewGroup, TextView textCanvasControllerInfo)
         {
             for (List<ClipRenderer> trackRenderer : trackLayers) {
                 for (ClipRenderer clipRenderer : trackRenderer) {

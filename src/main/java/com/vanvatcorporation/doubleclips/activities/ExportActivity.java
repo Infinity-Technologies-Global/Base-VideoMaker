@@ -41,7 +41,7 @@ import com.vanvatcorporation.doubleclips.impl.java.RunnableImpl;
 public class ExportActivity extends AppCompatActivityImpl {
 
     EditingActivity.Timeline timeline;
-    MainActivity.ProjectData properties;
+    MainAreaScreen.ProjectData properties;
     EditingActivity.VideoSettings settings;
 
 
@@ -113,7 +113,7 @@ public class ExportActivity extends AppCompatActivityImpl {
 
         setContentView(R.layout.layout_export);
 
-        properties = (MainActivity.ProjectData) createrBundle.getSerializable("ProjectProperties");
+        properties = (MainAreaScreen.ProjectData) createrBundle.getSerializable("ProjectProperties");
         timeline = (EditingActivity.Timeline) createrBundle.getSerializable("ProjectTimeline");
         settings = (EditingActivity.VideoSettings) createrBundle.getSerializable("ProjectSettings");
 

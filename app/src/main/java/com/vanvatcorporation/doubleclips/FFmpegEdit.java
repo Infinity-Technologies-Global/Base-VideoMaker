@@ -42,6 +42,7 @@ import com.arthenica.ffmpegkit.ReturnCode;
 import com.arthenica.ffmpegkit.Statistics;
 import com.vanvatcorporation.doubleclips.activities.EditingActivity;
 import com.vanvatcorporation.doubleclips.activities.MainActivity;
+import com.vanvatcorporation.doubleclips.activities.main.MainAreaScreen;
 import com.vanvatcorporation.doubleclips.constants.Constants;
 import com.vanvatcorporation.doubleclips.helper.IOHelper;
 import com.vanvatcorporation.doubleclips.impl.java.RunnableImpl;
@@ -52,9 +53,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Queue;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class FFmpegEdit {
@@ -144,7 +143,7 @@ public class FFmpegEdit {
     }
 
 
-    public static void generateExportVideo(Context context, EditingActivity.Timeline timeline, EditingActivity.VideoSettings settings, MainActivity.ProjectData data, Runnable onSuccess) {
+    public static void generateExportVideo(Context context, EditingActivity.Timeline timeline, EditingActivity.VideoSettings settings, MainAreaScreen.ProjectData data, Runnable onSuccess) {
         runAnyCommand(context, generateExportCmdFull(context, settings, timeline, data), "Exporting Video", onSuccess, () -> {
         }, new RunnableImpl() {
             @Override
@@ -161,7 +160,7 @@ public class FFmpegEdit {
 
 
 
-    public static String generateExportCmdPartially(Context context, EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainActivity.ProjectData data,
+    public static String generateExportCmdPartially(Context context, EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainAreaScreen.ProjectData data,
                                                     int clipCount, int clipOffset, int renderingIndex, boolean isFinal) {
         EditingActivity.Clip[] clips = new EditingActivity.Clip[clipCount];
         int currentClipCount = 0;
@@ -182,7 +181,7 @@ public class FFmpegEdit {
         return generateExportCmdPartially(context, settings, timeline, data, clips, renderingIndex, isFinal);
     }
 
-    public static String generateExportCmdPartially(Context context, EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainActivity.ProjectData data,
+    public static String generateExportCmdPartially(Context context, EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainAreaScreen.ProjectData data,
                                                     EditingActivity.Clip[] clips, int renderingIndex, boolean isFinal) {
 
         FfmpegFilterComplexTags tags = new FfmpegFilterComplexTags();
@@ -276,7 +275,7 @@ public class FFmpegEdit {
             // TODO: Optimize the search.
             float fillingTransitionDuration = 0;
 
-            if(clip.endTransition != null && !clip.endTransition.effect.style.equals("none")) {
+            if(clip.isClipTransitionAvailable() && !clip.endTransition.effect.style.equals("none")) {
                 switch (clip.endTransition.mode)
                 {
                     case END_FIRST:
@@ -508,7 +507,7 @@ public class FFmpegEdit {
                 EditingActivity.Clip clipA = clipList.get(i);
                 EditingActivity.Clip clipB = clipList.get(i + 1);
 
-                if (clipA.endTransition != null)
+                if (clipA.isClipTransitionAvailable())
                     filterComplex.append(FXCommandEmitter.emitTransition(clipA, clipB, clipA.endTransition, tags));
             }
         }
@@ -587,7 +586,7 @@ public class FFmpegEdit {
 
         return cmd.toString();
     }
-    public static String generateExportCmdFull(Context context, EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainActivity.ProjectData data) {
+    public static String generateExportCmdFull(Context context, EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainAreaScreen.ProjectData data) {
 
         int clipCount = 0;
         for (EditingActivity.Track track : timeline.tracks) {

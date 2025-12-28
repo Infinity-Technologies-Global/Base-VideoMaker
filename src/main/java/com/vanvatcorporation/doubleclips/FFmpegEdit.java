@@ -199,7 +199,7 @@ public class FFmpegEdit {
 
 
 
-    public static void generateExportVideo(Context context, EditingActivity.Timeline timeline, EditingActivity.VideoSettings settings, MainActivity.ProjectData data, Runnable onSuccess) {
+    public static void generateExportVideo(Context context, EditingActivity.Timeline timeline, EditingActivity.VideoSettings settings, MainAreaScreen.ProjectData data, Runnable onSuccess) {
         runAnyCommand(context, generateExportCmd(context, settings, timeline, data), "Exporting Video", onSuccess, () -> {
         }, new RunnableImpl() {
             @Override
@@ -214,7 +214,7 @@ public class FFmpegEdit {
         });
     }
 
-    public static String generateExportCmd(Context context, EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainActivity.ProjectData data) {
+    public static String generateExportCmd(Context context, EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainAreaScreen.ProjectData data) {
         FfmpegFilterComplexTags tags = new FfmpegFilterComplexTags();
 
         StringBuilder cmd = new StringBuilder();

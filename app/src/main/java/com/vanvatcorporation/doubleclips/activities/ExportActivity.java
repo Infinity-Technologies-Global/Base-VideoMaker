@@ -31,6 +31,7 @@ import com.vanvatcorporation.doubleclips.AdsHandler;
 import com.vanvatcorporation.doubleclips.FFmpegEdit;
 import com.vanvatcorporation.doubleclips.R;
 import com.vanvatcorporation.doubleclips.activities.export.VideoPropertiesExportSpecificAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.main.MainAreaScreen;
 import com.vanvatcorporation.doubleclips.constants.Constants;
 import com.vanvatcorporation.doubleclips.helper.IOHelper;
 import com.vanvatcorporation.doubleclips.helper.ParserHelper;
@@ -40,7 +41,7 @@ import com.vanvatcorporation.doubleclips.impl.java.RunnableImpl;
 public class ExportActivity extends AppCompatActivityImpl {
 
     EditingActivity.Timeline timeline;
-    MainActivity.ProjectData properties;
+    MainAreaScreen.ProjectData properties;
     EditingActivity.VideoSettings settings;
 
 
@@ -116,7 +117,7 @@ public class ExportActivity extends AppCompatActivityImpl {
 
         setContentView(R.layout.layout_export);
 
-        properties = (MainActivity.ProjectData) createrBundle.getSerializable("ProjectProperties");
+        properties = (MainAreaScreen.ProjectData) createrBundle.getSerializable("ProjectProperties");
         timeline = (EditingActivity.Timeline) createrBundle.getSerializable("ProjectTimeline");
         settings = (EditingActivity.VideoSettings) createrBundle.getSerializable("ProjectSettings");
 

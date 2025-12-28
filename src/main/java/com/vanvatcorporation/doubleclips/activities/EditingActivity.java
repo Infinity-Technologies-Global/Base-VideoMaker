@@ -93,7 +93,7 @@ public class EditingActivity extends AppCompatActivityImpl {
 
     //List<Track> trackList = new ArrayList<>();
     Timeline timeline = new Timeline();
-    MainActivity.ProjectData properties;
+    MainAreaScreen.ProjectData properties;
     VideoSettings settings;
 
     private LinearLayout timelineTracksContainer, rulerContainer, trackInfoLayout;
@@ -308,7 +308,7 @@ public class EditingActivity extends AppCompatActivityImpl {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        properties = (MainActivity.ProjectData) createrBundle.getSerializable("ProjectProperties");
+        properties = (MainAreaScreen.ProjectData) createrBundle.getSerializable("ProjectProperties");
 
         //settings = new VideoSettings(1280, 720, 30, 30, VideoSettings.FfmpegPreset.MEDIUM, VideoSettings.FfmpegTune.ZEROLATENCY);
         settings = new VideoSettings(1366, 768, 30, 30, VideoSettings.FfmpegPreset.MEDIUM, VideoSettings.FfmpegTune.ZEROLATENCY);
@@ -1708,7 +1708,7 @@ public class EditingActivity extends AppCompatActivityImpl {
 
 
 
-        public static void saveTimeline(Context context, Timeline timeline, MainActivity.ProjectData data)
+        public static void saveTimeline(Context context, Timeline timeline, MainAreaScreen.ProjectData data)
         {
             float max = 0;
             for (Track trackCpn : timeline.tracks) {
@@ -1743,7 +1743,7 @@ public class EditingActivity extends AppCompatActivityImpl {
             IOHelper.writeToFile(context, IOHelper.CombinePath(data.getProjectPath(), Constants.DEFAULT_PROJECT_PROPERTIES_FILENAME), jsonProperties);
             IOHelper.writeToFile(context, IOHelper.CombinePath(data.getProjectPath(), Constants.DEFAULT_TIMELINE_FILENAME), jsonTimeline);
         }
-        public static Timeline loadTimeline(Context context, EditingActivity instance, MainActivity.ProjectData data)
+        public static Timeline loadTimeline(Context context, EditingActivity instance, MainAreaScreen.ProjectData data)
         {
             String json = IOHelper.readFromFile(context, IOHelper.CombinePath(data.getProjectPath(), Constants.DEFAULT_TIMELINE_FILENAME));
             return loadTimeline(context, instance, new Gson().fromJson(json, Timeline.class));

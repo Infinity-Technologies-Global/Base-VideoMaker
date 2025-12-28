@@ -20,6 +20,12 @@
     <string name="alert_processing_preview">Processing Preview…</string>
     <string name="alert_processing_without_preview_confirmation">Proceed without preview</string>
 
+    <string name="alert_processing">Processing…</string>
+
+    <string name="alert_processing_compression">Compressing…</string>
+
+    <string name="alert_processing_decompression">Extracting…</string>
+
     <string name="alert_ask_for_showing_ads_title">Hey you, professional editor…</string>
     <string name="alert_ask_for_showing_ads_description">I know ads is frustrating, but in order to keep this app available, I…huhu,…have to add ads to survive in this world. Without money, I can\'t promote this app further to more people. I can\'t host my web because domain soon expire. Huhu. I need your help…</string>
     <string name="alert_ask_for_showing_ads_disable_guide">Tip! I don\'t like ads either, you can turn off this popup in Settings. I ain\'t mad at you 😚</string>
