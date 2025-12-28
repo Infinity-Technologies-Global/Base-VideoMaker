@@ -9,8 +9,9 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.StaggeredGridLayoutManager;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.vanvatcorporation.doubleclips.BuildConfig;
@@ -23,10 +24,10 @@ import java.util.Date;
 import java.util.List;
 
 public class TemplateAreaScreen extends BaseAreaScreen {
-    public List<TemplateData> projectList1, projectList2;
-    public RecyclerView projectListView1, projectListView2;
-    public TemplateDataAdapter projectAdapter1, projectAdapter2;
-    public SwipeRefreshLayout projectSwipeRefreshLayout;
+    public List<TemplateData> templateList;
+    public RecyclerView templateRecyclerView;
+    public TemplateDataAdapter templateAdapter;
+    public SwipeRefreshLayout templateSwipeRefreshLayout;
 
 
 
@@ -51,25 +52,22 @@ public class TemplateAreaScreen extends BaseAreaScreen {
     public void init() {
         super.init();
 
-        projectListView1 = findViewById(R.id.templateColumn1);
-        projectListView2 = findViewById(R.id.templateColumn2);
-        //progressBarFetchingBook = view.findViewById(R.id.progressBarFetchingBook);
-        projectSwipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
+        templateRecyclerView = findViewById(R.id.templateRecyclerView);
+        templateSwipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
 
 
 
 
-        projectListView1.setLayoutManager(new LinearLayoutManager(getContext()));
-        projectListView2.setLayoutManager(new LinearLayoutManager(getContext()));
+        StaggeredGridLayoutManager layoutManager = new StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL);
+//        layoutManager.setGapStrategy(StaggeredGridLayoutManager.GAP_HANDLING_NONE); doesnt know the exact purpose of this line yet
+        templateRecyclerView.setLayoutManager(layoutManager);
 
-        projectList1 = new ArrayList<>();
-        projectList2 = new ArrayList<>();
-        projectAdapter1 = new TemplateDataAdapter(getContext(), projectList1);
-        projectAdapter2 = new TemplateDataAdapter(getContext(), projectList2);
-        projectListView1.setAdapter(projectAdapter1);
-        projectListView2.setAdapter(projectAdapter2);
 
-        projectSwipeRefreshLayout.setOnRefreshListener(this::reloadingProject);
+        templateList = new ArrayList<>();
+        templateAdapter = new TemplateDataAdapter(getContext(), templateList);
+        templateRecyclerView.setAdapter(templateAdapter);
+
+        templateSwipeRefreshLayout.setOnRefreshListener(this::reloadingProject);
 
 
     }
@@ -79,15 +77,9 @@ public class TemplateAreaScreen extends BaseAreaScreen {
     public void addTemplate(TemplateData data)
     {
         data.version = BuildConfig.VERSION_NAME;
-        if(projectList1.size() > projectList2.size())
-        {
-            projectList2.add(data);
-            projectAdapter2.notifyItemInserted(projectList2.size() - 1);
-        }
-        else {
-            projectList1.add(data);
-            projectAdapter1.notifyItemInserted(projectList1.size() - 1);
-        }
+
+        templateList.add(data);
+        templateAdapter.notifyItemInserted(templateList.size() - 1);
     }
 
     public void fetchTemplate() {
@@ -146,7 +138,7 @@ public class TemplateAreaScreen extends BaseAreaScreen {
 //
 //        }
 //
-        projectSwipeRefreshLayout.setRefreshing(false);
+        templateSwipeRefreshLayout.setRefreshing(false);
     }
 
 
