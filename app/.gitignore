@@ -1,4 +1,5 @@
-/build
+./build
+./gradle
 /src/main/java/com/vanvatcorporation/doubleclips/APISecretKey.java
 /release/app-debug-double-clips.apk
 /src/main/java/com/vanvatcorporation/doubleclips/EncryptConversion.java
