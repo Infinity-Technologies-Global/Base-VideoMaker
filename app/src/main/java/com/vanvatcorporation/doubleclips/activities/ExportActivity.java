@@ -3,6 +3,7 @@ package com.vanvatcorporation.doubleclips.activities;
 import static com.vanvatcorporation.doubleclips.FFmpegEdit.generateExportCmdFull;
 import static com.vanvatcorporation.doubleclips.FFmpegEdit.runAnyCommand;
 
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
@@ -10,11 +11,16 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.transition.AutoTransition;
+import android.transition.TransitionManager;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
@@ -85,14 +91,12 @@ public class ExportActivity extends AppCompatActivityImpl {
     );
 
 
-
-
     boolean isLogUpdateRunning = false;
     Handler logUpdateHandler = new Handler(Looper.getMainLooper());
     Runnable logUpdateRunnable = new Runnable() {
         @Override
         public void run() {
-            if(FFmpegEdit.queue.currentRenderQueue == null) return;
+            if (FFmpegEdit.queue.currentRenderQueue == null) return;
             statusText.setText(FFmpegEdit.queue.currentRenderQueue.taskName);
 
             globalStatusBar.setMax(FFmpegEdit.queue.totalQueue);
@@ -100,15 +104,13 @@ public class ExportActivity extends AppCompatActivityImpl {
 
             globalStatusText.setText("Running tasks: " + "(" + FFmpegEdit.queue.queueDone + "/" + FFmpegEdit.queue.totalQueue + ")");
 
-            if(!FFmpegEdit.queue.isRunning) {
+            if (!FFmpegEdit.queue.isRunning) {
                 isLogUpdateRunning = false;
             }
-            if(isLogUpdateRunning)
+            if (isLogUpdateRunning)
                 logUpdateHandler.postDelayed(logUpdateRunnable, 500);
         }
     };
-
-
 
 
     @Override
@@ -150,13 +152,9 @@ public class ExportActivity extends AppCompatActivityImpl {
         commandText = findViewById(R.id.exportCommand);
 
 
-
-
-
         // Detect the last export session, if exist, try to export again.
         String inputPath = IOHelper.CombinePath(properties.getProjectPath(), Constants.DEFAULT_EXPORT_CLIP_FILENAME);
-        if(IOHelper.isFileExist(inputPath))
-        {
+        if (IOHelper.isFileExist(inputPath)) {
             new AlertDialog.Builder(this)
                     .setTitle("You have an unexported video!")
                     .setMessage("Would you like to export it now?")
@@ -164,36 +162,81 @@ public class ExportActivity extends AppCompatActivityImpl {
 
                         exportClipTo();
                         dialog.dismiss();
-            })
-                    .setNegativeButton("No", (dialog, which) -> {dialog.dismiss();})
+                    })
+                    .setNegativeButton("No", (dialog, which) -> {
+                        dialog.dismiss();
+                    })
                     .show();
         }
 
 
-
         setupSpecificEdit();
 
+
+        LinearLayout advancedHeader;
+        LinearLayout advancedContent;
+        ImageView advancedArrow;
+
+        advancedHeader = findViewById(R.id.advancedHeader);
+        advancedContent = findViewById(R.id.advancedContent);
+        advancedArrow = findViewById(R.id.advancedArrow);
+        advancedHeader.setOnClickListener(v -> {
+            boolean isVisible = advancedContent.getVisibility() == View.VISIBLE;
+            AutoTransition transition = new AutoTransition();
+            transition.setDuration(300); // smooth animation
+            TransitionManager.beginDelayedTransition((ViewGroup) advancedHeader.getParent(), transition);
+            if (isVisible) {
+                advancedArrow.setImageResource(R.drawable.baseline_keyboard_arrow_down_24);
+                advancedArrow.animate().rotation(0).setDuration(300).start();
+                collapse(advancedContent);
+            } else {
+                advancedArrow.setImageResource(R.drawable.diamond_shape); // Up
+                advancedArrow.animate().rotation(180).setDuration(300).start();
+                expand(advancedContent, 200); // target height in dp
+            }
+        });
     }
 
+    private void expand(final View view, int targetDp) {
+        view.setVisibility(View.VISIBLE);
+        int targetPx = (int) (targetDp * getResources().getDisplayMetrics().density);
+        ValueAnimator animator = ValueAnimator.ofInt(0, targetPx);
+        animator.setDuration(300);
+        animator.addUpdateListener(animation -> {
+            int value = (Integer) animation.getAnimatedValue();
+            ViewGroup.LayoutParams layoutParams = view.getLayoutParams();
+            layoutParams.height = value;
+            view.setLayoutParams(layoutParams);
+        });
+        animator.start();
+    }
 
+    private void collapse(final View view) {
+        int initialHeight = view.getHeight();
+        ValueAnimator animator = ValueAnimator.ofInt(initialHeight, 0);
+        animator.setDuration(300);
+        animator.addUpdateListener(animation -> {
+            int value = (Integer) animation.getAnimatedValue();
+            ViewGroup.LayoutParams layoutParams = view.getLayoutParams();
+            layoutParams.height = value;
+            view.setLayoutParams(layoutParams);
+        });
+        animator.start();
+        animator.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(android.animation.Animator animation) {
+                view.setVisibility(View.GONE);
+            }
+        });
+    }
 
-    private void setupSpecificEdit()
-    {
-
+    private void setupSpecificEdit() {
 
 
         // ===========================       VIDEO PROPERTIES ZONE       ====================================
         videoPropertiesExportSpecificAreaScreen = (VideoPropertiesExportSpecificAreaScreen) LayoutInflater.from(this).inflate(R.layout.view_export_specific_video_properties, null);
         modifyZone.addView(videoPropertiesExportSpecificAreaScreen);
         // ===========================       VIDEO PROPERTIES ZONE       ====================================
-
-
-
-
-
-
-
-
 
 
         // ===========================       VIDEO PROPERTIES ZONE       ====================================
@@ -211,8 +254,7 @@ public class ExportActivity extends AppCompatActivityImpl {
 
 
             // Recommended value not in range pop up [10, 30]
-            if(settings.clipCap > 30 || settings.clipCap < 10)
-            {
+            if (settings.clipCap > 30 || settings.clipCap < 10) {
                 new AlertDialog.Builder(this)
                         .setTitle("Clip Cap out of recommended range!")
                         .setMessage("Clip Cap out of recommended range, this mean the rendering process might take longer due to inefficient rendering part. Would you like to continue?")
@@ -245,34 +287,27 @@ public class ExportActivity extends AppCompatActivityImpl {
     }
 
 
-
-
     private void runLogUpdate() {
         isLogUpdateRunning = true;
         logUpdateHandler.post(logUpdateRunnable);
     }
 
-    private void generateCommand()
-    {
+    private void generateCommand() {
         String cmd = generateExportCmdFull(this, settings, timeline, properties);
         commandText.setText(cmd);
     }
 
 
-    private void exportClip()
-    {
+    private void exportClip() {
 
         // Keep the screen on for rendering process
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
 
-
-
-
         logText.post(() -> logText.setTextIsSelectable(false));
         FFmpegKit.cancel();
 
-        if(commandText.getText().toString().isEmpty())
+        if (commandText.getText().toString().isEmpty())
             generateCommand();
 
         String cmd = commandText.getText().toString();
@@ -286,7 +321,8 @@ public class ExportActivity extends AppCompatActivityImpl {
         String[] cmdAfterSplit = cmd.split(Constants.DEFAULT_MULTI_FFMPEG_COMMAND_REGEX);
         for (int i = 0; i < cmdAfterSplit.length; i++) {
             String cmdEach = cmdAfterSplit[i];
-            runAnyCommand(this, cmdEach, "Exporting Video", (i == cmdAfterSplit.length - 1 ? this::exportClipTo : () -> {}), () -> {
+            runAnyCommand(this, cmdEach, "Exporting Video", (i == cmdAfterSplit.length - 1 ? this::exportClipTo : () -> {
+                    }), () -> {
                         logText.post(() -> logText.setTextIsSelectable(true));
                     }
                     , new RunnableImpl() {
@@ -299,7 +335,7 @@ public class ExportActivity extends AppCompatActivityImpl {
                                     if (logStr.length() > Constants.DEFAULT_LOGGING_LIMIT_CHARACTERS && truncateCheckbox.isChecked())
                                         logStr = logStr.substring(logStr.length() - Constants.DEFAULT_LOGGING_LIMIT_CHARACTERS);
                                     logText.setText(logStr);
-                                    if(scrollLockCheckbox.isChecked())
+                                    if (scrollLockCheckbox.isChecked())
                                         logScroll.fullScroll(View.FOCUS_DOWN);
                                 });
                             }
@@ -324,14 +360,12 @@ public class ExportActivity extends AppCompatActivityImpl {
         }
 
 
-
-
-        if(!isLogUpdateRunning)
+        if (!isLogUpdateRunning)
             runLogUpdate();
     }
+
     //TODO: Delete the exported clip inside project path. Detect in the beginning the export.mp4 if its exist then do the same with this method to extract it out.
-    private void exportClipTo()
-    {
+    private void exportClipTo() {
         logText.post(() -> logText.setTextIsSelectable(true));
 
         IOHelper.deleteFilesInDir(IOHelper.CombinePath(properties.getProjectPath(), Constants.DEFAULT_CLIP_TEMP_DIRECTORY));
