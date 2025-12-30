@@ -19,7 +19,8 @@ DoubleClips is an open-source, ready-to-use video editor with functionality simi
 
 
 
-[<img src="https://img.buymeacoffee.com/button-api/?text=Feed%20me&emoji=%F0%9F%8D%9A&slug=viet2007ht&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" alt='Feed me' height="80">](https://www.buymeacoffee.com/viet2007ht)
+[<img src="https://img.buymeacoffee.com/button-api/?text=Feed%20me&emoji=%F0%9F%8D%9A&slug=viet2007ht&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" alt='Feed me' height="60">](https://www.buymeacoffee.com/viet2007ht)
+[<img height='50' style='border:0px;height:50px;' src='https://storage.ko-fi.com/cdn/kofi6.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' />](https://ko-fi.com/W7W11RA9FH)
 
 
 ## Install
