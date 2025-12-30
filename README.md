@@ -9,10 +9,13 @@
     </p>
   </div>
   <div style="flex-shrink: 0;">
-    <img src="src/main/res/drawable/logo.png" alt="OpenCut Logo" width="100"
+    <img src="src/main/res/drawable/logo.png" alt="DoubleClips Logo" width="100"
       style="border-radius: 8px; box-shadow: 0 0 8px rgba(0,0,0,0.05);" />
   </div>
 </div>
+
+[<img src="https://img.buymeacoffee.com/button-api/?text=Feed me&emoji=🍚&slug=viet2007ht&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" > alt='Feed me' height="80"](https://www.buymeacoffee.com/viet2007ht)
+
 
 
 DoubleClips is an open-source, ready-to-use video editor with functionality similar to CapCut. It offers Community Templates, Cross-platform rendering, Multitrack editing, and a variety of effects!
