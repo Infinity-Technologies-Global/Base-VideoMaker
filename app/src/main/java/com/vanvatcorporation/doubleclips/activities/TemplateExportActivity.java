@@ -7,8 +7,6 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.PorterDuff;
-import android.graphics.drawable.Drawable;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Build;
@@ -19,6 +17,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -31,7 +30,6 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.res.ResourcesCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -42,24 +40,20 @@ import com.vanvatcorporation.doubleclips.AdsHandler;
 import com.vanvatcorporation.doubleclips.FFmpegEdit;
 import com.vanvatcorporation.doubleclips.R;
 import com.vanvatcorporation.doubleclips.activities.export.VideoPropertiesExportSpecificAreaScreen;
-import com.vanvatcorporation.doubleclips.activities.main.MainAreaScreen;
 import com.vanvatcorporation.doubleclips.activities.main.TemplateAreaScreen;
 import com.vanvatcorporation.doubleclips.constants.Constants;
-import com.vanvatcorporation.doubleclips.externalUtils.Random;
 import com.vanvatcorporation.doubleclips.helper.IOHelper;
 import com.vanvatcorporation.doubleclips.helper.IOImageHelper;
 import com.vanvatcorporation.doubleclips.helper.ImageHelper;
 import com.vanvatcorporation.doubleclips.helper.ParserHelper;
-import com.vanvatcorporation.doubleclips.helper.ProgressCompressionHelper;
+import com.vanvatcorporation.doubleclips.helper.WebHelper;
 import com.vanvatcorporation.doubleclips.impl.AppCompatActivityImpl;
 import com.vanvatcorporation.doubleclips.impl.SectionView;
 import com.vanvatcorporation.doubleclips.impl.java.RunnableImpl;
 import com.vanvatcorporation.doubleclips.manager.LoggingManager;
-import com.vanvatcorporation.doubleclips.popups.CompressionPopup;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
@@ -81,18 +75,30 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
                 if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
                     Uri uri = result.getData().getData();
 
+
+                    String mimeType = getContentResolver().getType(uri);
+
                     if (currentlyChosenClipIndex == -1) return;
 
                     String clipPath = IOHelper.CombinePath(IOHelper.getPersistentDataPath(this),
                             Constants.DEFAULT_TEMPLATE_CLIP_TEMP_DIRECTORY,
-                            currentlyChosenClipIndex + ".mp4");
+                            currentlyChosenClipIndex + (mimeType.startsWith("video/")  ? ".mp4" : ".png"));
 
                     IOHelper.writeToFileAsRaw(this, clipPath,
                             IOHelper.readFromFileAsRaw(this, getContentResolver(), uri)
                     );
 
                     clipReplacementList.get(currentlyChosenClipIndex).clipPath = clipPath;
-                    clipReplacementList.get(currentlyChosenClipIndex).clipThumbnail = extractSingleThumbnail(this, clipPath);
+
+
+
+                    clipReplacementList.get(currentlyChosenClipIndex).type = mimeType.startsWith("video/") ? EditingActivity.ClipType.VIDEO : EditingActivity.ClipType.IMAGE;
+
+                    clipReplacementList.get(currentlyChosenClipIndex).clipThumbnail =
+                            mimeType.startsWith("video/") ?
+                                    extractSingleThumbnail(this, clipPath) :
+                                    IOImageHelper.LoadFileAsPNGImage(this, clipPath, 8)
+                    ;
                     currentlyChosenClipIndex = -1;
 
                     clipReplacementAdapter.notifyDataSetChanged();
@@ -143,6 +149,7 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
     EditText commandText;
     ScrollView logScroll;
     CheckBox logCheckbox, truncateCheckbox, scrollLockCheckbox;
+    Button exportButton;
 
     SectionView logSection, advancedSection;
 
@@ -190,6 +197,8 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
         clipReplacementAdapter = new ClipReplacementAdapter(this, clipReplacementList);
         clipReplacementRecyclerView.setAdapter(clipReplacementAdapter);
 
+        exportButton = findViewById(R.id.exportButton);
+        exportButton.setEnabled(false);
 
         findViewById(R.id.backButton).setOnClickListener(v -> {
             finish();
@@ -198,9 +207,9 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
             videoPropertiesExportSpecificAreaScreen.open();
         });
         findViewById(R.id.generateCmdButton).setOnClickListener(v -> {
-            generateCommand();
+            generateCommand(data.getTemplateAdditionalResourcesName());
         });
-        findViewById(R.id.exportButton).setOnClickListener(v -> {
+        exportButton.setOnClickListener(v -> {
             exportClip();
         });
 
@@ -225,9 +234,11 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
 
 
         for (int i = 0; i < data.getTemplateClipCount(); i++) {
-            clipReplacementList.add(new ClipReplacementData("", null));
+            clipReplacementList.add(new ClipReplacementData(EditingActivity.ClipType.VIDEO, "", null));
         }
         clipReplacementAdapter.notifyDataSetChanged();
+
+        downloadNecessaryResources(data.getTemplateLocation(), data.getTemplateAdditionalResourcesName());
     }
 
     @Override
@@ -302,21 +313,52 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
 
     }
 
+    void downloadNecessaryResources(String templateLocation, String[] additionalResourcesName)
+    {
+        for (String name : additionalResourcesName) {
+            ExecutorService executorService = Executors.newSingleThreadExecutor();
+            executorService.execute(() -> {
+                WebHelper.downloadFile(this,
+                        "https://app.vanvatcorp.com/doubleclips/templates" + templateLocation + "/content/" + name,
+                        IOHelper.CombinePath(
+                                IOHelper.getPersistentDataPath(this),
+                                Constants.DEFAULT_TEMPLATE_CLIP_TEMP_DIRECTORY,
+                                name)
+                );
+
+            });
+
+        }
+
+        exportButton.setEnabled(true);
+    }
 
     private void runLogUpdate() {
         isLogUpdateRunning = true;
         logUpdateHandler.post(logUpdateRunnable);
     }
 
-    private void generateCommand() {
+    private void generateCommand(String[] additionalResourcesName) {
         String cmd = data.getFfmpegCommand();
         for (int i = 0; i < clipReplacementList.size(); i++) {
             ClipReplacementData clipData = clipReplacementList.get(i);
+
+            String frameFilter =
+                    clipData.type == EditingActivity.ClipType.IMAGE ?
+                            "-loop 1 -t " + data.getTemplateDuration() + " -framerate " + settings.getFrameRate() + " " :
+                            "";
+
             // Replace placeholder clip to the new selected clips according to the list
-            cmd = cmd.replace("<editable-video-" + i + ">", clipData.clipPath);
+            cmd = cmd.replace("-i \"" + Constants.DEFAULT_TEMPLATE_CLIP_MARK(i), frameFilter + "-i \"" + clipData.clipPath);
+        }
+        for (String resourceName : additionalResourcesName) {
+            cmd = cmd.replace(Constants.DEFAULT_TEMPLATE_CLIP_STATIC_MARK(resourceName), IOHelper.CombinePath(
+                    IOHelper.getPersistentDataPath(this),
+                    Constants.DEFAULT_TEMPLATE_CLIP_TEMP_DIRECTORY,
+                    resourceName));
         }
         // Replace output.mp4 to relative device temp path
-        cmd = cmd.replace("<output.mp4>", IOHelper.CombinePath(
+        cmd = cmd.replace(Constants.DEFAULT_TEMPLATE_CLIP_EXPORT_MARK, IOHelper.CombinePath(
                         IOHelper.getPersistentDataPath(this),
                         Constants.DEFAULT_TEMPLATE_CLIP_TEMP_DIRECTORY,
                         Constants.DEFAULT_EXPORT_CLIP_FILENAME)); // Use your helper)
@@ -334,7 +376,7 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
         FFmpegKit.cancel();
 
         if (commandText.getText().toString().isEmpty())
-            generateCommand();
+            generateCommand(data.getTemplateAdditionalResourcesName());
 
         String cmd = commandText.getText().toString();
         // No need. Already in the EditText
@@ -447,15 +489,20 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
 
     public static class ClipReplacementData implements Serializable {
 
+        EditingActivity.ClipType type;
         public String clipPath;
         public Bitmap clipThumbnail;
 
-        public ClipReplacementData(String clipPath, Bitmap clipThumbnail) {
+        public ClipReplacementData(EditingActivity.ClipType type, String clipPath, Bitmap clipThumbnail) {
+            this.type = type;
             this.clipPath = clipPath;
             this.clipThumbnail = clipThumbnail;
         }
 
 
+        public EditingActivity.ClipType getType() {
+            return type;
+        }
         public String getClipPath() {
             return clipPath;
         }
@@ -495,7 +542,9 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
                 currentlyChosenClipIndex = holder.getAbsoluteAdapterPosition();
 
                 Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("video/*");
+                //intent.setType("video/*");
+                intent.setType("*/*"); // general catch-all
+                intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[] { "image/*", "video/*" });
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 clipChooser.launch(Intent.createChooser(intent, "Select Video #" + humanIndex));
             });

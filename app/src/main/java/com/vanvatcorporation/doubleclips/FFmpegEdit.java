@@ -236,7 +236,8 @@ public class FFmpegEdit {
                                     "-loop 1 -t " + clip.duration + " -framerate " + settings.getFrameRate() + " " :
                                     "";
 
-                    cmd.append(frameFilter).append("-i \"").append(inputPath).append("\" ");
+                    // Completely disable frameFilter to be able to choose between video and image flexibly
+                    cmd.append(isTemplateCommand ? "" : frameFilter).append("-i \"").append(inputPath).append("\" ");
                     break;
                 case AUDIO:
                     cmd.append("-i \"").append(inputPath).append("\" ");
@@ -370,7 +371,7 @@ public class FFmpegEdit {
 
                         String rotationExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, EditingActivity.VideoProperties.ValueType.RotInRadians);
 
-                        filterComplex.append("scale=iw*").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.ScaleX)).append(":ih*").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.ScaleY)).append(",")
+                        filterComplex.append("scale=iw*").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.ScaleX)).append(":ih*").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.ScaleX)).append(",") // in the ih* here, it should be ValueType.ScaleY, but for the temporal scaling then it will be scaleX too
                                 //.append("scale=").append(clip.width).append(":").append(clip.height).append(",")
                                 .append("rotate='").append(rotationExpr).append("':ow=rotw('").append(rotationExpr).append("'):oh=roth('").append(rotationExpr).append("')")
                                 .append(":fillcolor=0x00000000").append(",")
@@ -576,15 +577,20 @@ public class FFmpegEdit {
         // Null when there are no video in the track
         FfmpegFilterComplexTags.FilterComplexInfo mapTag = tags.useTag(0);
 
+        // If it was template then insert the mark.
+        String outputStr =
+                isTemplateCommand ? Constants.DEFAULT_TEMPLATE_CLIP_EXPORT_MARK :
+                        IOHelper.CombinePath(data.getProjectPath(), (isFinal ? "" : (renderingIndex + "_")) + Constants.DEFAULT_EXPORT_CLIP_FILENAME);
+
         cmd.append("-filter_complex \"").append(filterComplex).append("\" ")
                 .append("-map \"").append( (mapTag != null ? mapTag.tag : "[base]") ).append("\" ")
                 .append(audioMaps)
-                .append("-t ").append(timeline.duration)
+                //.append("-t ").append(timeline.duration)
                 .append(" -c:v libx264 -preset ").append(settings.getPreset())
                 .append(" -tune ").append(settings.getTune())
                 .append(" -crf ").append(settings.getCRF())
                 .append(" -y ").append("\"")
-                .append(IOHelper.CombinePath(data.getProjectPath(), (isFinal ? "" : (renderingIndex + "_")) + Constants.DEFAULT_EXPORT_CLIP_FILENAME))
+                .append(outputStr)
                 .append("\"");
 
         return cmd.toString();

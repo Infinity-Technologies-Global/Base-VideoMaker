@@ -27,6 +27,10 @@ public class Constants {
 
 
     public static String DEFAULT_TEMPLATE_CLIP_EXPORT_MARK = "<output.mp4>";
+    public static String DEFAULT_TEMPLATE_CLIP_STATIC_MARK(String resourceName) {
+        return "<static-" + resourceName + ">";
+    }
+
     public static String DEFAULT_TEMPLATE_CLIP_MARK(int index) {
         return "<editable-video-" + index + ">";
     }

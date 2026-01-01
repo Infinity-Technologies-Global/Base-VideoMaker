@@ -46,8 +46,8 @@ public class TemplatePreviewActivity extends AppCompatActivityImpl {
         commentCount = findViewById(R.id.commentCount);
         bookmarkCount = findViewById(R.id.bookmarkCount);
 
-        usernameText.setText("@" + "viet2007ht"); // data.username
-        replacementClipCount.setText("" + data.getTemplateClipCount()); // data.clipCount
+        usernameText.setText("@" + data.getTemplateAuthor());
+        replacementClipCount.setText("" + data.getTemplateClipCount());
 
         heartCount.setText("" + NumberHelper.abbreviateNumber(Random.Range(1, 80000000))); // data.clipCount
         commentCount.setText("" + NumberHelper.abbreviateNumber(Random.Range(1, 300000))); // data.clipCount
