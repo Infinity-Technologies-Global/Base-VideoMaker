@@ -107,6 +107,10 @@ public class MainActivity extends AppCompatActivityImpl {
         // Initialize Mobile Ads SDK
         AdsHandler.initializeAds(this, this);
 
+        new AlertDialog.Builder(this)
+                .setTitle("Early access warning")
+                .setMessage("This app will undergo many core changes in the near future. If you update to the latest version and find that your project can’t be edited or modified, don’t panic—just click the three-line menu button and select “Share project” to create a backup. Your work is still there; it just needs to be migrated to the new version. Then visit our GitHub page and submit an issue including the version. Thank you for using our app.")
+                .setPositiveButton("OK", (dialog, which) -> dialog.dismiss()).create().show();
 
 
 //        pickButton = findViewById(R.id.button);

@@ -10,6 +10,7 @@
     <string name="close">Close</string>
     <string name="advanced">Advanced</string>
     <string name="log">Log</string>
+    <string name="clips">Clips</string>
 
     <string name="attribution_audio_playback">Template media player</string>
 

@@ -1,6 +1,7 @@
 package com.vanvatcorporation.doubleclips.activities;
 
 import android.content.Context;
+import android.content.Intent;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
@@ -46,7 +47,7 @@ public class TemplatePreviewActivity extends AppCompatActivityImpl {
         bookmarkCount = findViewById(R.id.bookmarkCount);
 
         usernameText.setText("@" + "viet2007ht"); // data.username
-        replacementClipCount.setText("" + Random.Range(1, 50)); // data.clipCount
+        replacementClipCount.setText("" + data.getTemplateClipCount()); // data.clipCount
 
         heartCount.setText("" + NumberHelper.abbreviateNumber(Random.Range(1, 80000000))); // data.clipCount
         commentCount.setText("" + NumberHelper.abbreviateNumber(Random.Range(1, 300000))); // data.clipCount
@@ -54,6 +55,13 @@ public class TemplatePreviewActivity extends AppCompatActivityImpl {
 
 
         setupMediaPlayer(data.getTemplateVideoLink());
+
+        findViewById(R.id.useTemplateButton).setOnClickListener(v -> {
+            Intent intent = new Intent(this, TemplateExportActivity.class);
+            intent.putExtra("TemplateData", data);
+            startActivity(intent);
+        });
+
 
     }
 

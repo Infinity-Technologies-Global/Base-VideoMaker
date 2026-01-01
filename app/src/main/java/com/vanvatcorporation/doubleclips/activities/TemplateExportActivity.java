@@ -1,18 +1,20 @@
 package com.vanvatcorporation.doubleclips.activities;
 
-import static com.vanvatcorporation.doubleclips.FFmpegEdit.generateCmdFull;
 import static com.vanvatcorporation.doubleclips.FFmpegEdit.runAnyCommand;
 
-import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.PorterDuff;
+import android.graphics.drawable.Drawable;
+import android.media.MediaMetadataRetriever;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.transition.AutoTransition;
-import android.transition.TransitionManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,7 +22,6 @@ import android.view.WindowManager;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
@@ -28,7 +29,11 @@ import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.res.ResourcesCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.arthenica.ffmpegkit.FFmpegKit;
 import com.arthenica.ffmpegkit.Log;
@@ -38,39 +43,74 @@ import com.vanvatcorporation.doubleclips.FFmpegEdit;
 import com.vanvatcorporation.doubleclips.R;
 import com.vanvatcorporation.doubleclips.activities.export.VideoPropertiesExportSpecificAreaScreen;
 import com.vanvatcorporation.doubleclips.activities.main.MainAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.main.TemplateAreaScreen;
 import com.vanvatcorporation.doubleclips.constants.Constants;
+import com.vanvatcorporation.doubleclips.externalUtils.Random;
 import com.vanvatcorporation.doubleclips.helper.IOHelper;
+import com.vanvatcorporation.doubleclips.helper.IOImageHelper;
+import com.vanvatcorporation.doubleclips.helper.ImageHelper;
 import com.vanvatcorporation.doubleclips.helper.ParserHelper;
+import com.vanvatcorporation.doubleclips.helper.ProgressCompressionHelper;
 import com.vanvatcorporation.doubleclips.impl.AppCompatActivityImpl;
 import com.vanvatcorporation.doubleclips.impl.SectionView;
 import com.vanvatcorporation.doubleclips.impl.java.RunnableImpl;
+import com.vanvatcorporation.doubleclips.manager.LoggingManager;
+import com.vanvatcorporation.doubleclips.popups.CompressionPopup;
 
-public class ExportActivity extends AppCompatActivityImpl {
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-    EditingActivity.Timeline timeline;
-    MainAreaScreen.ProjectData properties;
+public class TemplateExportActivity extends AppCompatActivityImpl {
+    TemplateAreaScreen.TemplateData data;
     EditingActivity.VideoSettings settings;
 
+    public List<ClipReplacementData> clipReplacementList;
+    public RecyclerView clipReplacementRecyclerView;
+    public ClipReplacementAdapter clipReplacementAdapter;
 
-    private VideoPropertiesExportSpecificAreaScreen videoPropertiesExportSpecificAreaScreen;
+    int currentlyChosenClipIndex = -1;
 
-    RelativeLayout modifyZone;
+    private ActivityResultLauncher<Intent> clipChooser = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    Uri uri = result.getData().getData();
 
-    ProgressBar statusBar, globalStatusBar;
-    TextView logText, statusText, globalStatusText;
-    EditText commandText;
-    ScrollView logScroll;
-    CheckBox logCheckbox, truncateCheckbox, scrollLockCheckbox;
+                    if (currentlyChosenClipIndex == -1) return;
 
-    SectionView logSection, advancedSection;
+                    String clipPath = IOHelper.CombinePath(IOHelper.getPersistentDataPath(this),
+                            Constants.DEFAULT_TEMPLATE_CLIP_TEMP_DIRECTORY,
+                            currentlyChosenClipIndex + ".mp4");
 
+                    IOHelper.writeToFileAsRaw(this, clipPath,
+                            IOHelper.readFromFileAsRaw(this, getContentResolver(), uri)
+                    );
+
+                    clipReplacementList.get(currentlyChosenClipIndex).clipPath = clipPath;
+                    clipReplacementList.get(currentlyChosenClipIndex).clipThumbnail = extractSingleThumbnail(this, clipPath);
+                    currentlyChosenClipIndex = -1;
+
+                    clipReplacementAdapter.notifyDataSetChanged();
+
+
+                }
+            }
+    );
 
     private ActivityResultLauncher<Intent> filePickerLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
                     Uri uri = result.getData().getData();
-                    String inputPath = IOHelper.CombinePath(properties.getProjectPath(), Constants.DEFAULT_EXPORT_CLIP_FILENAME); // Use your helper
+                    String inputPath = IOHelper.CombinePath(
+                            IOHelper.getPersistentDataPath(this),
+                            Constants.DEFAULT_TEMPLATE_CLIP_TEMP_DIRECTORY,
+                            Constants.DEFAULT_EXPORT_CLIP_FILENAME); // Use your helper
 
                     IOHelper.writeToFileAsRaw(this, getContentResolver(), uri, IOHelper.readFromFileAsRaw(this, inputPath));
 
@@ -93,6 +133,18 @@ public class ExportActivity extends AppCompatActivityImpl {
             }
     );
 
+
+    private VideoPropertiesExportSpecificAreaScreen videoPropertiesExportSpecificAreaScreen;
+
+    RelativeLayout modifyZone;
+
+    ProgressBar statusBar, globalStatusBar;
+    TextView logText, statusText, globalStatusText;
+    EditText commandText;
+    ScrollView logScroll;
+    CheckBox logCheckbox, truncateCheckbox, scrollLockCheckbox;
+
+    SectionView logSection, advancedSection;
 
     boolean isLogUpdateRunning = false;
     Handler logUpdateHandler = new Handler(Looper.getMainLooper());
@@ -119,12 +171,24 @@ public class ExportActivity extends AppCompatActivityImpl {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.layout_template_export);
 
-        setContentView(R.layout.layout_export);
+        data = (TemplateAreaScreen.TemplateData) createrBundle.getSerializable("TemplateData");
+        // Make default video settings at this point
+        settings = new EditingActivity.VideoSettings(1366, 768, 30, 30, 30, EditingActivity.VideoSettings.FfmpegPreset.ULTRAFAST, EditingActivity.VideoSettings.FfmpegTune.ZEROLATENCY);
 
-        properties = (MainAreaScreen.ProjectData) createrBundle.getSerializable("ProjectProperties");
-        timeline = (EditingActivity.Timeline) createrBundle.getSerializable("ProjectTimeline");
-        settings = (EditingActivity.VideoSettings) createrBundle.getSerializable("ProjectSettings");
+        clipReplacementRecyclerView = findViewById(R.id.clipReplacementRecyclerView);
+
+
+        // Set layout manager for horizontal scrolling
+        clipReplacementRecyclerView.setLayoutManager(
+                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        );
+
+
+        clipReplacementList = new ArrayList<>();
+        clipReplacementAdapter = new ClipReplacementAdapter(this, clipReplacementList);
+        clipReplacementRecyclerView.setAdapter(clipReplacementAdapter);
 
 
         findViewById(R.id.backButton).setOnClickListener(v -> {
@@ -135,9 +199,6 @@ public class ExportActivity extends AppCompatActivityImpl {
         });
         findViewById(R.id.generateCmdButton).setOnClickListener(v -> {
             generateCommand();
-        });
-        findViewById(R.id.generateTemplateCmdButton).setOnClickListener(v -> {
-            generateTemplateCommand();
         });
         findViewById(R.id.exportButton).setOnClickListener(v -> {
             exportClip();
@@ -160,29 +221,31 @@ public class ExportActivity extends AppCompatActivityImpl {
         logSection = findViewById(R.id.logSection);
         advancedSection = findViewById(R.id.advancedSection);
 
-
-        // Detect the last export session, if exist, try to export again.
-        String inputPath = IOHelper.CombinePath(properties.getProjectPath(), Constants.DEFAULT_EXPORT_CLIP_FILENAME);
-        if (IOHelper.isFileExist(inputPath)) {
-            new AlertDialog.Builder(this)
-                    .setTitle("You have an unexported video!")
-                    .setMessage("Would you like to export it now?")
-                    .setPositiveButton("Yes", (dialog, which) -> {
-
-                        exportClipTo();
-                        dialog.dismiss();
-                    })
-                    .setNegativeButton("No", (dialog, which) -> {
-                        dialog.dismiss();
-                    })
-                    .show();
-        }
-
-
         setupSpecificEdit();
 
 
+        for (int i = 0; i < data.getTemplateClipCount(); i++) {
+            clipReplacementList.add(new ClipReplacementData("", null));
+        }
+        clipReplacementAdapter.notifyDataSetChanged();
+    }
 
+    @Override
+    public void finish() {
+        super.finish();
+        FFmpegEdit.queue.cancelAllTask();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        FFmpegEdit.queue.cancelAllTask();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        AdsHandler.displayThanksForShowingAds(this);
     }
 
 
@@ -206,8 +269,6 @@ public class ExportActivity extends AppCompatActivityImpl {
             settings.preset = videoPropertiesExportSpecificAreaScreen.presetSpinner.getSelectedItem().toString();
             settings.tune = videoPropertiesExportSpecificAreaScreen.tuneSpinner.getSelectedItem().toString();
 
-            settings.saveSettings(this, properties);
-
 
             // Recommended value not in range pop up [10, 30]
             if (settings.clipCap > 30 || settings.clipCap < 10) {
@@ -220,7 +281,6 @@ public class ExportActivity extends AppCompatActivityImpl {
                         .setNegativeButton("No", (dialog, which) -> {
                             // Set back to default (30)
                             settings.clipCap = 30;
-                            settings.saveSettings(this, properties);
                             dialog.dismiss();
                         })
                         .show();
@@ -249,11 +309,17 @@ public class ExportActivity extends AppCompatActivityImpl {
     }
 
     private void generateCommand() {
-        String cmd = generateCmdFull(this, settings, timeline, properties, false);
-        commandText.setText(cmd);
-    }
-    private void generateTemplateCommand() {
-        String cmd = generateCmdFull(this, settings, timeline, properties, true);
+        String cmd = data.getFfmpegCommand();
+        for (int i = 0; i < clipReplacementList.size(); i++) {
+            ClipReplacementData clipData = clipReplacementList.get(i);
+            // Replace placeholder clip to the new selected clips according to the list
+            cmd = cmd.replace("<editable-video-" + i + ">", clipData.clipPath);
+        }
+        // Replace output.mp4 to relative device temp path
+        cmd = cmd.replace("<output.mp4>", IOHelper.CombinePath(
+                        IOHelper.getPersistentDataPath(this),
+                        Constants.DEFAULT_TEMPLATE_CLIP_TEMP_DIRECTORY,
+                        Constants.DEFAULT_EXPORT_CLIP_FILENAME)); // Use your helper)
         commandText.setText(cmd);
     }
 
@@ -281,7 +347,7 @@ public class ExportActivity extends AppCompatActivityImpl {
         String[] cmdAfterSplit = cmd.split(Constants.DEFAULT_MULTI_FFMPEG_COMMAND_REGEX);
         for (int i = 0; i < cmdAfterSplit.length; i++) {
             String cmdEach = cmdAfterSplit[i];
-            runAnyCommand(this, cmdEach, "Exporting Video", (i == cmdAfterSplit.length - 1 ? this::exportClipTo : () -> {
+            runAnyCommand(this, cmdEach, "Exporting Video", (i == cmdAfterSplit.length - 1 ? this::exportCompleted : () -> {
                     }), () -> {
                         logText.post(() -> logText.setTextIsSelectable(true));
                     }
@@ -305,7 +371,7 @@ public class ExportActivity extends AppCompatActivityImpl {
                         public <T> void runWithParam(T param) {
                             //MediaInformationSession session = FFprobeKit.getMediaInformation(properties.getProjectPath());
                             //double duration = Double.parseDouble(session.getMediaInformation().getDuration());
-                            double duration = properties.getProjectDuration();
+                            double duration = data.getTemplateDuration();
 
                             Statistics statistics = (Statistics) param;
                             {
@@ -324,11 +390,16 @@ public class ExportActivity extends AppCompatActivityImpl {
             runLogUpdate();
     }
 
-    //TODO: Delete the exported clip inside project path. Detect in the beginning the export.mp4 if its exist then do the same with this method to extract it out.
-    private void exportClipTo() {
+    void exportCompleted() {
+        IOHelper.deleteFilesInDir(
+                IOHelper.CombinePath(
+                        IOHelper.getPersistentDataPath(this),
+                        Constants.DEFAULT_TEMPLATE_CLIP_TEMP_DIRECTORY)
+        );
+
+
         logText.post(() -> logText.setTextIsSelectable(true));
 
-        IOHelper.deleteFilesInDir(IOHelper.CombinePath(properties.getProjectPath(), Constants.DEFAULT_CLIP_TEMP_DIRECTORY));
         // Request permission to create a file
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -341,21 +412,119 @@ public class ExportActivity extends AppCompatActivityImpl {
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
-    @Override
-    public void finish() {
-        super.finish();
-        FFmpegEdit.queue.cancelAllTask();
+    private static Bitmap extractSingleThumbnail(Context context, String filePath) {
+        try {
+            MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+            retriever.setDataSource(filePath);
+
+            int originalWidth = Integer.parseInt(Objects.requireNonNull(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)));
+            int originalHeight = Integer.parseInt(Objects.requireNonNull(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)));
+
+            int desiredWidth = originalWidth / Constants.SAMPLE_SIZE_PREVIEW_CLIP;
+            int desiredHeight = originalHeight / Constants.SAMPLE_SIZE_PREVIEW_CLIP;
+
+            Bitmap frame;
+            if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                frame = retriever.getScaledFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, desiredWidth, desiredHeight);
+            } else {
+                frame = Bitmap.createScaledBitmap(
+                        Objects.requireNonNull(retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)),
+                        desiredWidth, desiredHeight, true);
+
+            }
+
+
+            retriever.release();
+            retriever.close();
+
+            return frame;
+        } catch (Exception e) {
+            LoggingManager.LogExceptionToNoteOverlay(context, e);
+            return null;
+        }
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        FFmpegEdit.queue.cancelAllTask();
+
+    public static class ClipReplacementData implements Serializable {
+
+        public String clipPath;
+        public Bitmap clipThumbnail;
+
+        public ClipReplacementData(String clipPath, Bitmap clipThumbnail) {
+            this.clipPath = clipPath;
+            this.clipThumbnail = clipThumbnail;
+        }
+
+
+        public String getClipPath() {
+            return clipPath;
+        }
+
+        public Bitmap getClipThumbnail() {
+            return clipThumbnail;
+        }
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        AdsHandler.displayThanksForShowingAds(this);
+    public class ClipReplacementAdapter extends RecyclerView.Adapter<ClipReplacementViewHolder> {
+
+        private List<ClipReplacementData> clipList;
+        private Context context;
+
+        // Constructor
+        public ClipReplacementAdapter(Context context, List<ClipReplacementData> clipList) {
+            this.context = context;
+            this.clipList = clipList;
+        }
+
+        @Override
+        public ClipReplacementViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(context).inflate(R.layout.cpn_clip_replacement_element, parent, false);
+            return new ClipReplacementViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ClipReplacementViewHolder holder, int position) {
+            ClipReplacementData data = clipList.get(position);
+
+            int humanIndex = position + 1;
+
+            holder.indexText.setText("" + humanIndex);
+            holder.clipPreview.setBackground(ImageHelper.createDrawableFromBitmap(getResources(), data.clipThumbnail));
+
+            holder.wholeView.setOnClickListener(v -> {
+                currentlyChosenClipIndex = holder.getAbsoluteAdapterPosition();
+
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("video/*");
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                clipChooser.launch(Intent.createChooser(intent, "Select Video #" + humanIndex));
+            });
+            holder.wholeView.setOnLongClickListener(v -> {
+                clipList.get(position).clipPath = "";
+                holder.clipPreview.setImageResource(R.color.colorPalette1_4);
+                // Remove clips
+                return true;
+            });
+        }
+
+
+        @Override
+        public int getItemCount() {
+            return clipList.size();
+        }
+    }
+
+    public static class ClipReplacementViewHolder extends RecyclerView.ViewHolder {
+        TextView indexText;
+        ImageView clipPreview;
+        View wholeView;
+
+        public ClipReplacementViewHolder(@NonNull View itemView) {
+            super(itemView);
+            wholeView = itemView;
+
+            indexText = itemView.findViewById(R.id.indexText);
+            clipPreview = itemView.findViewById(R.id.clipReplacementPreview);
+        }
     }
 }

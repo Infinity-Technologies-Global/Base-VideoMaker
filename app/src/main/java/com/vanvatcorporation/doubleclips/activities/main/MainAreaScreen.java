@@ -443,7 +443,7 @@ public class MainAreaScreen extends BaseAreaScreen {
                                 EditingActivity.VideoSettings.FfmpegTune.ZEROLATENCY);
                         EditingActivity.Timeline timeline = EditingActivity.Timeline.loadRawTimeline(context, projectItem);
                         String ffmpegCmdPath = IOHelper.CombinePath(projectItem.getProjectPath(), "ffmpegCmd.txt");
-                        IOHelper.writeToFile(context, ffmpegCmdPath, FFmpegEdit.generateExportCmdFull(context, videoSettings, timeline, projectItem));
+                        IOHelper.writeToFile(context, ffmpegCmdPath, FFmpegEdit.generateCmdFull(context, videoSettings, timeline, projectItem, false));
 
 
                         zippingProject(projectItem);

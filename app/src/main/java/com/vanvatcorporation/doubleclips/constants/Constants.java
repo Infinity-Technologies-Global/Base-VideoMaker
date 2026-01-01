@@ -11,6 +11,7 @@ public class Constants {
     public static final String DEFAULT_PREVIEW_CLIP_FILENAME = "preview.mp4";
     public static final String DEFAULT_EXPORT_CLIP_FILENAME = "export.mp4";
     public static final String DEFAULT_LOGGING_DIRECTORY = "Logging";
+    public static final String DEFAULT_TEMPLATE_CLIP_TEMP_DIRECTORY = "TemplatesClipTemp";
     public static final String DEFAULT_CLIP_DIRECTORY = "Clips";
     public static final String DEFAULT_PREVIEW_CLIP_DIRECTORY = "PreviewClips";
     public static final String DEFAULT_CLIP_TEMP_DIRECTORY = "Clips/Temp";
@@ -22,6 +23,13 @@ public class Constants {
     public static final float CANVAS_ROTATE_SNAP_DEGREE = 90f;
     public static float TRACK_CLIPS_SNAP_THRESHOLD_PIXEL = 30f; // pixels;
     public static float TRACK_CLIPS_SNAP_THRESHOLD_SECONDS = 0.3f; // seconds;
+
+
+
+    public static String DEFAULT_TEMPLATE_CLIP_EXPORT_MARK = "<output.mp4>";
+    public static String DEFAULT_TEMPLATE_CLIP_MARK(int index) {
+        return "<editable-video-" + index + ">";
+    }
 
     public static String DEFAULT_PROJECT_DIRECTORY(Context context) {
         return IOHelper.CombinePath(IOHelper.getPersistentDataPath(context), "projects");

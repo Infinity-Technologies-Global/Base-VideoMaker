@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/layout/view_section.xml -->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="100dp"
+    android:layout_height="100dp">
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/clipReplacementPreview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="5dp"
+
+
+        android:background="@color/colorPalette1_4"
+
+        app:shapeAppearanceOverlay="@style/roundedImageView"
+        app:strokeColor="@color/colorSoftBlueBackground"
+        app:strokeWidth="1dp" />
+    <TextView
+        android:id="@+id/indexText"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:textStyle="bold"
+        android:textSize="24sp"
+        android:text="1"/>
+
+</RelativeLayout>
+
+

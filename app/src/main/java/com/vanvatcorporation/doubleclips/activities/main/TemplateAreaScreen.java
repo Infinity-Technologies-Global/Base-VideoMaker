@@ -89,10 +89,10 @@ public class TemplateAreaScreen extends BaseAreaScreen {
         TemplateData data = new TemplateData(
                 "Tớ yêu cậu Template",
                 "Template tớ yêu cậu là template đầu tiên trong hệ sinh thái. Ra mắt vào ngày 28/12/2025, Template tớ yêu cậu đã đánh dấu sự ra đời của hệ thống mẫu chỉnh sửa video mã nguồn mở.",
-                "-i \"<editable-video-0>\" -y output.mp4",
+                "-i \"<editable-video-0>\" -y \"<output.mp4>\"",
                 "https://app.vanvatcorp.com/doubleclips/templates/viet2007ht/mkr5r-SDfve6/preview.png",
                 "https://app.vanvatcorp.com/doubleclips/templates/viet2007ht/mkr5r-SDfve6/preview.mp4",
-                new Date().getTime(), 8032007);
+                new Date().getTime(), 8032007, 1);
         addTemplate(data);
 
 //        TemplateData data = new TemplateData(projectPath, projectName, new Date().getTime(), 31122007, 8032007);
@@ -161,8 +161,9 @@ public class TemplateAreaScreen extends BaseAreaScreen {
         private String templateVideoLink;
         private long templateTimestamp;
         private long templateDuration;
+        private int templateTotalClip;
 
-        public TemplateData(String projectTitle, String projectDescription, String ffmpegCommand, String templateSnapshotLink, String templateVideoLink, long templateTimestamp, long templateDuration) {
+        public TemplateData(String projectTitle, String projectDescription, String ffmpegCommand, String templateSnapshotLink, String templateVideoLink, long templateTimestamp, long templateDuration, int templateTotalClip) {
             this.projectTitle = projectTitle;
             this.projectDescription = projectDescription;
             this.ffmpegCommand = ffmpegCommand;
@@ -170,6 +171,7 @@ public class TemplateAreaScreen extends BaseAreaScreen {
             this.templateVideoLink = templateVideoLink;
             this.templateTimestamp = templateTimestamp;
             this.templateDuration = templateDuration;
+            this.templateTotalClip = templateTotalClip;
         }
 
 
@@ -193,6 +195,9 @@ public class TemplateAreaScreen extends BaseAreaScreen {
         }
         public long getTemplateDuration() {
             return templateDuration;
+        }
+        public int getTemplateClipCount() {
+            return templateTotalClip;
         }
     }
     public class TemplateDataAdapter extends RecyclerView.Adapter<TemplateDataViewHolder>

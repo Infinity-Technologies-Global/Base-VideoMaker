@@ -42,29 +42,35 @@
 
 
         <com.vanvatcorporation.doubleclips.impl.SectionView
-            android:id="@+id/advancedSection"
+            android:id="@+id/clipsSection"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_below="@id/top_bar"
-            app:sectionTitle="@string/advanced">
-            <RelativeLayout
+            app:sectionTitle="@string/clips">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/clipReplacementRecyclerView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content">
 
 
-                <Button
-                    android:id="@+id/generateCmdButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Gen cmd" />
+            </androidx.recyclerview.widget.RecyclerView>
 
-                <Button
-                    android:id="@+id/generateTemplateCmdButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_toEndOf="@id/generateCmdButton"
-                    android:text="Gen template cmd" />
-            </RelativeLayout>
+
+        </com.vanvatcorporation.doubleclips.impl.SectionView>
+
+        <com.vanvatcorporation.doubleclips.impl.SectionView
+            android:id="@+id/advancedSection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/clipsSection"
+            app:sectionTitle="@string/advanced">
+
+            <Button
+                android:id="@+id/generateCmdButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Gen cmd" />
 
             <EditText
                 android:id="@+id/exportCommand"

@@ -144,7 +144,7 @@ public class FFmpegEdit {
 
 
     public static void generateExportVideo(Context context, EditingActivity.Timeline timeline, EditingActivity.VideoSettings settings, MainAreaScreen.ProjectData data, Runnable onSuccess) {
-        runAnyCommand(context, generateExportCmdFull(context, settings, timeline, data), "Exporting Video", onSuccess, () -> {
+        runAnyCommand(context, generateCmdFull(context, settings, timeline, data, false), "Exporting Video", onSuccess, () -> {
         }, new RunnableImpl() {
             @Override
             public <T> void runWithParam(T param) {
@@ -161,7 +161,7 @@ public class FFmpegEdit {
 
 
     public static String generateExportCmdPartially(Context context, EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainAreaScreen.ProjectData data,
-                                                    int clipCount, int clipOffset, int renderingIndex, boolean isFinal) {
+                                                    int clipCount, int clipOffset, int renderingIndex, boolean isFinal, boolean isTemplateCommand) {
         EditingActivity.Clip[] clips = new EditingActivity.Clip[clipCount];
         int currentClipCount = 0;
         for (EditingActivity.Track track : timeline.tracks) {
@@ -178,11 +178,11 @@ public class FFmpegEdit {
                 currentClipCount++;
             }
         }
-        return generateExportCmdPartially(context, settings, timeline, data, clips, renderingIndex, isFinal);
+        return generateExportCmdPartially(context, settings, timeline, data, clips, renderingIndex, isFinal, isTemplateCommand);
     }
 
     public static String generateExportCmdPartially(Context context, EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainAreaScreen.ProjectData data,
-                                                    EditingActivity.Clip[] clips, int renderingIndex, boolean isFinal) {
+                                                    EditingActivity.Clip[] clips, int renderingIndex, boolean isFinal, boolean isTemplateCommand) {
 
         FfmpegFilterComplexTags tags = new FfmpegFilterComplexTags();
 
@@ -216,7 +216,10 @@ public class FFmpegEdit {
         int keyframeClipIndex = 0;
         // --- Inserting file path into -i ---
 
-        for (EditingActivity.Clip clip : clips) {
+        for (int i = 0; i < clips.length; i++) {
+            EditingActivity.Clip clip = clips[i];
+
+            String inputPath = isTemplateCommand ? Constants.DEFAULT_TEMPLATE_CLIP_MARK(i) : clip.getAbsolutePath(data);
 
             switch (clip.type) {
                 case VIDEO:
@@ -233,10 +236,10 @@ public class FFmpegEdit {
                                     "-loop 1 -t " + clip.duration + " -framerate " + settings.getFrameRate() + " " :
                                     "";
 
-                    cmd.append(frameFilter).append("-i \"").append(clip.getAbsolutePath(data)).append("\" ");
+                    cmd.append(frameFilter).append("-i \"").append(inputPath).append("\" ");
                     break;
                 case AUDIO:
-                    cmd.append("-i \"").append(clip.getAbsolutePath(data)).append("\" ");
+                    cmd.append("-i \"").append(inputPath).append("\" ");
                     break;
                 case TEXT:
                     cmd.append("-f lavfi -i \"nullsrc=size=")
@@ -586,7 +589,7 @@ public class FFmpegEdit {
 
         return cmd.toString();
     }
-    public static String generateExportCmdFull(Context context, EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainAreaScreen.ProjectData data) {
+    public static String generateCmdFull(Context context, EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainAreaScreen.ProjectData data, boolean isTemplateCommand) {
 
         int clipCount = 0;
         for (EditingActivity.Track track : timeline.tracks) {
@@ -600,13 +603,13 @@ public class FFmpegEdit {
         {
             if(clipCount > settings.getClipCap())
             {
-                cmd.append(generateExportCmdPartially(context, settings, timeline, data, settings.getClipCap(), renderingIndex * settings.getClipCap(), renderingIndex, false))
+                cmd.append(generateExportCmdPartially(context, settings, timeline, data, settings.getClipCap(), renderingIndex * settings.getClipCap(), renderingIndex, false, isTemplateCommand))
                         .append(Constants.DEFAULT_MULTI_FFMPEG_COMMAND_REGEX);
 
                 clipCount -= settings.getClipCap();
             }
             else {
-                cmd.append(generateExportCmdPartially(context, settings, timeline, data, clipCount, renderingIndex * settings.getClipCap(), renderingIndex, true));
+                cmd.append(generateExportCmdPartially(context, settings, timeline, data, clipCount, renderingIndex * settings.getClipCap(), renderingIndex, true, isTemplateCommand));
                 break;
             }
             renderingIndex++;

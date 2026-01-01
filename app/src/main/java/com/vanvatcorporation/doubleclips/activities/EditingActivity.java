@@ -2535,6 +2535,8 @@ public class EditingActivity extends AppCompatActivityImpl {
         @Expose
         public int height;
 
+
+
         @Expose
         public VideoProperties videoProperties;
 
