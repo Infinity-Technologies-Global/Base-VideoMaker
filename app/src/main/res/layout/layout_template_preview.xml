@@ -40,6 +40,7 @@
                 android:layout_height="wrap_content"
                 android:layout_below="@id/heartButton"
                 android:gravity="center"
+                android:textColor="@color/colorPalette1_4"
                 android:text="15k" />
         </RelativeLayout>
 
@@ -62,6 +63,7 @@
                 android:layout_height="wrap_content"
                 android:layout_below="@id/commentButton"
                 android:gravity="center"
+                android:textColor="@color/colorPalette1_4"
                 android:text="787" />
         </RelativeLayout>
 
@@ -85,6 +87,7 @@
                 android:layout_height="wrap_content"
                 android:layout_below="@id/bookmarkButton"
                 android:gravity="center"
+                android:textColor="@color/colorPalette1_4"
                 android:text="2k" />
         </RelativeLayout>
 
@@ -126,6 +129,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textStyle="bold"
+                android:textColor="@color/colorPalette1_4"
                 android:text="\@viet2007ht"/>
             <HorizontalScrollView
                 android:id="@+id/infoScroll"
@@ -145,6 +149,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textStyle="bold"
+                        android:textColor="@color/colorPalette1_4"
                         android:text="42"/>
                     <ImageView
                         android:layout_width="wrap_content"
@@ -155,6 +160,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textStyle="bold"
+                        android:textColor="@color/colorPalette1_4"
                         android:text="02:32"/>
                 </LinearLayout>
             </HorizontalScrollView>

@@ -433,6 +433,9 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
     }
 
     void exportCompleted() {
+
+        FFmpegEdit.queue.cancelAllTask();
+
         IOHelper.deleteFilesInDir(
                 IOHelper.CombinePath(
                         IOHelper.getPersistentDataPath(this),

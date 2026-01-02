@@ -897,8 +897,6 @@ public class FFmpegEdit {
         }
 
 
-
-
         public static class FfmpegRenderQueueInfo {
             Runnable task;
             public String taskName;

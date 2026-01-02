@@ -326,6 +326,8 @@ public class ExportActivity extends AppCompatActivityImpl {
 
     //TODO: Delete the exported clip inside project path. Detect in the beginning the export.mp4 if its exist then do the same with this method to extract it out.
     private void exportClipTo() {
+        FFmpegEdit.queue.cancelAllTask();
+
         logText.post(() -> logText.setTextIsSelectable(true));
 
         IOHelper.deleteFilesInDir(IOHelper.CombinePath(properties.getProjectPath(), Constants.DEFAULT_CLIP_TEMP_DIRECTORY));
