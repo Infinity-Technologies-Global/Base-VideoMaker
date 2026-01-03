@@ -82,6 +82,7 @@ public class TemplatePreviewActivity extends AppCompatActivityImpl {
                     mediaPlayer.setOnPreparedListener(mp -> {
                         mp.start();
                         durationClipCount.setText(DateHelper.convertTimestampToMMSSFormat(mp.getDuration()));
+                        data.setTemplateDuration(mp.getDuration());
                     });
 
 

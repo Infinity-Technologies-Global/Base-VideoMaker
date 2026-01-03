@@ -7,6 +7,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -31,6 +32,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -64,19 +66,25 @@ import com.vanvatcorporation.doubleclips.impl.java.RunnableImpl2;
 import com.vanvatcorporation.doubleclips.manager.LoggingManager;
 import com.vanvatcorporation.doubleclips.popups.CompressionPopup;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
 import java.io.Serializable;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import javax.net.ssl.HttpsURLConnection;
 
 public class MainActivity extends AppCompatActivityImpl {
-
 
 
     ViewPagerImpl viewPager;
@@ -85,9 +93,6 @@ public class MainActivity extends AppCompatActivityImpl {
     MainAreaScreen homeAreaScreen;
     TemplateAreaScreen templateAreaScreen;
     ProfileAreaScreen profileAreaScreen;
-
-
-
 
 
     @Override
@@ -99,18 +104,17 @@ public class MainActivity extends AppCompatActivityImpl {
         Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler(Thread.getDefaultUncaughtExceptionHandler(), this));
 
 
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+
         // Notification Stuff
         NotificationHelper.createNotificationChannel(this);
-
 
 
         // Initialize Mobile Ads SDK
         AdsHandler.initializeAds(this, this);
 
-        new AlertDialog.Builder(this)
-                .setTitle("Early access warning")
-                .setMessage("This app will undergo many core changes in the near future. If you update to the latest version and find that your project can’t be edited or modified, don’t panic—just click the three-line menu button and select “Share project” to create a backup. Your work is still there; it just needs to be migrated to the new version. Then visit our GitHub page and submit an issue including the version. Thank you for using our app.")
-                .setPositiveButton("OK", (dialog, which) -> dialog.dismiss()).create().show();
+        if(prefs.getBoolean("early_access_issues_notification", true))
+            loadCurrentIssuesAndShow();
 
 
 //        pickButton = findViewById(R.id.button);
@@ -134,8 +138,6 @@ public class MainActivity extends AppCompatActivityImpl {
         }
 
 
-
-
         // Start initializing critical modules ----------------------------------------------------------
 
 
@@ -156,8 +158,6 @@ public class MainActivity extends AppCompatActivityImpl {
         });
 
 
-
-
         homeAreaScreen = (MainAreaScreen) getLayoutInflater().inflate(R.layout.pager_main_homepage, null);
         templateAreaScreen = (TemplateAreaScreen) getLayoutInflater().inflate(R.layout.pager_main_template, null);
         View View3 = getLayoutInflater().inflate(R.layout.pager_main_search, null);
@@ -176,10 +176,7 @@ public class MainActivity extends AppCompatActivityImpl {
         View[] navigationButtons = {navigationButton1, navigationButton2, navigationButton3, navigationButton4, navigationButton5};
 
 
-
-
-
-        ((NavigationIconLayout)navigationButton1).runAnimation(NavigationIconLayout.AnimationType.SELECTED);
+        ((NavigationIconLayout) navigationButton1).runAnimation(NavigationIconLayout.AnimationType.SELECTED);
 
 
         viewPager = findViewById(R.id.mainViewPager);
@@ -192,8 +189,8 @@ public class MainActivity extends AppCompatActivityImpl {
                         int position = (int) param2;
 
 
-                        ((NavigationIconLayout)navigationButtons[position]).runAnimation(NavigationIconLayout.AnimationType.SELECTED);
-                        ((NavigationIconLayout)navigationButtons[lastPosition]).runAnimation(NavigationIconLayout.AnimationType.UNSELECTED);
+                        ((NavigationIconLayout) navigationButtons[position]).runAnimation(NavigationIconLayout.AnimationType.SELECTED);
+                        ((NavigationIconLayout) navigationButtons[lastPosition]).runAnimation(NavigationIconLayout.AnimationType.UNSELECTED);
 
                     }
                 }
@@ -203,8 +200,6 @@ public class MainActivity extends AppCompatActivityImpl {
 
 
         homeAreaScreen.reloadingProject();
-
-
 
 
         homeAreaScreen.filePickerLauncher = registerForActivityResult(
@@ -218,30 +213,30 @@ public class MainActivity extends AppCompatActivityImpl {
                         ExecutorService executor = Executors.newSingleThreadExecutor();
                         executor.execute(() -> {
                             ProgressCompressionHelper.unzipFolder(this, getContentResolver(), uri, Constants.DEFAULT_PROJECT_DIRECTORY(this),
-                            new ProgressCompressionHelper.UnzipProgressListener() {
+                                    new ProgressCompressionHelper.UnzipProgressListener() {
 
-                                @Override
-                                public void onProgress(long bytesExtracted, long totalBytes, String name) {
-                                    int percent = (int)((bytesExtracted * 100) / totalBytes);
+                                        @Override
+                                        public void onProgress(long bytesExtracted, long totalBytes, String name) {
+                                            int percent = (int) ((bytesExtracted * 100) / totalBytes);
 
-                                    dialog.previewProgressBar.post(() -> {
-                                        dialog.previewProgressBar.setMax(100);
-                                        dialog.previewProgressBar.setProgress(percent);
-                                        dialog.processingPercent.setText(percent + "%");
-                                        dialog.descriptionText.setText("Extracting project... " + name);
+                                            dialog.previewProgressBar.post(() -> {
+                                                dialog.previewProgressBar.setMax(100);
+                                                dialog.previewProgressBar.setProgress(percent);
+                                                dialog.processingPercent.setText(percent + "%");
+                                                dialog.descriptionText.setText("Extracting project... " + name);
+                                            });
+                                        }
+
+                                        @Override
+                                        public void onCompleted() {
+                                            dialog.dialog.dismiss();
+                                        }
+
+                                        @Override
+                                        public void onError(Exception e) {
+
+                                        }
                                     });
-                                }
-
-                                @Override
-                                public void onCompleted() {
-                                    dialog.dialog.dismiss();
-                                }
-
-                                @Override
-                                public void onError(Exception e) {
-
-                                }
-                            });
                         });
 
                     }
@@ -257,11 +252,11 @@ public class MainActivity extends AppCompatActivityImpl {
                         CompressionPopup dialog = new CompressionPopup(this, getString(R.string.alert_processing_compression), "Compressing project...");
                         ExecutorService executor = Executors.newSingleThreadExecutor();
                         executor.execute(() -> {
-                            if(homeAreaScreen.currentExportingProject == null) return;
+                            if (homeAreaScreen.currentExportingProject == null) return;
                             ProgressCompressionHelper.zipFolder(this, homeAreaScreen.currentExportingProject.getProjectPath(), getContentResolver(), uri, new ProgressCompressionHelper.ZipProgressListener() {
                                 @Override
                                 public void onProgress(long bytesWritten, long totalBytes, String name) {
-                                    int percent = (int)((bytesWritten * 100) / totalBytes);
+                                    int percent = (int) ((bytesWritten * 100) / totalBytes);
 
                                     dialog.previewProgressBar.post(() -> {
                                         dialog.previewProgressBar.setMax(100);
@@ -290,9 +285,6 @@ public class MainActivity extends AppCompatActivityImpl {
     }
 
 
-
-
-
     @Override
     protected void onResume() {
         super.onResume();
@@ -301,18 +293,80 @@ public class MainActivity extends AppCompatActivityImpl {
     }
 
 
+    void loadCurrentIssuesAndShow() {
+
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+
+        Future<String> future = executorService.submit(() -> {
 
 
+            StringBuilder issueBuilder = new StringBuilder("None");
+
+            try {
+
+                URL url = new URL("https://app.vanvatcorp.com/doubleclips/api/fetch-issues");
+                HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+
+                // Read the response
+                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                StringBuilder response = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+                reader.close();
+
+                System.err.println(response);
+                String[] issues = new Gson().newBuilder().setPrettyPrinting().create().fromJson(response.toString(), String[].class);
+
+                System.err.println(issues.length);
+                issueBuilder = new StringBuilder();
+                for (String issue : issues) {
+                    issueBuilder.append("•").append(issue).append("\n");
+                }
+                if(issues.length == 0)
+                {
+                    issueBuilder.append("None");
+                }
+            }
+            catch (Exception e)
+            {
+                issueBuilder.append("Failed to get issues from server.");
+            }
+
+            return issueBuilder.toString();
+        });
 
 
-
-
+        String issueCrafted;
+        try {
+            issueCrafted = future.get();
+        } catch (Exception e) {
+            issueCrafted = "Failed to get issues from server.";
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Early access warning")
+                .setMessage("This app will undergo many core changes in the near future. " +
+                        "If you update to the latest version and find that your project can’t be edited or modified, " +
+                        "don’t panic—just click the three-line menu button and select “Share project” to create a backup. " +
+                        "Your work is still there; it just needs to be migrated to the new version. " +
+                        "Then visit our GitHub page and submit an issue including the version. Thank you for using our app." +
+                        "\nHere's the brief summary of found issues this version currently have:\n\n" +
+                        issueCrafted +
+                        "\n\nThis popup can be enable in Settings, and usually take about a few kilobyte of internet depending on how many the issue is.")
+                .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
+                .setNegativeButton("Don't show again", (dialog, which) -> {
+                    PreferenceManager.getDefaultSharedPreferences(this).edit().putBoolean("early_access_issues_notification", false).apply();
+                    dialog.dismiss();
+                }).create().show();
+    }
 
 
 
 
     public static String getPath(Context context, Uri uri) {
-        String[] projection = { MediaStore.Video.Media.DATA };
+        String[] projection = {MediaStore.Video.Media.DATA};
         Cursor cursor = context.getContentResolver().query(uri, projection, null, null, null);
         if (cursor != null) {
             int column_index = cursor.getColumnIndexOrThrow(projection[0]);
@@ -325,22 +379,13 @@ public class MainActivity extends AppCompatActivityImpl {
     }
 
 
-
-
-
-
-
-
-
     public static class MigrationHelper {
-        public static void migrate(MainAreaScreen.ProjectData data)
-        {
+        public static void migrate(MainAreaScreen.ProjectData data) {
             // List some critical changes need to be apply e.g a null field that wasn't exist until
             // the newer version come out, and loading it in the new version crashes the app
-            if(data.version == null)
+            if (data.version == null)
                 data.version = BuildConfig.VERSION_NAME;
-            switch (data.version)
-            {
+            switch (data.version) {
                 case "1.0.0":
                     // Migrate for the lower project
                     // For example newer version may create the folder

@@ -52,12 +52,17 @@ import com.vanvatcorporation.doubleclips.impl.SectionView;
 import com.vanvatcorporation.doubleclips.impl.java.RunnableImpl;
 import com.vanvatcorporation.doubleclips.manager.LoggingManager;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.Serializable;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import javax.net.ssl.HttpsURLConnection;
 
 public class TemplateExportActivity extends AppCompatActivityImpl {
     TemplateAreaScreen.TemplateData data;
@@ -72,41 +77,66 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
     private ActivityResultLauncher<Intent> clipChooser = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
+
+
                 if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
-                    Uri uri = result.getData().getData();
 
-
-                    String mimeType = getContentResolver().getType(uri);
-
-                    if (currentlyChosenClipIndex == -1) return;
-
-                    String clipPath = IOHelper.CombinePath(IOHelper.getPersistentDataPath(this),
-                            Constants.DEFAULT_TEMPLATE_CLIP_TEMP_DIRECTORY,
-                            currentlyChosenClipIndex + (mimeType.startsWith("video/")  ? ".mp4" : ".png"));
-
-                    IOHelper.writeToFileAsRaw(this, clipPath,
-                            IOHelper.readFromFileAsRaw(this, getContentResolver(), uri)
-                    );
-
-                    clipReplacementList.get(currentlyChosenClipIndex).clipPath = clipPath;
-
-
-
-                    clipReplacementList.get(currentlyChosenClipIndex).type = mimeType.startsWith("video/") ? EditingActivity.ClipType.VIDEO : EditingActivity.ClipType.IMAGE;
-
-                    clipReplacementList.get(currentlyChosenClipIndex).clipThumbnail =
-                            mimeType.startsWith("video/") ?
-                                    extractSingleThumbnail(this, clipPath) :
-                                    IOImageHelper.LoadFileAsPNGImage(this, clipPath, 8)
-                    ;
-                    currentlyChosenClipIndex = -1;
-
-                    clipReplacementAdapter.notifyDataSetChanged();
-
-
+                    if(result.getData().getClipData() != null) { // checking multiple selection or not
+                        Uri[] uris = new Uri[result.getData().getClipData().getItemCount()];
+                        for(int i = 0; i < result.getData().getClipData().getItemCount(); i++) {
+                            uris[i] = result.getData().getClipData().getItemAt(i).getUri();
+                        }
+                        arrangeClip(uris);
+                    }
+                    else {
+                        Uri uri = result.getData().getData();
+                        arrangeClip(new Uri[]{uri});
+                    }
                 }
             }
     );
+
+    public void arrangeClip(Uri[] uris)
+    {
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        executorService.execute(() -> {
+            for (Uri uri : uris) {
+                String mimeType = getContentResolver().getType(uri);
+
+                if (currentlyChosenClipIndex == -1) return;
+                // Discard the rest of leftover clip when done arranging
+                if (currentlyChosenClipIndex >= clipReplacementList.size()) return;
+
+                String clipPath = IOHelper.CombinePath(IOHelper.getPersistentDataPath(this),
+                        Constants.DEFAULT_TEMPLATE_CLIP_TEMP_DIRECTORY,
+                        currentlyChosenClipIndex + (mimeType.startsWith("video/")  ? ".mp4" : ".png"));
+
+                IOHelper.writeToFileAsRaw(this, clipPath,
+                        IOHelper.readFromFileAsRaw(this, getContentResolver(), uri)
+                );
+
+                clipReplacementList.get(currentlyChosenClipIndex).clipPath = clipPath;
+
+
+
+                clipReplacementList.get(currentlyChosenClipIndex).type = mimeType.startsWith("video/") ? EditingActivity.ClipType.VIDEO : EditingActivity.ClipType.IMAGE;
+
+                clipReplacementList.get(currentlyChosenClipIndex).clipThumbnail =
+                        mimeType.startsWith("video/") ?
+                                extractSingleThumbnail(this, clipPath) :
+                                IOImageHelper.LoadFileAsPNGImage(this, clipPath, 8)
+                ;
+
+                currentlyChosenClipIndex++;
+            }
+
+            currentlyChosenClipIndex = -1;
+
+            runOnUiThread(() -> {
+                clipReplacementAdapter.notifyDataSetChanged();
+            });
+        });
+    }
 
     private ActivityResultLauncher<Intent> filePickerLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -315,9 +345,42 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
 
     void downloadNecessaryResources(String templateLocation, String[] additionalResourcesName)
     {
+
         for (String name : additionalResourcesName) {
             ExecutorService executorService = Executors.newSingleThreadExecutor();
             executorService.execute(() -> {
+
+                try {
+
+                    URL url = new URL(
+                            "https://app.vanvatcorp.com/doubleclips/api/fetch-ffmpeg-command/" +
+                                    data.getTemplateAuthor() + "/" +
+                                    data.getTemplateId()
+                            );
+                    HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
+                    connection.setRequestMethod("GET");
+
+                    // Read the response
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        response.append(line);
+                    }
+                    reader.close();
+
+
+                    String ffmpegTemplate = response.toString();
+                    if(ffmpegTemplate.contains("\n"))
+                        ffmpegTemplate = ffmpegTemplate.charAt(ffmpegTemplate.length() - 1) == '\n' ? ffmpegTemplate.substring(0, ffmpegTemplate.length() - 1) : ffmpegTemplate;
+
+                    data.setFfmpegCommand(ffmpegTemplate);
+                }
+                catch (Exception e)
+                {
+                    LoggingManager.LogExceptionToNoteOverlay(this, e);
+                }
+
                 WebHelper.downloadFile(this,
                         "https://app.vanvatcorp.com/doubleclips/templates" + templateLocation + "/content/" + name,
                         IOHelper.CombinePath(
@@ -326,11 +389,12 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
                                 name)
                 );
 
+                exportButton.post(() -> exportButton.setEnabled(true));
+
             });
 
         }
 
-        exportButton.setEnabled(true);
     }
 
     private void runLogUpdate() {
@@ -548,6 +612,7 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
                 //intent.setType("video/*");
                 intent.setType("*/*"); // general catch-all
                 intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[] { "image/*", "video/*" });
+                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 clipChooser.launch(Intent.createChooser(intent, "Select Video #" + humanIndex));
             });

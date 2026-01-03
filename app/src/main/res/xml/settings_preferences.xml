@@ -17,6 +17,11 @@
             android:key="ads_popup"
             android:title="@string/settings_general_ads_popup" />
 
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="early_access_issues_notification"
+            android:title="@string/settings_general_early_access_issues_notification" />
+
     </PreferenceCategory>
 
 

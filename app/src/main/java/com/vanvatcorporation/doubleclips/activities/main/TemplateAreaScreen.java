@@ -19,6 +19,7 @@ import com.vanvatcorporation.doubleclips.R;
 import com.vanvatcorporation.doubleclips.activities.TemplatePreviewActivity;
 import com.vanvatcorporation.doubleclips.externalUtils.Random;
 import com.vanvatcorporation.doubleclips.helper.ImageHelper;
+import com.vanvatcorporation.doubleclips.manager.LoggingManager;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -78,6 +79,8 @@ public class TemplateAreaScreen extends BaseAreaScreen {
         templateSwipeRefreshLayout.setOnRefreshListener(this::reloadingProject);
 
 
+        templateSwipeRefreshLayout.setRefreshing(true);
+        reloadingProject();
     }
 
 
@@ -109,17 +112,27 @@ public class TemplateAreaScreen extends BaseAreaScreen {
                 }
                 reader.close();
 
-                TemplateData[] serverData = new Gson().newBuilder().setPrettyPrinting().create().fromJson(response.toString(), TemplateData[].class);
 
-                for (TemplateData data : serverData) {
-                    data.ffmpegCommand = data.ffmpegCommand.charAt(data.ffmpegCommand.length() - 1) == '\n' ? data.ffmpegCommand.substring(0, data.ffmpegCommand.length() - 1) : data.ffmpegCommand;
-                    addTemplate(data);
-                }
-                templateAdapter.notifyDataSetChanged();
+
+                TemplateData[] serverData = new Gson().newBuilder().create().fromJson(response.toString(), TemplateData[].class);
+
+
+
+                templateSwipeRefreshLayout.post(() -> {
+                    templateAdapter.notifyDataSetChanged();
+                    for (TemplateData data : serverData) {
+                        addTemplate(data);
+                    }
+                    templateSwipeRefreshLayout.setRefreshing(false);
+                });
             }
             catch (Exception e)
             {
+                LoggingManager.LogExceptionToNoteOverlay(getContext(), e);
 
+                templateSwipeRefreshLayout.post(() -> {
+                    templateSwipeRefreshLayout.setRefreshing(false);
+                });
             }
         });
 
@@ -154,7 +167,6 @@ public class TemplateAreaScreen extends BaseAreaScreen {
 //
 //        }
 //
-        templateSwipeRefreshLayout.setRefreshing(false);
     }
 
 
@@ -233,6 +245,15 @@ public class TemplateAreaScreen extends BaseAreaScreen {
         public String getTemplateLocation() {
             return "/" + templateAuthor + "/" + templateId;
         }
+
+
+        public void setTemplateDuration(long amount) {
+            templateDuration = amount;
+        }
+        public void setFfmpegCommand(String cmd) {
+            ffmpegCommand = cmd;
+        }
+
     }
     public class TemplateDataAdapter extends RecyclerView.Adapter<TemplateDataViewHolder>
     {

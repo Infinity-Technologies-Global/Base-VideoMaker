@@ -54,6 +54,7 @@
     <string name="settings_group_general">General</string>
     <string name="settings_general_enable_dark_mode">Enable Dark Mode</string>
     <string name="settings_general_ads_popup">Ads popup</string>
+    <string name="settings_general_early_access_issues_notification">Early access &amp; Issues Notification Popup</string>
 
     <string name="main_homepage">Home</string>
     <string name="main_template">Template</string>
