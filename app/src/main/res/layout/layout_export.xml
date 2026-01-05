@@ -31,6 +31,13 @@
 
 
             <Button
+                android:id="@+id/exportAsTemplateButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toStartOf="@id/exportButton"
+                android:text="export Template" />
+
+            <Button
                 android:id="@+id/exportButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

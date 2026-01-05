@@ -159,6 +159,8 @@ public class EditingActivity extends AppCompatActivityImpl {
 
     private ScaleGestureDetector scaleDetector;
     private float scaleFactor = 1f;
+    private float MIN_SCALE_FACTOR = 0.01f; // 0.05 before
+    private float MAX_SCALE_FACTOR = 32f; // 8 before
     private int basePixelsPerSecond = 100;
     private float currentTimeBeforeScrolling = -1;
 
@@ -1215,7 +1217,7 @@ public class EditingActivity extends AppCompatActivityImpl {
                 scaleFactor *= detector.getScaleFactor();
 
                 // Clamp scale factor
-                scaleFactor = Math.max(0.05f, Math.min(scaleFactor, 8.0f));
+                scaleFactor = Math.max(MIN_SCALE_FACTOR, Math.min(scaleFactor, MAX_SCALE_FACTOR));
 
                 pixelsPerSecond = (int) (basePixelsPerSecond * scaleFactor);
                 updateTimelineZoom();
@@ -1905,7 +1907,16 @@ public class EditingActivity extends AppCompatActivityImpl {
     float changedRulerInterval = 1f;
 
     private void updateRulerEfficiently() {
-        if(pixelsPerSecond < 25 && pixelsPerSecond > 10)
+        if(pixelsPerSecond < 10 && pixelsPerSecond > 5)
+        {
+            changedRulerInterval = 32f;
+        }
+        // Recently updated. Below are tested.
+        if(pixelsPerSecond < 15 && pixelsPerSecond > 10)
+        {
+            changedRulerInterval = 16f;
+        }
+        if(pixelsPerSecond < 25 && pixelsPerSecond > 15)
         {
             changedRulerInterval = 8f;
         }
@@ -2412,6 +2423,14 @@ public class EditingActivity extends AppCompatActivityImpl {
             }
 
             return timeline;
+        }
+
+        public int getAllClipCount() {
+            int clipCount = 0;
+            for (EditingActivity.Track track : tracks) {
+                clipCount += track.clips.size();
+            }
+            return clipCount;
         }
     }
 

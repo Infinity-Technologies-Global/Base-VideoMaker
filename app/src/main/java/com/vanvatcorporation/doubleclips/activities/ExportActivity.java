@@ -6,6 +6,7 @@ import static com.vanvatcorporation.doubleclips.FFmpegEdit.runAnyCommand;
 import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -41,9 +42,28 @@ import com.vanvatcorporation.doubleclips.activities.main.MainAreaScreen;
 import com.vanvatcorporation.doubleclips.constants.Constants;
 import com.vanvatcorporation.doubleclips.helper.IOHelper;
 import com.vanvatcorporation.doubleclips.helper.ParserHelper;
+import com.vanvatcorporation.doubleclips.helper.WebHelper;
 import com.vanvatcorporation.doubleclips.impl.AppCompatActivityImpl;
 import com.vanvatcorporation.doubleclips.impl.SectionView;
 import com.vanvatcorporation.doubleclips.impl.java.RunnableImpl;
+import com.vanvatcorporation.doubleclips.manager.LoggingManager;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.net.ssl.HttpsURLConnection;
 
 public class ExportActivity extends AppCompatActivityImpl {
 
@@ -140,7 +160,10 @@ public class ExportActivity extends AppCompatActivityImpl {
             generateTemplateCommand();
         });
         findViewById(R.id.exportButton).setOnClickListener(v -> {
-            exportClip();
+            exportClip(false);
+        });
+        findViewById(R.id.exportAsTemplateButton).setOnClickListener(v -> {
+            exportClip(true);
         });
 
         modifyZone = findViewById(R.id.modifyZone);
@@ -169,7 +192,7 @@ public class ExportActivity extends AppCompatActivityImpl {
                     .setMessage("Would you like to export it now?")
                     .setPositiveButton("Yes", (dialog, which) -> {
 
-                        exportClipTo();
+                        exportClipTo(false, "", 0, new ArrayList<>(), new ArrayList<>());
                         dialog.dismiss();
                     })
                     .setNegativeButton("No", (dialog, which) -> {
@@ -258,7 +281,7 @@ public class ExportActivity extends AppCompatActivityImpl {
     }
 
 
-    private void exportClip() {
+    private void exportClip(boolean exportAsTemplate) {
 
         // Keep the screen on for rendering process
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -271,17 +294,20 @@ public class ExportActivity extends AppCompatActivityImpl {
             generateCommand();
 
         String cmd = commandText.getText().toString();
-        // No need. Already in the EditText
-        //logText.setText(cmd);
 
 
         AdsHandler.loadBothAds(this, this);
+
+        List<File> videoFiles = new ArrayList<>();
+
+        List<File> previewFiles = Arrays.asList(new File(IOHelper.CombinePath(properties.getProjectPath(), "preview.png")),
+                new File(IOHelper.CombinePath(properties.getProjectPath(), "preview.mp4")));
 
 
         String[] cmdAfterSplit = cmd.split(Constants.DEFAULT_MULTI_FFMPEG_COMMAND_REGEX);
         for (int i = 0; i < cmdAfterSplit.length; i++) {
             String cmdEach = cmdAfterSplit[i];
-            runAnyCommand(this, cmdEach, "Exporting Video", (i == cmdAfterSplit.length - 1 ? this::exportClipTo : () -> {
+            runAnyCommand(this, cmdEach, "Exporting Video", (i == cmdAfterSplit.length - 1 ? () -> exportClipTo(exportAsTemplate, cmd, timeline.getAllClipCount(), videoFiles, previewFiles) : () -> {
                     }), () -> {
                         logText.post(() -> logText.setTextIsSelectable(true));
                     }
@@ -325,10 +351,11 @@ public class ExportActivity extends AppCompatActivityImpl {
     }
 
     //TODO: Delete the exported clip inside project path. Detect in the beginning the export.mp4 if its exist then do the same with this method to extract it out.
-    private void exportClipTo() {
+    private void exportClipTo(boolean exportAsTemplate, String ffmpegCommand, int totalClip, List<File> videoFiles, List<File> previewFiles) {
         FFmpegEdit.queue.cancelAllTask();
 
         logText.post(() -> logText.setTextIsSelectable(true));
+
 
         IOHelper.deleteFilesInDir(IOHelper.CombinePath(properties.getProjectPath(), Constants.DEFAULT_CLIP_TEMP_DIRECTORY));
         // Request permission to create a file
@@ -336,11 +363,32 @@ public class ExportActivity extends AppCompatActivityImpl {
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("video/*");
         intent.putExtra(Intent.EXTRA_TITLE, "export");
-        filePickerLauncher.launch(Intent.createChooser(intent, "Select Export"));
+
+        if(!exportAsTemplate)
+            filePickerLauncher.launch(Intent.createChooser(intent, "Select Export"));
+        else {
+            new File(IOHelper.CombinePath(properties.getProjectPath(), Constants.DEFAULT_EXPORT_CLIP_FILENAME))
+                    .renameTo(new File(IOHelper.CombinePath(properties.getProjectPath(), "preview.mp4")));
 
 
-        // After rendering, set back to default
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            Map<String, String> field = new HashMap<>();
+            field.put("accountUsername", "viet2007ht");
+            field.put("accountPassword", "********");
+            field.put("templateTitle", properties.getProjectTitle());
+            field.put("templateDescription", properties.getProjectTitle());
+            field.put("ffmpegCommand", ffmpegCommand);
+            field.put("templateDate", new Date().toString());
+            field.put("templateTotalClips", String.valueOf(totalClip));
+
+            uploadTemplateNecessityItems(this, "https://app.vanvatcorp.com/doubleclips/api/post-template", field, videoFiles, previewFiles);
+        }
+
+
+
+        runOnUiThread(() -> {
+            // After rendering, set back to default
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        });
     }
 
     @Override
@@ -360,4 +408,126 @@ public class ExportActivity extends AppCompatActivityImpl {
         super.onResume();
         AdsHandler.displayThanksForShowingAds(this);
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    public static void uploadTemplateNecessityItems(Context context, String serverUrl, Map<String, String> fields, List<File> videoFiles, List<File> previewFiles) {
+
+        try {
+            String boundary = "===" + System.currentTimeMillis() + "===";
+            String LINE_FEED = "\r\n";
+
+            URL url = new URL(serverUrl);
+            HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
+            conn.setUseCaches(false);
+            conn.setDoOutput(true);
+            conn.setDoInput(true);
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+
+            OutputStream outputStream = conn.getOutputStream();
+            PrintWriter writer = new PrintWriter(new OutputStreamWriter(outputStream, "UTF-8"), true);
+
+            // Text fields
+            for (Map.Entry<String, String> entry : fields.entrySet()) {
+                writer.append("--").append(boundary).append(LINE_FEED);
+                writer.append("Content-Disposition: form-data; name=\"").append(entry.getKey()).append("\"").append(LINE_FEED);
+                writer.append("Content-Type: text/plain; charset=UTF-8").append(LINE_FEED);
+                writer.append(LINE_FEED);
+                writer.append(entry.getValue()).append(LINE_FEED);
+                writer.flush();
+            }
+
+            // Optional multiple files
+            if (videoFiles != null) {
+                for (File file : videoFiles) {
+                    writer.append("--").append(boundary).append(LINE_FEED);
+                    writer.append("Content-Disposition: form-data; name=\"videoFiles\"; filename=\"").append(file.getName()).append("\"").append(LINE_FEED);
+                    writer.append("Content-Type: video/mp4").append(LINE_FEED);
+                    writer.append(LINE_FEED);
+                    writer.flush();
+
+                    FileInputStream inputStream = new FileInputStream(file);
+                    byte[] buffer = new byte[4096];
+                    int bytesRead;
+                    while ((bytesRead = inputStream.read(buffer)) != -1) {
+                        outputStream.write(buffer, 0, bytesRead);
+                    }
+                    outputStream.flush();
+                    inputStream.close();
+
+                    writer.append(LINE_FEED);
+                    writer.flush();
+                }
+            }
+
+            // Optional multiple files
+            if (previewFiles != null) {
+                for (File file : previewFiles) {
+                    writer.append("--").append(boundary).append(LINE_FEED);
+                    writer.append("Content-Disposition: form-data; name=\"previewFiles\"; filename=\"").append(file.getName()).append("\"").append(LINE_FEED);
+                    writer.append("Content-Type: video/mp4").append(LINE_FEED);
+                    writer.append(LINE_FEED);
+                    writer.flush();
+
+                    FileInputStream inputStream = new FileInputStream(file);
+                    byte[] buffer = new byte[4096];
+                    int bytesRead;
+                    while ((bytesRead = inputStream.read(buffer)) != -1) {
+                        outputStream.write(buffer, 0, bytesRead);
+                    }
+                    outputStream.flush();
+                    inputStream.close();
+
+                    writer.append(LINE_FEED);
+                    writer.flush();
+                }
+            }
+
+            // End of multipart
+            writer.append("--").append(boundary).append("--").append(LINE_FEED);
+            writer.close();
+
+            // Response
+            int status = conn.getResponseCode();
+            if (status == HttpsURLConnection.HTTP_OK) {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    System.out.println(line);
+                }
+                reader.close();
+                conn.disconnect();
+            } else {
+                LoggingManager.LogToNoteOverlay(context, "Server returned non-OK status: " + status);
+            }
+        }
+        catch (Exception e)
+        {
+            LoggingManager.LogExceptionToNoteOverlay(context, e);
+        }
+
+    }
+
+
+
 }

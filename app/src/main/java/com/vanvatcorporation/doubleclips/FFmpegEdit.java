@@ -597,10 +597,7 @@ public class FFmpegEdit {
     }
     public static String generateCmdFull(Context context, EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainAreaScreen.ProjectData data, boolean isTemplateCommand) {
 
-        int clipCount = 0;
-        for (EditingActivity.Track track : timeline.tracks) {
-            clipCount += track.clips.size();
-        }
+        int clipCount = timeline.getAllClipCount();
 
         StringBuilder cmd = new StringBuilder();
         int renderingIndex = 0;
