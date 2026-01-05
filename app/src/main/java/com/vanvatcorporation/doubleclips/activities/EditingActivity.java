@@ -1668,34 +1668,40 @@ public class EditingActivity extends AppCompatActivityImpl {
 
 
                             // Snap the other track
-                            for (int i = 0; i < dragContext.currentTrack.viewRef.getChildCount(); i++) {
-                                View other = dragContext.currentTrack.viewRef.getChildAt(i);
-                                if (other == dragContext.ghost || other == v) continue;
+                            for (Track track : timeline.tracks) {
 
-                                float otherStart = other.getX();
-                                float otherEnd = other.getX() + other.getWidth();
+                                for (int i = 0; i < track.viewRef.getChildCount(); i++) {
 
-                                // Snap ghost start to other end
-                                if (Math.abs(ghostStart - otherEnd) <= Constants.TRACK_CLIPS_SNAP_THRESHOLD_PIXEL) {
-                                    newX = otherEnd;
-                                    break;
-                                }
+                                    View other = track.viewRef.getChildAt(i);
+                                    if (other == dragContext.ghost || other == v) continue;
+                                    if (!(other.getTag() instanceof Clip)) continue;
 
-                                // Snap ghost end to other start
-                                if (Math.abs(ghostEnd - otherStart) <= Constants.TRACK_CLIPS_SNAP_THRESHOLD_PIXEL) {
-                                    newX = otherStart - ghostWidth;
-                                    break;
-                                }
 
-                                // Optional: Snap start-to-start or end-to-end
-                                // Todo: Pending removal as no sense of letting clips overlapping each other in the same track in the near future.
-                                if (Math.abs(ghostStart - otherStart) <= Constants.TRACK_CLIPS_SNAP_THRESHOLD_PIXEL) {
-                                    newX = otherStart;
-                                    break;
-                                }
-                                if (Math.abs(ghostEnd - otherEnd) <= Constants.TRACK_CLIPS_SNAP_THRESHOLD_PIXEL) {
-                                    newX = otherEnd - ghostWidth;
-                                    break;
+                                    float otherStart = other.getX();
+                                    float otherEnd = other.getX() + other.getWidth();
+
+                                    // Snap ghost start to other end
+                                    if (Math.abs(ghostStart - otherEnd) <= Constants.TRACK_CLIPS_SNAP_THRESHOLD_PIXEL) {
+                                        newX = otherEnd;
+                                        break;
+                                    }
+
+                                    // Snap ghost end to other start
+                                    if (Math.abs(ghostEnd - otherStart) <= Constants.TRACK_CLIPS_SNAP_THRESHOLD_PIXEL) {
+                                        newX = otherStart - ghostWidth;
+                                        break;
+                                    }
+
+                                    // Optional: Snap start-to-start or end-to-end
+                                    // Todo: Pending removal as no sense of letting clips overlapping each other in the same track in the near future.
+                                    if (Math.abs(ghostStart - otherStart) <= Constants.TRACK_CLIPS_SNAP_THRESHOLD_PIXEL) {
+                                        newX = otherStart;
+                                        break;
+                                    }
+                                    if (Math.abs(ghostEnd - otherEnd) <= Constants.TRACK_CLIPS_SNAP_THRESHOLD_PIXEL) {
+                                        newX = otherEnd - ghostWidth;
+                                        break;
+                                    }
                                 }
                             }
                             dragContext.ghost.setX(newX);
