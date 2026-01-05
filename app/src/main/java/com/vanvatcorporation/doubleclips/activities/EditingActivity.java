@@ -939,9 +939,12 @@ public class EditingActivity extends AppCompatActivityImpl {
                 for (Clip clip : clips) {
                     if(clip != selectedClip)
                     {
-                        clip.keyframes.keyframes.clear();
-                        clip.keyframes.keyframes.addAll(selectedClip.keyframes.keyframes);
-                        //TODO: Fetch the addKeyframesUi again to match the preview
+                        clearKeyframe(clip);
+
+                        for (Keyframe keyframe : selectedClip.keyframes.keyframes) {
+                            addKeyframe(clip, keyframe);
+                        }
+
                     }
                 }
             }
@@ -1164,13 +1167,15 @@ public class EditingActivity extends AppCompatActivityImpl {
             {
                 clipEditSpecificAreaScreen.createKeyframeElement(selectedClip, keyframe, () -> {
                     setCurrentTime(keyframe.getGlobalTime(selectedClip));
+                }, () -> {
+                    removeKeyframe(selectedClip, keyframe);
                 });
             }
 
             clipEditSpecificAreaScreen.clearKeyframeButton.setOnClickListener(v -> {
                 if(selectedClip != null)
                 {
-                    selectedClip.keyframes.keyframes.clear();
+                    clearKeyframe(selectedClip);
                 }
             });
         });
@@ -1501,12 +1506,50 @@ public class EditingActivity extends AppCompatActivityImpl {
         //params.leftMargin = getCurrentTimeInX();
         //params.topMargin = clip.viewRef.getTop() + (clip.viewRef.getHeight() / 2);
         params.topMargin = clip.viewRef.getTop() + (clip.viewRef.getHeight() / 2) - (height / 2);
-        knotView.setX(getTimeInX(keyframe.getGlobalTime(clip)));
-        timeline.tracks.get(clip.trackIndex).viewRef.addView(knotView, params);
+        knotView.setX(keyframe.getLocalTime() * pixelsPerSecond);
+
+        //timeline.tracks.get(clip.trackIndex).viewRef.addView(knotView, params);
+        clip.viewRef.addView(knotView, params);
 
 
 
         handleKeyframeInteraction(knotView);
+    }
+
+
+    public void removeKeyframe(Clip clip, Keyframe keyframe)
+    {
+        removeKeyframeUi(clip, keyframe);
+
+        clip.keyframes.keyframes.remove(keyframe);
+    }
+    public void removeKeyframeUi(Clip clip, Keyframe keyframe)
+    {
+        for (int i = 0; i < clip.viewRef.getChildCount(); i++) {
+            View knotView = clip.viewRef.getChildAt(i);
+            if(knotView.getTag(R.id.keyframe_knot_tag) instanceof Keyframe && knotView.getTag(R.id.keyframe_knot_tag) == keyframe)
+            {
+                clip.viewRef.removeView(knotView);
+                break;
+            }
+        }
+    }
+
+    public void clearKeyframe(Clip clip)
+    {
+        clearKeyframeUi(clip);
+
+        clip.keyframes.keyframes.clear();
+    }
+    public void clearKeyframeUi(Clip clip)
+    {
+        for (int i = 0; i < clip.viewRef.getChildCount(); i++) {
+            View knotView = clip.viewRef.getChildAt(i);
+            if(knotView.getTag(R.id.keyframe_knot_tag) instanceof Keyframe)
+            {
+                clip.viewRef.removeView(knotView);
+            }
+        }
     }
     public void revalidationClipView(Clip data)
     {
@@ -1797,6 +1840,18 @@ public class EditingActivity extends AppCompatActivityImpl {
                 if (child.getTag() != null && child.getTag() instanceof Clip) { // It's a clip
                     int right = (int) (child.getX() + child.getWidth());
                     if (right > newTimelineEnd) newTimelineEnd = right;
+
+                    // For keyframe syncing
+                    if(child instanceof ImageGroupView)
+                    {
+                        ImageGroupView clipViewRef = ((ImageGroupView) child);
+                        for (int j = 0; j < clipViewRef.getChildCount(); j++) {
+                            View child1 = clipViewRef.getChildAt(j);
+                            if(child1.getTag(R.id.keyframe_knot_tag) instanceof Keyframe) {
+                                child1.setX(((Keyframe) child1.getTag(R.id.keyframe_knot_tag)).getLocalTime() * pixelsPerSecond);
+                            }
+                        }
+                    }
                 }
             }
         }

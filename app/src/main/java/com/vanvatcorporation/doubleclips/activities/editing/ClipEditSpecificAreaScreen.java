@@ -71,7 +71,7 @@ public class ClipEditSpecificAreaScreen extends BaseEditSpecificAreaScreen {
         });
     }
 
-    public void createKeyframeElement(EditingActivity.Clip clip, EditingActivity.Keyframe keyframe, Runnable onClickKeyframe)
+    public void createKeyframeElement(EditingActivity.Clip clip, EditingActivity.Keyframe keyframe, Runnable onClickKeyframe, Runnable onLongClickKeyframe)
     {
         LinearLayout layout = new LinearLayout(getContext());
         layout.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -84,7 +84,8 @@ public class ClipEditSpecificAreaScreen extends BaseEditSpecificAreaScreen {
             onClickKeyframe.run();
         });
         text.setOnLongClickListener(v -> {
-            clip.keyframes.keyframes.remove(keyframe);
+            onLongClickKeyframe.run();
+
             keyframeScrollFrame.removeView(layout);
             return true;
         });
