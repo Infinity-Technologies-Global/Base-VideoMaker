@@ -2790,14 +2790,9 @@ public class EditingActivity extends AppCompatActivityImpl {
 
 
                                         int newWidth = clipView.getWidth() - (int) deltaX;
-                                        float newStartTime = (clipView.getX() + deltaX - centerOffset) / pixelsPerSecond;
 
                                         // Clamping
                                         if (newWidth < minWidth) return true;
-                                        // Clamp to prevent going before 0s
-                                        // TODO: In capcut it doesn't clamp. Instead after pointer up, it set the
-                                        //  start time to 0 and push the rest of the before 0s to the right.
-                                        if (newStartTime < 0) return true;
 
 
                                         newWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
@@ -2827,6 +2822,12 @@ public class EditingActivity extends AppCompatActivityImpl {
                                 case MotionEvent.ACTION_UP:
                                 case MotionEvent.ACTION_CANCEL:
                                     timelineScroll.requestDisallowInterceptTouchEvent(false);
+
+                                    if(clip.startTime < 0)
+                                    {
+                                        clipView.setX(activity.getTimeInX(0));
+                                        clip.startTime = 0;
+                                    }
 
                                     activity.updateCurrentClipEnd();
                                     break;
