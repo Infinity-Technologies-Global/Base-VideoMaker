@@ -219,7 +219,8 @@ public class FFmpegEdit {
         for (int i = 0; i < clips.length; i++) {
             EditingActivity.Clip clip = clips[i];
 
-            String inputPath = isTemplateCommand ? Constants.DEFAULT_TEMPLATE_CLIP_MARK(i) : clip.getAbsolutePath(data);
+            String inputPath = isTemplateCommand ? Constants.DEFAULT_TEMPLATE_CLIP_MARK(i) :
+                    clip.isLockedForTemplate ? Constants.DEFAULT_TEMPLATE_CLIP_STATIC_MARK(clip.getClipName()) : clip.getAbsolutePath(data);
 
             switch (clip.type) {
                 case VIDEO:
@@ -635,7 +636,6 @@ public class FFmpegEdit {
         StringBuilder keyframeExprString = new StringBuilder();
 
         if(startIndex + 1 >= keyframes.size()) return String.valueOf(clip.videoProperties.getValue(valueType)); // Default value
-        // TODO: Set the default value to match the current clip properties. Need rework on the structure.
 
         EditingActivity.Keyframe prevKeyframe = keyframes.get(startIndex);
         EditingActivity.Keyframe nextKeyframe = keyframes.get(startIndex + 1);

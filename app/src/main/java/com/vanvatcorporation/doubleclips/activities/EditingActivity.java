@@ -43,6 +43,7 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
@@ -87,6 +88,7 @@ import com.vanvatcorporation.doubleclips.impl.java.RunnableImpl;
 import com.vanvatcorporation.doubleclips.manager.LoggingManager;
 import com.vanvatcorporation.doubleclips.utils.TimelineUtils;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
@@ -389,7 +391,7 @@ public class EditingActivity extends AppCompatActivityImpl {
         dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setVisibility(View.GONE);
 
 
-        processingText.setText(getString(R.string.processing) + " " + "\"" + clip.clipName + "\"");
+        processingText.setText(getString(R.string.processing) + " " + "\"" + clip.getClipName() + "\"");
 
 
 
@@ -1126,7 +1128,7 @@ public class EditingActivity extends AppCompatActivityImpl {
         clipEditSpecificAreaScreen.onClose.add(() -> {
             if(selectedClip != null)
             {
-                selectedClip.clipName = clipEditSpecificAreaScreen.clipNameField.getText().toString();
+                selectedClip.setClipName(clipEditSpecificAreaScreen.clipNameField.getText().toString(), properties);
                 selectedClip.duration = ParserHelper.TryParse(clipEditSpecificAreaScreen.durationContent.getText().toString(), selectedClip.duration);
                 selectedClip.videoProperties.setValue(ParserHelper.TryParse(clipEditSpecificAreaScreen.positionXField.getText().toString(), selectedClip.videoProperties.getValue(VideoProperties.ValueType.PosX)), VideoProperties.ValueType.PosX);
                 selectedClip.videoProperties.setValue(ParserHelper.TryParse(clipEditSpecificAreaScreen.positionYField.getText().toString(), selectedClip.videoProperties.getValue(VideoProperties.ValueType.PosY)), VideoProperties.ValueType.PosY);
@@ -1150,7 +1152,7 @@ public class EditingActivity extends AppCompatActivityImpl {
         });
         clipEditSpecificAreaScreen.onOpen.add(() -> {
             clipEditSpecificAreaScreen.totalDurationText.setText(String.valueOf(selectedClip.originalDuration));
-            clipEditSpecificAreaScreen.clipNameField.setText(String.valueOf(selectedClip.clipName));
+            clipEditSpecificAreaScreen.clipNameField.setText(String.valueOf(selectedClip.getClipName()));
             clipEditSpecificAreaScreen.durationContent.setText(String.valueOf(selectedClip.duration));
             clipEditSpecificAreaScreen.positionXField.setText(String.valueOf(selectedClip.videoProperties.getValue(VideoProperties.ValueType.PosX)));
             clipEditSpecificAreaScreen.positionYField.setText(String.valueOf(selectedClip.videoProperties.getValue(VideoProperties.ValueType.PosY)));
@@ -1529,7 +1531,7 @@ public class EditingActivity extends AppCompatActivityImpl {
             View knotView = clip.viewRef.getChildAt(i);
             if(knotView.getTag(R.id.keyframe_knot_tag) instanceof Keyframe && knotView.getTag(R.id.keyframe_knot_tag) == keyframe)
             {
-                clip.viewRef.removeView(knotView);
+                clip.viewRef.removeViewAt(i);
                 break;
             }
         }
@@ -2596,7 +2598,7 @@ public class EditingActivity extends AppCompatActivityImpl {
         @Expose
         public ClipType type;
         @Expose
-        public String clipName;
+        private String clipName;
         @Expose
         public float startTime; // in seconds
         @Expose
@@ -2655,11 +2657,14 @@ public class EditingActivity extends AppCompatActivityImpl {
          */
         @Expose
         public boolean isMute;    // for VIDEO type
+        @Expose
+        public boolean isLockedForTemplate;    // for VIDEO type
 
 
         //Not serializing
         public transient View leftHandle, rightHandle;
         public transient ImageGroupView viewRef;
+        public transient ImageView templateLockViewRef;
 
 
         public Clip(String clipName, float startTime, float duration, int trackIndex, ClipType type, boolean isVideoHasAudio, int width, int height) {
@@ -2696,6 +2701,7 @@ public class EditingActivity extends AppCompatActivityImpl {
 
             this.videoProperties = new VideoProperties(clip.videoProperties);
             this.isMute = clip.isMute;
+            this.isLockedForTemplate = clip.isLockedForTemplate;
 
 
             if(clip.type == ClipType.TEXT)
@@ -2732,6 +2738,16 @@ public class EditingActivity extends AppCompatActivityImpl {
 
         public void registerClipHandle(ImageGroupView clipView, EditingActivity activity, HorizontalScrollView timelineScroll) {
             viewRef = clipView;
+
+            // Lock display for isLockedForTemplate
+
+            templateLockViewRef = new ImageView(activity);
+            ImageGroupView.LayoutParams templateLockLayoutParams = new ImageGroupView.LayoutParams(30, 30);
+            templateLockLayoutParams.setMargins(5, 5, 0, 0);
+            templateLockViewRef.setLayoutParams(templateLockLayoutParams);
+            templateLockViewRef.setImageResource(R.drawable.baseline_lock_24);
+            viewRef.addView(templateLockViewRef);
+            templateLockViewRef.setVisibility(isLockedForTemplate ? View.VISIBLE : View.GONE);
 
             leftHandle = new View(clipView.getContext());
             leftHandle.setBackgroundColor(Color.WHITE);
@@ -2994,7 +3010,7 @@ public class EditingActivity extends AppCompatActivityImpl {
             return getAbsolutePath(properties.getProjectPath());
         }
         public String getAbsolutePath(String projectPath) {
-            return IOHelper.CombinePath(projectPath, Constants.DEFAULT_CLIP_DIRECTORY, clipName);
+            return IOHelper.CombinePath(projectPath, Constants.DEFAULT_CLIP_DIRECTORY, getClipName());
         }
         /**
          * Used for EditingActivity in which didn't need high quality video. Fit for real-time preview.
@@ -3006,7 +3022,7 @@ public class EditingActivity extends AppCompatActivityImpl {
             return getAbsolutePreviewPath(properties.getProjectPath());
         }
         public String getAbsolutePreviewPath(String projectPath) {
-            String path = IOHelper.CombinePath(projectPath, Constants.DEFAULT_PREVIEW_CLIP_DIRECTORY, clipName);
+            String path = IOHelper.CombinePath(projectPath, Constants.DEFAULT_PREVIEW_CLIP_DIRECTORY, getClipName());
             // Fallback if not available yet.
             // TODO: Temporary fix for the soon preview loading. Consider block main thread for preview to have time to load first
             if(!IOHelper.isFileExist(path))
@@ -3023,7 +3039,7 @@ public class EditingActivity extends AppCompatActivityImpl {
             return getAbsolutePreviewPath(properties.getProjectPath(), previewExtension);
         }
         public String getAbsolutePreviewPath(String projectPath, String previewExtension) {
-            String path = IOHelper.CombinePath(projectPath, Constants.DEFAULT_PREVIEW_CLIP_DIRECTORY, clipName.substring(0, clipName.lastIndexOf('.')) + previewExtension);
+            String path = IOHelper.CombinePath(projectPath, Constants.DEFAULT_PREVIEW_CLIP_DIRECTORY, getClipName().substring(0, getClipName().lastIndexOf('.')) + previewExtension);
             // Fallback if not available yet.
             // TODO: Temporary fix for the soon preview loading. Consider block main thread for preview to have time to load first
             if(!IOHelper.isFileExist(path))
@@ -3040,6 +3056,33 @@ public class EditingActivity extends AppCompatActivityImpl {
 
         public float getCutoutDuration() {
             return duration - startClipTrim - endClipTrim;
+        }
+
+
+
+
+
+        public boolean getIsLockedForTemplate()
+        {
+            return isLockedForTemplate;
+        }
+        public void setIsLockedForTemplate(boolean value)
+        {
+            isLockedForTemplate = value;
+            templateLockViewRef.setVisibility(value ? View.VISIBLE : View.GONE);
+        }
+
+        public String getClipName()
+        {
+            return clipName;
+        }
+        public void setClipName(String clipName, MainAreaScreen.ProjectData data)
+        {
+            File file = new File(getAbsolutePath(data));
+            if(file.renameTo(new File(getAbsolutePath(data).replace(this.clipName, clipName))))
+                this.clipName = clipName;
+            else
+                ; // Operation failed
         }
 
     }
