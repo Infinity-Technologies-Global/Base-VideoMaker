@@ -49,13 +49,15 @@ import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.text.TextWatcher;
+import android.text.Editable;
+import android.util.Log;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.core.content.res.ResourcesCompat;
 
-import com.arthenica.ffmpegkit.Log;
 import com.arthenica.ffmpegkit.Statistics;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -139,6 +141,7 @@ public class EditingActivity extends AppCompatActivityImpl {
     private int trackCount = 0;
     private final int TRACK_HEIGHT = 100;
     private static final float MIN_CLIP_DURATION = 0.1f; // in seconds
+    private static final float CANVAS_DRAG_SENSITIVITY = 1f; // 0.5 = đi chậm hơn tay, mượt hơn
     public static int pixelsPerSecond = 100;
 
     public static int previewAvailableWidth, previewAvailableHeight;
@@ -187,6 +190,8 @@ public class EditingActivity extends AppCompatActivityImpl {
     private boolean isPlaying = false;
     private float frameInterval = 1f / 30f; // 30fps
     private Handler playbackHandler = new Handler(Looper.getMainLooper());
+    private Handler resolutionUpdateHandler = new Handler(Looper.getMainLooper());
+    private Runnable resolutionUpdateRunnable;
     private Runnable playbackLoop;
 
 
@@ -337,6 +342,7 @@ public class EditingActivity extends AppCompatActivityImpl {
 
         offsetTime += duration;
 
+        regeneratingTimelineRenderer();
 
         previewRenderQueue.enqueue(new FFmpegEdit.FfmpegRenderQueue.FfmpegRenderQueueInfo("Preview Generation",
                 () -> {
@@ -409,6 +415,7 @@ public class EditingActivity extends AppCompatActivityImpl {
 
                         dialog.dismiss();
                         previewRenderQueue.taskCompleted();
+                        regeneratingTimelineRenderer();
                     }), () -> {
                         processingDescription.post(() -> {
                             processingDescription.setTextColor(0xFFFF0000);
@@ -420,7 +427,7 @@ public class EditingActivity extends AppCompatActivityImpl {
                     , new RunnableImpl() {
                         @Override
                         public <T> void runWithParam(T param) {
-                            Log log = (Log) param;
+                            com.arthenica.ffmpegkit.Log log = (com.arthenica.ffmpegkit.Log) param;
                             processingDescription.post(() -> {
                                 processingDescription.setText(log.getMessage());
                             });
@@ -448,6 +455,7 @@ public class EditingActivity extends AppCompatActivityImpl {
                     () -> EditingActivity.this.runOnUiThread(() -> {
                         dialog.dismiss();
                         previewRenderQueue.taskCompleted();
+                        regeneratingTimelineRenderer();
                     }), () -> {
                         processingDescription.post(() -> {
                             processingDescription.setTextColor(0xFFFF0000);
@@ -459,7 +467,7 @@ public class EditingActivity extends AppCompatActivityImpl {
                     , new RunnableImpl() {
                         @Override
                         public <T> void runWithParam(T param) {
-                            Log log = (Log) param;
+                            com.arthenica.ffmpegkit.Log log = (com.arthenica.ffmpegkit.Log) param;
                             processingDescription.post(() -> {
                                 processingDescription.setText(log.getMessage());
                             });
@@ -1207,11 +1215,74 @@ public class EditingActivity extends AppCompatActivityImpl {
             videoPropertiesEditSpecificAreaScreen.bitrateField.setText(String.valueOf(settings.getCRF()));
         });
 
+        videoPropertiesEditSpecificAreaScreen.resolutionXField.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                updatePreviewResolution();
+            }
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+        videoPropertiesEditSpecificAreaScreen.resolutionYField.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                updatePreviewResolution();
+            }
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
 
         // ===========================       VIDEO PROPERTIES ZONE       ====================================
 
-
     }
+
+    private void updatePreviewResolution() {
+        if (videoPropertiesEditSpecificAreaScreen == null ||
+            videoPropertiesEditSpecificAreaScreen.resolutionXField == null ||
+            videoPropertiesEditSpecificAreaScreen.resolutionYField == null) {
+            return;
+        }
+        int newWidth = ParserHelper.TryParse(videoPropertiesEditSpecificAreaScreen.resolutionXField.getText().toString(), settings.videoWidth);
+        int newHeight = ParserHelper.TryParse(videoPropertiesEditSpecificAreaScreen.resolutionYField.getText().toString(), settings.videoHeight);
+        if (newWidth > 0 && newHeight > 0) {
+            float oldRatio = (float) settings.videoWidth / settings.videoHeight;
+            float newRatio = (float) newWidth / newHeight;
+
+            Log.e("ResolutionUpdate", "=== RESOLUTION UPDATE DEBUG ===");
+            Log.e("ResolutionUpdate", "Old resolution: " + settings.videoWidth + "x" + settings.videoHeight + " (ratio: " + oldRatio + ")");
+            Log.e("ResolutionUpdate", "New resolution: " + newWidth + "x" + newHeight + " (ratio: " + newRatio + ")");
+            Log.e("ResolutionUpdate", "PreviewAvailable: " + previewAvailableWidth + "x" + previewAvailableHeight);
+            Log.e("ResolutionUpdate", "PreviewViewGroup size: " + previewViewGroup.getWidth() + "x" + previewViewGroup.getHeight());
+            Log.e("ResolutionUpdate", "================================");
+
+            settings.videoWidth = newWidth;
+            settings.videoHeight = newHeight;
+            ViewGroup.LayoutParams previewViewGroupParams = previewViewGroup.getLayoutParams();
+            previewViewGroupParams.width = settings.videoWidth;
+            previewViewGroupParams.height = settings.videoHeight;
+            previewViewGroup.setLayoutParams(previewViewGroupParams);
+            if (resolutionUpdateRunnable != null) {
+                resolutionUpdateHandler.removeCallbacks(resolutionUpdateRunnable);
+            }
+            resolutionUpdateRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    Log.e("ResolutionUpdate", "Rebuilding timeline renderer with new resolution: " + settings.videoWidth + "x" + settings.videoHeight);
+                    regeneratingTimelineRenderer();
+                }
+            };
+            resolutionUpdateHandler.postDelayed(resolutionUpdateRunnable, 500);
+        }
+    }
+
     public void setupTimelinePinchAndZoom() {
         scaleDetector = new ScaleGestureDetector(this, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
             @Override
@@ -1267,7 +1338,7 @@ public class EditingActivity extends AppCompatActivityImpl {
         playbackHandler.removeCallbacks(playbackLoop);
         playPauseButton.setImageResource(R.drawable.baseline_play_circle_24);
 
-        regeneratingTimelineRenderer();
+        timelineRenderer.updateTime(currentTime, true);
     }
     private void regeneratingTimelineRenderer()
     {
@@ -1345,8 +1416,21 @@ public class EditingActivity extends AppCompatActivityImpl {
     public void onPause() {
         super.onPause();
 
-        timelineRenderer.release();
+        if (timelineRenderer != null) {
+            timelineRenderer.release();
+        }
         Timeline.saveTimeline(this, timeline, properties, settings);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        if (timelineRenderer == null) {
+            timelineRenderer = new TimelineRenderer(this);
+        }
+        regeneratingTimelineRenderer();
+        timelineRenderer.updateTime(currentTime, true);
     }
 
     private Track addNewTrack() {
@@ -1658,6 +1742,10 @@ public class EditingActivity extends AppCompatActivityImpl {
             ghost.setLayoutParams(new TrackFrameLayout.LayoutParams(v.getWidth(), v.getHeight()));
             ghost.setFilledImageBitmap(((ImageGroupView)v).getFilledImageBitmap());
             ghost.setAlpha(0.5f);
+            android.graphics.drawable.GradientDrawable border = new android.graphics.drawable.GradientDrawable();
+            border.setColor(android.graphics.Color.TRANSPARENT);
+            border.setStroke((int) (1 * getResources().getDisplayMetrics().density), Color.YELLOW);
+            ghost.setBackground(border);
 
 
 
@@ -2160,9 +2248,16 @@ public class EditingActivity extends AppCompatActivityImpl {
                 selectedClip.select();
                 this.selectedClip = selectedClip;
                 toolbarClips.setVisibility(View.VISIBLE);
+
+                float clipCenterTime = selectedClip.startTime + selectedClip.duration / 2;
+                setCurrentTime(clipCenterTime);
+                timelineScroll.post(() -> {
+                    int targetScrollX = (int) (clipCenterTime * pixelsPerSecond);
+                    timelineScroll.smoothScrollTo(targetScrollX, 0);
+                });
             }
-            if(currentTime < selectedClip.startTime)
-                setCurrentTime(selectedClip.startTime);
+            if(this.selectedClip != null && currentTime < this.selectedClip.startTime)
+                setCurrentTime(this.selectedClip.startTime);
         }
 
     }
@@ -2333,11 +2428,15 @@ public class EditingActivity extends AppCompatActivityImpl {
 
     public static int previewToRenderConversionX(float previewX, float renderResolutionX)
     {
-        return (int) ((previewX / Math.min(previewAvailableWidth, renderResolutionX)) * renderResolutionX);
+        // Preview is laid out to match render resolution (previewViewGroup size == videoWidth),
+        // so 1px trên preview tương ứng 1 đơn vị trong không gian render.
+        // Giữ mapping 1:1 để Pos X thay đổi đúng với chuyển động ngón tay.
+        return (int) previewX;
     }
     public static int previewToRenderConversionY(float previewY, float renderResolutionY)
     {
-        return (int) ((previewY / Math.min(previewAvailableHeight, renderResolutionY)) * renderResolutionY);
+        // Tương tự trục Y: 1px preview == 1 đơn vị render.
+        return (int) previewY;
     }
 
     public static int renderToPreviewConversionX(float renderX, float renderResolutionX)
@@ -2355,25 +2454,43 @@ public class EditingActivity extends AppCompatActivityImpl {
 
     public static float previewToRenderConversionScalingX(float clipScaleX, float renderResolutionX)
     {
-        return clipScaleX / getRenderRatio(previewAvailableWidth, renderResolutionX);
+        float ratioX = getRenderRatio(previewAvailableWidth, renderResolutionX);
+        float ratioY = getRenderRatio(previewAvailableHeight, renderResolutionX);
+        float ratio = Math.min(ratioX, ratioY);
+        return ratio == 0 ? clipScaleX : clipScaleX / ratio;
     }
     public static float previewToRenderConversionScalingY(float clipScaleY, float renderResolutionY)
     {
-        return clipScaleY / getRenderRatio(previewAvailableHeight, renderResolutionY);
+        float ratioX = getRenderRatio(previewAvailableWidth, renderResolutionY);
+        float ratioY = getRenderRatio(previewAvailableHeight, renderResolutionY);
+        float ratio = Math.min(ratioX, ratioY);
+        return ratio == 0 ? clipScaleY : clipScaleY / ratio;
     }
 
-    public static float renderToPreviewConversionScalingX(float clipScaleX, float renderResolutionX)
+    public static float renderToPreviewConversionScalingX(float clipScaleX, float renderResolutionX, float renderResolutionY)
     {
-        return clipScaleX * getRenderRatio(previewAvailableWidth, renderResolutionX);
+        float ratioX = getRenderRatio(previewAvailableWidth, renderResolutionX);
+        float ratioY = getRenderRatio(previewAvailableHeight, renderResolutionY);
+        float ratio = Math.min(ratioX, ratioY);
+        float result = clipScaleX * ratio;
+        Log.d("Conversion", "renderToPreviewConversionScalingX: clipScaleX=" + clipScaleX + ", renderResolutionX=" + renderResolutionX + ", renderResolutionY=" + renderResolutionY + ", previewAvailableWidth=" + previewAvailableWidth + ", previewAvailableHeight=" + previewAvailableHeight + ", ratioX=" + ratioX + ", ratioY=" + ratioY + ", minRatio=" + ratio + ", result=" + result);
+        return result;
     }
-    public static float renderToPreviewConversionScalingY(float clipScaleY, float renderResolutionY)
+    public static float renderToPreviewConversionScalingY(float clipScaleY, float renderResolutionX, float renderResolutionY)
     {
-        return clipScaleY * getRenderRatio(previewAvailableHeight, renderResolutionY);
+        float ratioX = getRenderRatio(previewAvailableWidth, renderResolutionX);
+        float ratioY = getRenderRatio(previewAvailableHeight, renderResolutionY);
+        float ratio = Math.min(ratioX, ratioY);
+        float result = clipScaleY * ratio;
+        Log.d("Conversion", "renderToPreviewConversionScalingY: clipScaleY=" + clipScaleY + ", renderResolutionX=" + renderResolutionX + ", renderResolutionY=" + renderResolutionY + ", previewAvailableWidth=" + previewAvailableWidth + ", previewAvailableHeight=" + previewAvailableHeight + ", ratioX=" + ratioX + ", ratioY=" + ratioY + ", minRatio=" + ratio + ", result=" + result);
+        return result;
     }
 
     public static float getRenderRatio(float previewAvailable, float renderResolution)
     {
-        return Math.min(previewAvailable, renderResolution) / renderResolution;
+        float ratio = Math.min(previewAvailable, renderResolution) / renderResolution;
+        Log.d("Conversion", "getRenderRatio: previewAvailable=" + previewAvailable + ", renderResolution=" + renderResolution + ", ratio=" + ratio);
+        return ratio;
     }
 
     // TODO: For the scaling. When passing the previewAvailableWidth/Height. We get
@@ -3478,6 +3595,10 @@ frameRate = 60;
 
         private TextureView textureView;
         private Context context;
+        private EditingActivity editingActivity;
+        private FrameLayout previewViewGroupRef;
+
+        private long lastSeekPtsUs = -1;
 
         private ExecutorService renderThreadExecutorAudio = Executors.newFixedThreadPool(1);
         private ExecutorService renderThreadExecutorVideo = Executors.newFixedThreadPool(1);
@@ -3494,10 +3615,18 @@ frameRate = 60;
         private float rotMatrix = 0;
         private float posMatrixX = 0, posMatrixY = 0;
 
+        private float initialPosX = 0, initialPosY = 0;
+        private float startTouchX = 0, startTouchY = 0;
+
+        private View dragBorderView;
+        private android.graphics.drawable.GradientDrawable dragBorderDrawable;
+
 
         public ClipRenderer(Context context, Clip clip, MainAreaScreen.ProjectData data, VideoSettings settings, EditingActivity editingActivity, FrameLayout previewViewGroup, TextView textCanvasControllerInfo) {
             this.context = context;
             this.clip = clip;
+            this.editingActivity = editingActivity;
+            this.previewViewGroupRef = previewViewGroup;
 
             try
             {
@@ -3518,6 +3647,8 @@ frameRate = 60;
                         RelativeLayout.LayoutParams textureViewLayoutParams =
                                 new RelativeLayout.LayoutParams(clip.width, clip.height);
                         previewViewGroup.addView(textureView, textureViewLayoutParams);
+                        textureView.setX(0f);
+                        textureView.setY(0f);
 
 
                         textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
@@ -3545,10 +3676,33 @@ frameRate = 60;
 
                                     posX = (EditingActivity.renderToPreviewConversionX(clip.videoProperties.getValue(VideoProperties.ValueType.PosX), settings.videoWidth));
                                     posY = (EditingActivity.renderToPreviewConversionY(clip.videoProperties.getValue(VideoProperties.ValueType.PosY), settings.videoHeight));
-                                    scaleX = (EditingActivity.renderToPreviewConversionScalingX(clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX), settings.videoWidth));
-                                    scaleY = (EditingActivity.renderToPreviewConversionScalingY(clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY), settings.videoHeight));
+                                    scaleX = (EditingActivity.renderToPreviewConversionScalingX(clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX), settings.videoWidth, settings.videoHeight));
+                                    scaleY = (EditingActivity.renderToPreviewConversionScalingY(clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY), settings.videoWidth, settings.videoHeight));
                                     rot = (clip.videoProperties.getValue(VideoProperties.ValueType.Rot));
 
+                                    float clipRatio = (float) clip.width / clip.height;
+                                    float resolutionRatio = (float) settings.videoWidth / settings.videoHeight;
+                                    float previewAvailableRatio = previewAvailableWidth > 0 && previewAvailableHeight > 0 ? (float) previewAvailableWidth / previewAvailableHeight : 0;
+                                    float scaleRatio = scaleX / scaleY;
+                                    float actualWidth = clip.width * scaleX;
+                                    float actualHeight = clip.height * scaleY;
+                                    float actualRatio = actualHeight > 0 ? actualWidth / actualHeight : 0;
+
+                                    Log.e("ClipRatio", "=== VIDEO CLIP RATIO DEBUG ===");
+                                    Log.e("ClipRatio", "Clip: " + clip.clipName);
+                                    Log.e("ClipRatio", "Clip original size: " + clip.width + "x" + clip.height);
+                                    Log.e("ClipRatio", "Clip original ratio: " + clipRatio);
+                                    Log.e("ClipRatio", "Resolution: " + settings.videoWidth + "x" + settings.videoHeight);
+                                    Log.e("ClipRatio", "Resolution ratio: " + resolutionRatio);
+                                    Log.e("ClipRatio", "PreviewAvailable: " + previewAvailableWidth + "x" + previewAvailableHeight);
+                                    Log.e("ClipRatio", "PreviewAvailable ratio: " + previewAvailableRatio);
+                                    Log.e("ClipRatio", "Scale: " + scaleX + "x" + scaleY);
+                                    Log.e("ClipRatio", "Scale ratio: " + scaleRatio);
+                                    Log.e("ClipRatio", "Actual size after scale: " + actualWidth + "x" + actualHeight);
+                                    Log.e("ClipRatio", "Actual ratio after scale: " + actualRatio);
+                                    Log.e("ClipRatio", "Render ScaleX: " + clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX));
+                                    Log.e("ClipRatio", "Render ScaleY: " + clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY));
+                                    Log.e("ClipRatio", "===============================");
 
                                     applyTransformation();
                                     applyPostTransformation();
@@ -3595,9 +3749,22 @@ frameRate = 60;
 
                         MediaFormat audioFormat = audioExtractor.getTrackFormat(audioTrackIndex);
 
-                        int sampleRate = audioFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE);
-                        int channelConfig = (audioFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT) == 1) ?
-                                AudioFormat.CHANNEL_OUT_MONO : AudioFormat.CHANNEL_OUT_STEREO;
+                        Integer sampleRateValue = audioFormat.containsKey(MediaFormat.KEY_SAMPLE_RATE)
+                                ? audioFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+                                : null;
+                        Integer channelCountValue = audioFormat.containsKey(MediaFormat.KEY_CHANNEL_COUNT)
+                                ? audioFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+                                : null;
+
+                        if (sampleRateValue == null || channelCountValue == null) {
+                            Log.e("ClipRenderer", "Audio format missing sample rate or channel count for clip: " + clip.clipName);
+                            break;
+                        }
+
+                        int sampleRate = sampleRateValue;
+                        int channelConfig = (channelCountValue == 1)
+                                ? AudioFormat.CHANNEL_OUT_MONO
+                                : AudioFormat.CHANNEL_OUT_STEREO;
                         int audioFormatPCM = AudioFormat.ENCODING_PCM_16BIT;
                         int minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormatPCM);
 
@@ -3649,8 +3816,32 @@ frameRate = 60;
 
                                 posX = (EditingActivity.renderToPreviewConversionX(clip.videoProperties.getValue(VideoProperties.ValueType.PosX), settings.videoWidth));
                                 posY = (EditingActivity.renderToPreviewConversionY(clip.videoProperties.getValue(VideoProperties.ValueType.PosY), settings.videoHeight));
-                                scaleX = (EditingActivity.renderToPreviewConversionScalingX(clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX), settings.videoWidth));
-                                scaleY = (EditingActivity.renderToPreviewConversionScalingY(clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY), settings.videoHeight));
+                                scaleX = (EditingActivity.renderToPreviewConversionScalingX(clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX), settings.videoWidth, settings.videoHeight));
+                                scaleY = (EditingActivity.renderToPreviewConversionScalingY(clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY), settings.videoWidth, settings.videoHeight));
+
+                                float clipRatio = (float) clip.width / clip.height;
+                                float resolutionRatio = (float) settings.videoWidth / settings.videoHeight;
+                                float previewAvailableRatio = previewAvailableWidth > 0 && previewAvailableHeight > 0 ? (float) previewAvailableWidth / previewAvailableHeight : 0;
+                                float scaleRatio = scaleX / scaleY;
+                                float actualWidth = clip.width * scaleX;
+                                float actualHeight = clip.height * scaleY;
+                                float actualRatio = actualHeight > 0 ? actualWidth / actualHeight : 0;
+
+                                Log.e("ClipRatio", "=== IMAGE CLIP RATIO DEBUG ===");
+                                Log.e("ClipRatio", "Clip: " + clip.clipName);
+                                Log.e("ClipRatio", "Clip original size: " + clip.width + "x" + clip.height);
+                                Log.e("ClipRatio", "Clip original ratio: " + clipRatio);
+                                Log.e("ClipRatio", "Resolution: " + settings.videoWidth + "x" + settings.videoHeight);
+                                Log.e("ClipRatio", "Resolution ratio: " + resolutionRatio);
+                                Log.e("ClipRatio", "PreviewAvailable: " + previewAvailableWidth + "x" + previewAvailableHeight);
+                                Log.e("ClipRatio", "PreviewAvailable ratio: " + previewAvailableRatio);
+                                Log.e("ClipRatio", "Scale: " + scaleX + "x" + scaleY);
+                                Log.e("ClipRatio", "Scale ratio: " + scaleRatio);
+                                Log.e("ClipRatio", "Actual size after scale: " + actualWidth + "x" + actualHeight);
+                                Log.e("ClipRatio", "Actual ratio after scale: " + actualRatio);
+                                Log.e("ClipRatio", "Render ScaleX: " + clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX));
+                                Log.e("ClipRatio", "Render ScaleY: " + clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY));
+                                Log.e("ClipRatio", "===============================");
                                 rot = (clip.videoProperties.getValue(VideoProperties.ValueType.Rot));
 
                                 applyTransformation();
@@ -3748,15 +3939,35 @@ frameRate = 60;
             if(textureView.getVisibility() == View.GONE) return;
             float clipTime = playheadTime - clip.startTime + clip.startClipTrim;
             long ptsUs = (long)(clipTime * 1_000_000); // override presentation timestamp
+
+            boolean needsSeek = (lastSeekPtsUs == -1 || Math.abs(ptsUs - lastSeekPtsUs) > 100_000);
+            if (needsSeek) {
+                videoExtractor.seekTo(ptsUs, MediaExtractor.SEEK_TO_PREVIOUS_SYNC);
+                lastSeekPtsUs = ptsUs;
+                MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
+                while (true) {
+                    int outputIndex = videoDecoder.dequeueOutputBuffer(bufferInfo, 0);
+                    if (outputIndex >= 0) {
+                        videoDecoder.releaseOutputBuffer(outputIndex, false);
+                    } else if (outputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                        continue;
+                    } else {
+                        break;
+                    }
+                }
+            }
+
             int inputIndex = videoDecoder.dequeueInputBuffer(0);
             if (inputIndex >= 0) {
                 ByteBuffer inputBuffer = videoDecoder.getInputBuffer(inputIndex);
                 int sampleSize = videoExtractor.readSampleData(inputBuffer, 0);
 
                 if (sampleSize >= 0) {
-                    videoExtractor.seekTo(ptsUs, MediaExtractor.SEEK_TO_PREVIOUS_SYNC);
-                    videoDecoder.queueInputBuffer(inputIndex, 0, sampleSize, ptsUs, 0);
-
+                    long sampleTimeUs = videoExtractor.getSampleTime();
+                    if (sampleTimeUs < 0) {
+                        sampleTimeUs = ptsUs;
+                    }
+                    videoDecoder.queueInputBuffer(inputIndex, 0, sampleSize, sampleTimeUs, 0);
                 } else {
                     videoDecoder.queueInputBuffer(inputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
                 }
@@ -3893,18 +4104,78 @@ frameRate = 60;
 
         private void attachGestureControls(TextureView tv, Clip clip, VideoSettings settings, EditingActivity editingActivity, TextView textCanvasControllerInfo) {
             final GestureDetector tapDrag = new GestureDetector(tv.getContext(), new GestureDetector.SimpleOnGestureListener() {
-                @Override public boolean onDown(MotionEvent e) { return true; } // must return true to receive events
+                @Override public boolean onDown(MotionEvent e) {
+                    initialPosX = posX;
+                    initialPosY = posY;
+                    startTouchX = e.getX();
+                    startTouchY = e.getY();
+                    return true;
+                }
                 @Override public boolean onScroll(MotionEvent e1, MotionEvent e2, float dx, float dy) {
-
+                    if(EditingActivity.selectedClip != clip) {
+                        editingActivity.selectingClip(clip);
+                    }
                     if(currentMode != EditMode.NONE && currentMode != EditMode.MOVE) return true;
                     currentMode = EditMode.MOVE;
 
-                    // Move
-                    posX -= dx;
-                    posY -= dy;
-                    posMatrixX -= dx / clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX);
-                    posMatrixY -= dy / clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY);
-                    applyTransformation();
+                    if(dragBorderDrawable == null) {
+                        dragBorderDrawable = new android.graphics.drawable.GradientDrawable();
+                        dragBorderDrawable.setColor(android.graphics.Color.TRANSPARENT);
+                        dragBorderDrawable.setStroke(
+                                (int) (1 * editingActivity.getResources().getDisplayMetrics().density),
+                                android.graphics.Color.YELLOW
+                        );
+                    }
+                    if (dragBorderView == null) {
+                        dragBorderView = new View(context);
+                        FrameLayout.LayoutParams borderParams =
+                                new FrameLayout.LayoutParams(textureView.getWidth(), textureView.getHeight());
+                        previewViewGroupRef.addView(dragBorderView, borderParams);
+                        dragBorderView.setX(textureView.getX());
+                        dragBorderView.setY(textureView.getY());
+                    }
+                    dragBorderView.setBackground(dragBorderDrawable);
+                    dragBorderView.setVisibility(View.VISIBLE);
+
+                    float deltaX = (e2.getX() - startTouchX) * CANVAS_DRAG_SENSITIVITY;
+                    float deltaY = (e2.getY() - startTouchY) * CANVAS_DRAG_SENSITIVITY;
+
+                    float newPosX = initialPosX + deltaX;
+                    float newPosY = initialPosY + deltaY;
+
+                    float clipDisplayWidth = textureView.getWidth() * scaleX;
+                    float clipDisplayHeight = textureView.getHeight() * scaleY;
+
+                    float previewWidth = previewViewGroupRef != null ? previewViewGroupRef.getWidth() : EditingActivity.previewAvailableWidth;
+                    float previewHeight = previewViewGroupRef != null ? previewViewGroupRef.getHeight() : EditingActivity.previewAvailableHeight;
+
+                    if (previewWidth > 0 && previewHeight > 0) {
+                        float minX = 0f;
+                        float maxX = previewWidth - clipDisplayWidth;
+                        float minY = 0f;
+                        float maxY = previewHeight - clipDisplayHeight;
+
+                        newPosX = Math.max(minX, Math.min(maxX, newPosX));
+                        newPosY = Math.max(minY, Math.min(maxY, newPosY));
+
+                        Log.d("ClipDragDebug",
+                                "onScroll clamp"
+                                        + " | clip=" + clip.clipName
+                                        + " | touch=(" + e2.getX() + "," + e2.getY() + ")"
+                                        + " | delta=(" + deltaX + "," + deltaY + ")"
+                                        + " | scale=(" + scaleX + "," + scaleY + ")"
+                                        + " | preview=(" + previewWidth + "," + previewHeight + ")"
+                                        + " | clipDisplay=(" + clipDisplayWidth + "," + clipDisplayHeight + ")"
+                                        + " | pos=(" + newPosX + "," + newPosY + ")"
+                                        + " | boundsX=[" + minX + "," + maxX + "]"
+                                        + " | boundsY=[" + minY + "," + maxY + "]"
+                        );
+                    }
+
+                    posX = newPosX;
+                    posY = newPosY;
+
+                    applyPostTransformation();
 
                     // Sync model
                     clip.videoProperties.setValue(EditingActivity.previewToRenderConversionX(posX, settings.videoWidth), VideoProperties.ValueType.PosX);
@@ -3921,16 +4192,16 @@ frameRate = 60;
 
             final ScaleGestureDetector scaler = new ScaleGestureDetector(tv.getContext(), new ScaleGestureDetector.SimpleOnScaleGestureListener() {
                 @Override public boolean onScale(ScaleGestureDetector detector) {
-
+                    if(EditingActivity.selectedClip != clip) {
+                        editingActivity.selectingClip(clip);
+                    }
                     if(currentMode != EditMode.NONE && currentMode != EditMode.SCALE && currentMode != EditMode.ROTATE) return true;
                     currentMode = EditMode.SCALE;
 
                     scaleX *= detector.getScaleFactor();
                     scaleY *= detector.getScaleFactor();
-                    scaleMatrixX *= detector.getScaleFactor();
-                    scaleMatrixY *= detector.getScaleFactor();
 
-                    applyTransformation();
+                    applyPostTransformation();
 
                     // TODO: Before we going further. Let calculate first the aspect ratio of video
                     //  only after that we based on the width and height of the following aspect ratio
@@ -3962,7 +4233,9 @@ frameRate = 60;
                     case MotionEvent.ACTION_POINTER_DOWN:
                     case MotionEvent.ACTION_MOVE:
                         if (event.getPointerCount() >= 2) {
-
+                            if(EditingActivity.selectedClip != clip) {
+                                editingActivity.selectingClip(clip);
+                            }
                             if(currentMode != EditMode.NONE && currentMode != EditMode.ROTATE && currentMode != EditMode.SCALE) break;
                             currentMode = EditMode.ROTATE;
 
@@ -3974,23 +4247,17 @@ frameRate = 60;
                             } else {
                                 float delta = normalizeAngle(angle - lastAngle[0]);
                                 rot += delta;
-                                rotMatrix += delta;
 
                                 // Normalize to [-360, 360]
                                 rot = ((rot + 360f) % 720f) - 360f;
-                                rotMatrix = ((rotMatrix + 360f) % 720f) - 360f;
 
                                 // Snap to nearest multiple of 90
                                 float nearest = Math.round(rot / Constants.CANVAS_ROTATE_SNAP_DEGREE) * Constants.CANVAS_ROTATE_SNAP_DEGREE;
                                 if (Math.abs(rot - nearest) <= Constants.CANVAS_ROTATE_SNAP_THRESHOLD_DEGREE) {
                                     rot = nearest;
                                 }
-                                nearest = Math.round(rotMatrix / Constants.CANVAS_ROTATE_SNAP_DEGREE) * Constants.CANVAS_ROTATE_SNAP_DEGREE;
-                                if (Math.abs(rotMatrix - nearest) <= Constants.CANVAS_ROTATE_SNAP_THRESHOLD_DEGREE) {
-                                    rotMatrix = nearest;
-                                }
 
-                                applyTransformation();
+                                applyPostTransformation();
                                 clip.videoProperties.setValue(rot, VideoProperties.ValueType.Rot);
 
                                 textCanvasControllerInfo.setText(
@@ -4008,7 +4275,12 @@ frameRate = 60;
                     case MotionEvent.ACTION_CANCEL:
                         lastAngle[0] = Float.NaN;
                         currentMode = EditMode.NONE;
+                        initialPosX = posX;
+                        initialPosY = posY;
                         applyPostTransformation();
+                        if (dragBorderView != null) {
+                            dragBorderView.setVisibility(View.GONE);
+                        }
                         break;
                 }
                 return true;
@@ -4027,23 +4299,61 @@ frameRate = 60;
         }
         private void applyPostTransformation() {
             textureView.post(() -> {
-                // Reset the matrix state for next drag
-                scaleMatrixX = 1;
-                scaleMatrixY = 1;
-                rotMatrix = 0;
-                posMatrixX = 0;
-                posMatrixY = 0;
                 matrix.reset();
 
+                float pivotX = 0f;
+                float pivotY = 0f;
+
+                // Scale và rotate quanh góc trên trái để posX/posY = 0 trùng top-left preview.
+                matrix.postScale(scaleX, scaleY, pivotX, pivotY);
+                matrix.postRotate(rot, pivotX, pivotY);
+                matrix.postTranslate(posX, posY);
+
+                textureView.setPivotX(0f);
+                textureView.setPivotY(0f);
                 textureView.setTransform(matrix);
                 textureView.invalidate();
 
+                // Tính bounding box thực tế sau transform để xem clip đang nằm ở đâu.
+                android.graphics.RectF mapped = new android.graphics.RectF(0, 0, textureView.getWidth(), textureView.getHeight());
+                matrix.mapRect(mapped);
 
-                textureView.setTranslationX(posX);
-                textureView.setTranslationY(posY);
-                textureView.setScaleX(scaleX);
-                textureView.setScaleY(scaleY);
-                textureView.setRotation(rot);
+                if (dragBorderView != null && dragBorderView.getVisibility() == View.VISIBLE) {
+                    FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) dragBorderView.getLayoutParams();
+                    lp.width = Math.round(mapped.width());
+                    lp.height = Math.round(mapped.height());
+                    dragBorderView.setLayoutParams(lp);
+                    dragBorderView.setTranslationX(mapped.left);
+                    dragBorderView.setTranslationY(mapped.top);
+                    dragBorderView.setRotation(rot);
+                    dragBorderView.setScaleX(1f);
+                    dragBorderView.setScaleY(1f);
+                }
+
+                float actualDisplayWidth = textureView.getWidth() * scaleX;
+                float actualDisplayHeight = textureView.getHeight() * scaleY;
+                float actualDisplayRatio = actualDisplayHeight > 0 ? actualDisplayWidth / actualDisplayHeight : 0;
+
+                int[] loc = new int[2];
+                previewViewGroupRef.getLocationOnScreen(loc);
+                int[] texLoc = new int[2];
+                textureView.getLocationOnScreen(texLoc);
+
+                Log.d("ClipDragDebug",
+                        "applyPostTransformation"
+                                + " | clip=" + clip.clipName
+                                + " | pos=(" + posX + "," + posY + ")"
+                                + " | scale=(" + scaleX + "," + scaleY + ")"
+                                + " | rot=" + rot
+                                + " | texSize=(" + textureView.getWidth() + "," + textureView.getHeight() + ")"
+                                + " | texXY=(" + textureView.getX() + "," + textureView.getY() + ")"
+                                + " | texScreen=(" + texLoc[0] + "," + texLoc[1] + ")"
+                                + " | parentSize=(" + previewViewGroupRef.getWidth() + "," + previewViewGroupRef.getHeight() + ")"
+                                + " | parentScreen=(" + loc[0] + "," + loc[1] + ")"
+                                + " | display=(" + actualDisplayWidth + "," + actualDisplayHeight + ")"
+                                + " | displayRatio=" + actualDisplayRatio
+                                + " | mappedRect=(" + mapped.left + "," + mapped.top + "," + mapped.right + "," + mapped.bottom + ")"
+                );
             });
         }
         private void applyPostMatrixTransformation() {

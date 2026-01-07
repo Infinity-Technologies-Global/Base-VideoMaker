@@ -372,12 +372,12 @@ public class FFmpegEdit {
 
                         String rotationExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, EditingActivity.VideoProperties.ValueType.RotInRadians);
 
-                        filterComplex.append("scale=iw*").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.ScaleX)).append(":ih*").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.ScaleX)).append(",") // in the ih* here, it should be ValueType.ScaleY, but for the temporal scaling then it will be scaleX too
-                                //.append("scale=").append(clip.width).append(":").append(clip.height).append(",")
+                        filterComplex
+                                .append("scale='iw*").append(scaleXExpr).append("':'ih*").append(scaleYExpr).append("',")
+                                .append("setsar=1,setdar=").append(settings.getVideoWidth()).append("/").append(settings.getVideoHeight()).append(",")
                                 .append("rotate='").append(rotationExpr).append("':ow=rotw('").append(rotationExpr).append("'):oh=roth('").append(rotationExpr).append("')")
                                 .append(":fillcolor=0x00000000").append(",")
                                 .append("format=rgba,colorchannelmixer=aa=").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.Opacity)).append(",")
-                                .append("zoompan=z=zoom*'").append(scaleXExpr).append("':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'").append(",")
                                 .append("setpts='(PTS-STARTPTS)/").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.Speed)).append("+").append(clip.startTime).append("/TB'").append(",");
                     }
                     else
@@ -391,7 +391,7 @@ public class FFmpegEdit {
                         // the clip has merge or there are no keyframe to combine
 
                         filterComplex.append("scale=iw*").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.ScaleX)).append(":ih*").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.ScaleY)).append(",")
-                                //.append("scale=").append(clip.width).append(":").append(clip.height).append(",")
+                                .append("setsar=1,setdar=").append(settings.getVideoWidth()).append("/").append(settings.getVideoHeight()).append(",")
                                 .append("rotate=").append(radiansRotation).append(":ow=rotw(").append(radiansRotation).append("):oh=roth(").append(radiansRotation).append(")")
                                 .append(":fillcolor=0x00000000").append(",")
                                 .append("format=rgba,colorchannelmixer=aa=").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.Opacity)).append(",")
