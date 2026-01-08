@@ -22,4 +22,15 @@ public class TimelineUtils {
         }
         throw new Exception("No video track found!");
     }
+
+    public static int findAudioTrackIndex(MediaExtractor extractor) throws Exception {
+        for (int i = 0; i < extractor.getTrackCount(); i++) {
+            MediaFormat format = extractor.getTrackFormat(i);
+            String mime = format.getString(MediaFormat.KEY_MIME);
+            if (mime.startsWith("audio/")) {
+                return i;
+            }
+        }
+        throw new Exception("No audio track found!");
+    }
 }

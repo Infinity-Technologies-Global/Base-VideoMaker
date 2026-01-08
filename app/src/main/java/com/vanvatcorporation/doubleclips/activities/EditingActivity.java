@@ -28,6 +28,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.provider.OpenableColumns;
 import android.util.DisplayMetrics;
 import android.view.GestureDetector;
@@ -89,6 +90,14 @@ import com.vanvatcorporation.doubleclips.impl.TrackFrameLayout;
 import com.vanvatcorporation.doubleclips.impl.java.RunnableImpl;
 import com.vanvatcorporation.doubleclips.manager.LoggingManager;
 import com.vanvatcorporation.doubleclips.utils.TimelineUtils;
+
+import androidx.media3.common.MediaItem;
+import androidx.media3.common.Player;
+import androidx.media3.common.PlaybackParameters;
+import androidx.media3.common.AudioAttributes;
+import androidx.media3.common.C;
+import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.common.util.UnstableApi;
 
 import java.io.File;
 import java.io.IOException;
@@ -188,7 +197,8 @@ public class EditingActivity extends AppCompatActivityImpl {
         }
     };
     private boolean isPlaying = false;
-    private float frameInterval = 1f / 30f; // 30fps
+    private float frameInterval = 1f / 60f; // smaller step for smoother timeline updates
+    private float playbackSpeed = 1f; // keep real-time speed for stable A/V sync
     private Handler playbackHandler = new Handler(Looper.getMainLooper());
     private Handler resolutionUpdateHandler = new Handler(Looper.getMainLooper());
     private Runnable resolutionUpdateRunnable;
@@ -247,21 +257,34 @@ public class EditingActivity extends AppCompatActivityImpl {
                     } else if (data.getData() != null) {
                         // Single file selected
                         Uri fileUri = data.getData();
-                        // Process the file URI
-                        parseFileIntoWorkPathAndAddToTrack(fileUri, 0);
+                        // Process the file URI on background thread
+                        parseFileIntoWorkPathAndAddToTrackAsync(fileUri, 0);
                     }
                 }
             }
     );
 
+    float parseFileIntoWorkPathAndAddToTrackAsync(Uri uri, float offsetTime) {
+        if(uri == null) return offsetTime;
+        if(selectedTrack == null) return offsetTime;
+        
+        // Process on background thread to avoid ANR
+        importExecutor.execute(() -> {
+            parseFileIntoWorkPathAndAddToTrack(uri, offsetTime);
+        });
+        
+        return offsetTime; // Return immediately
+    }
+
     float parseFileIntoWorkPathAndAddToTrack(Uri uri, float offsetTime)
     {
-
         if(uri == null) return offsetTime;
         if(selectedTrack == null) return offsetTime;
         String filename = getFileName(uri);
         String clipPath = IOHelper.CombinePath(properties.getProjectPath(), Constants.DEFAULT_CLIP_DIRECTORY, filename);
         String previewClipPath = IOHelper.CombinePath(properties.getProjectPath(), Constants.DEFAULT_PREVIEW_CLIP_DIRECTORY, filename);
+        
+        // Copy file - this is heavy but now on background thread
         IOHelper.writeToFileAsRaw(this, clipPath, IOHelper.readFromFileAsRaw(this, getContentResolver(), uri));
 
         float duration = 3f; // fallback default if needed
@@ -279,50 +302,45 @@ public class EditingActivity extends AppCompatActivityImpl {
 
 
 
-        if(type == ClipType.VIDEO || type == ClipType.AUDIO)
+        boolean isVideoHasAudio = false;
+        int width = 0, height = 0;
+        
+        // Use MediaExtractor for metadata - faster and lighter than ExoPlayer for just metadata
+        // ExoPlayer is better for playback, but MediaExtractor is faster for metadata extraction
+        if(type == ClipType.VIDEO || type == ClipType.AUDIO) {
             try {
                 MediaExtractor extractor = new MediaExtractor();
                 extractor.setDataSource(clipPath);
 
-
+                boolean hasVideoTrack = false;
+                boolean hasAudioTrack = false;
 
                 for (int i = 0; i < extractor.getTrackCount(); i++) {
                     MediaFormat format = extractor.getTrackFormat(i);
                     String trackMime = format.getString(MediaFormat.KEY_MIME);
                     if (trackMime != null) {
-                        // For MOV type, it has 2 track, so before this version, this applied to the below ClipType, which turn MOV to audio type
-                        //mimeType = trackMime;
-
+                        if (trackMime.startsWith("video/")) {
+                            hasVideoTrack = true;
+                            if (format.containsKey(MediaFormat.KEY_WIDTH)) {
+                                width = format.getInteger(MediaFormat.KEY_WIDTH);
+                            }
+                            if (format.containsKey(MediaFormat.KEY_HEIGHT)) {
+                                height = format.getInteger(MediaFormat.KEY_HEIGHT);
+                            }
+                        }
+                        if (trackMime.startsWith("audio/")) {
+                            hasAudioTrack = true;
+                            isVideoHasAudio = true;
+                        }
                         if (format.containsKey(MediaFormat.KEY_DURATION)) {
                             long d = format.getLong(MediaFormat.KEY_DURATION);
                             duration = d / 1_000_000f; // microseconds to seconds
-                            break;
                         }
                     }
                 }
-
                 extractor.release();
             } catch (Exception e) {
-                LoggingManager.LogExceptionToNoteOverlay(this, e);
-            }
-
-
-        boolean isVideoHasAudio = false;
-        int width = 0, height = 0;
-        // Video check
-        if(type == ClipType.VIDEO)
-        {
-            try {
-                MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-                retriever.setDataSource(clipPath);
-
-                width = Integer.parseInt(Objects.requireNonNull(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)));
-                height = Integer.parseInt(Objects.requireNonNull(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)));
-
-                isVideoHasAudio = "yes".equals(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO));
-                retriever.close();
-            } catch (IOException e) {
-                LoggingManager.LogExceptionToNoteOverlay(this, e);
+                Log.e("ImportFile", "Error extracting metadata: " + e.getMessage());
             }
         }
         if(type == ClipType.IMAGE)
@@ -337,32 +355,61 @@ public class EditingActivity extends AppCompatActivityImpl {
 
         Clip newClip = new Clip(filename, currentTime + offsetTime, duration, selectedTrack.trackIndex, type, isVideoHasAudio, width, height);
 
-
-        addClipToTrack(selectedTrack, newClip);
-
-        offsetTime += duration;
-
-        regeneratingTimelineRenderer();
-
-        previewRenderQueue.enqueue(new FFmpegEdit.FfmpegRenderQueue.FfmpegRenderQueueInfo("Preview Generation",
-                () -> {
-                    processingPreview(newClip, clipPath, previewClipPath);
-                }));
-
-        if(type == ClipType.VIDEO && isVideoHasAudio)
-        {
-            previewRenderQueue.enqueue(new FFmpegEdit.FfmpegRenderQueue.FfmpegRenderQueueInfo("Preview Generation",
-                    () -> {
-                        // Extract audio from Video if it has audio
-                        Clip audioClip = new Clip(newClip);
-                        audioClip.type = ClipType.AUDIO;
-                        processingPreview(audioClip, clipPath, previewClipPath);
-                    }));
+        // Calculate scale to fit clip into preview (fit inside, maintain aspect ratio)
+        if (width > 0 && height > 0 && settings != null && settings.videoWidth > 0 && settings.videoHeight > 0) {
+            float scaleToFitX = (float) settings.videoWidth / width;
+            float scaleToFitY = (float) settings.videoHeight / height;
+            // Use minimum scale to fit entirely inside preview (letterbox/pillarbox)
+            float fitScale = Math.min(scaleToFitX, scaleToFitY);
+            newClip.videoProperties.valueScaleX = fitScale;
+            newClip.videoProperties.valueScaleY = fitScale;
+            
+            // Center the clip in preview
+            float scaledWidth = width * fitScale;
+            float scaledHeight = height * fitScale;
+            float centerPosX = (settings.videoWidth - scaledWidth) / 2f;
+            float centerPosY = (settings.videoHeight - scaledHeight) / 2f;
+            newClip.videoProperties.valuePosX = centerPosX;
+            newClip.videoProperties.valuePosY = centerPosY;
+            
+            Log.d("ClipFit", "Clip " + filename + " | size=" + width + "x" + height 
+                    + " | preview=" + settings.videoWidth + "x" + settings.videoHeight
+                    + " | fitScale=" + fitScale
+                    + " | pos=(" + centerPosX + "," + centerPosY + ")");
         }
 
+        // Update UI on main thread
+        final Clip clipToAdd = newClip;
+        runOnUiThread(() -> {
+            addClipToTrack(selectedTrack, clipToAdd);
+            
+            // Debounce timeline rebuild - only rebuild after delay to avoid multiple rebuilds
+            // Increased debounce to 1000ms to reduce UI updates during heavy imports
+            if (timelineRebuildRunnable != null) {
+                timelineRebuildHandler.removeCallbacks(timelineRebuildRunnable);
+            }
+            timelineRebuildRunnable = () -> regeneratingTimelineRenderer();
+            timelineRebuildHandler.postDelayed(timelineRebuildRunnable, 1000); // 1000ms debounce for heavy imports
+        });
 
+        // Skip preview generation - ExoPlayer will use original files directly
+        // previewRenderQueue.enqueue(new FFmpegEdit.FfmpegRenderQueue.FfmpegRenderQueueInfo("Preview Generation",
+        //         () -> {
+        //             processingPreview(newClip, clipPath, previewClipPath);
+        //         }));
 
-        return offsetTime;
+        // if(type == ClipType.VIDEO && isVideoHasAudio)
+        // {
+        //     previewRenderQueue.enqueue(new FFmpegEdit.FfmpegRenderQueue.FfmpegRenderQueueInfo("Preview Generation",
+        //             () -> {
+        //                 // Extract audio from Video if it has audio
+        //                 Clip audioClip = new Clip(newClip);
+        //                 audioClip.type = ClipType.AUDIO;
+        //                 processingPreview(audioClip, clipPath, previewClipPath);
+        //             }));
+        // }
+
+        return offsetTime + duration;
     }
 
     void processingPreview(Clip clip, String originalClipPath, String previewClipPath)
@@ -532,27 +579,14 @@ public class EditingActivity extends AppCompatActivityImpl {
 
         // TODO: Find a way to render 2 uncancelable dialog for these commented line of code to work
 
-        ExecutorService service = Executors.newSingleThreadExecutor();
-        service.execute(() -> {
-            int index = 0;
-            AtomicReference<Float> offsetTime = new AtomicReference<>((float) 0);
-//            previewProgressBar.setMax(100);
+        // Process all files sequentially on background thread to avoid ANR
+        // This ensures offsetTime is calculated correctly while keeping main thread free
+        importExecutor.execute(() -> {
+            float offsetTime = 0f;
             for (Uri uri : uris) {
-                index++;
-                int percent = ((index * 100) / uris.length);
-
-                runOnUiThread(() -> {
-                    offsetTime.set(parseFileIntoWorkPathAndAddToTrack(uri, offsetTime.get()));
-//                    processingText.setText(getString(R.string.processing));
-//                    previewProgressBar.setProgress(percent);
-//                    processingPercent.setText(percent + "%");
-                });
-                try {
-                    Thread.sleep(200);
-                } catch (InterruptedException e) {
-
-                }
-//                if(index == uris.length) dialog.dismiss();
+                // Process each file sequentially on background thread
+                // This ensures correct offsetTime calculation and prevents ANR
+                offsetTime = parseFileIntoWorkPathAndAddToTrack(uri, offsetTime);
             }
         });
 
@@ -678,14 +712,26 @@ public class EditingActivity extends AppCompatActivityImpl {
         timelineScroll.getViewTreeObserver().addOnScrollChangedListener(() -> {
             rulerScroll.scrollTo(timelineScroll.getScrollX(), 0);
 
-            if(!isPlaying)
-                currentTime = (timelineScroll.getScrollX()) / (float) pixelsPerSecond;
+            if(!isPlaying) {
+                float newCurrentTime = (timelineScroll.getScrollX()) / (float) pixelsPerSecond;
+                currentTime = newCurrentTime;
+            }
 
             // Get time (- centerOffset mean remove the start spacer)
             //float totalSeconds = (timelineScroll.getScrollX()) / (float) pixelsPerSecond;
             currentTimePosText.post(() -> currentTimePosText.setText(DateHelper.convertTimestampToMMSSFormat((long) (currentTime * 1000L)) + String.format(".%02d", ((long)((currentTime % 1) * 100)))));
 
-            timelineRenderer.updateTime(currentTime, !isPlaying);
+            boolean isSeekingOnly = !isPlaying;
+            timelineRenderer.updateTime(currentTime, isSeekingOnly);
+            
+            // Trigger thumbnail rendering when seeking (debounced to avoid too frequent calls)
+            if (isSeekingOnly) {
+                // Debounce: only trigger if time changed significantly or enough time passed since last trigger
+                if (Math.abs(currentTime - lastThumbnailTriggerTime) > 0.5f) {
+                    triggerThumbnailRenderingDebounced(currentTime);
+                    lastThumbnailTriggerTime = currentTime;
+                }
+            }
         });
 
 
@@ -1312,9 +1358,17 @@ public class EditingActivity extends AppCompatActivityImpl {
             @Override
             public void run() {
                 if (!isPlaying) return;
-                currentTime += frameInterval;
+                currentTime += frameInterval * playbackSpeed;
 
                 timelineRenderer.updateTime(currentTime, false);
+                
+                // Trigger thumbnail rendering periodically during playback (every 2 seconds)
+                if ((int)(currentTime * 10) % 20 == 0) { // Every 2 seconds (20 * 0.1s)
+                    if (Math.abs(currentTime - lastThumbnailTriggerTime) > 1.5f) { // Only trigger if at least 1.5s passed
+                        triggerThumbnailRenderingDebounced(currentTime);
+                        lastThumbnailTriggerTime = currentTime;
+                    }
+                }
 
                 int newScrollX = (int) (currentTime * pixelsPerSecond);
                 timelineScroll.scrollTo(newScrollX, 0);
@@ -1338,17 +1392,74 @@ public class EditingActivity extends AppCompatActivityImpl {
         playbackHandler.removeCallbacks(playbackLoop);
         playPauseButton.setImageResource(R.drawable.baseline_play_circle_24);
 
+        // Stop ExoPlayer for all clip renderers
+        if (timelineRenderer != null && timelineRenderer.trackLayers != null) {
+            for (List<ClipRenderer> track : timelineRenderer.trackLayers) {
+                for (ClipRenderer cr : track) {
+                    if (cr.exoPlayer != null) {
+                        cr.exoPlayer.setPlayWhenReady(false);
+                        cr.isPlaying = false;
+                    }
+                }
+            }
+        }
+
         timelineRenderer.updateTime(currentTime, true);
     }
+    private ExecutorService timelineBuildExecutor = Executors.newSingleThreadExecutor();
+    private ExecutorService importExecutor = Executors.newFixedThreadPool(1); // Single thread to process files sequentially and avoid overwhelming system
+    private ExecutorService thumbnailExecutor = Executors.newFixedThreadPool(4); // Multiple threads for parallel thumbnail rendering
+    private Handler timelineRebuildHandler = new Handler(Looper.getMainLooper());
+    private Runnable timelineRebuildRunnable;
+    private Handler thumbnailTriggerHandler = new Handler(Looper.getMainLooper());
+    private Runnable thumbnailTriggerRunnable;
+    private float lastThumbnailTriggerTime = -1f; // Track last triggered time to avoid duplicate triggers
+    
+    // Track which thumbnails have been rendered for each clip
+    // Map<Clip, Set<Integer>> where Integer is the frame index (0-based, 1 frame per second)
+    private java.util.Map<Clip, java.util.Set<Integer>> renderedThumbnails = new java.util.concurrent.ConcurrentHashMap<>();
+
     private void regeneratingTimelineRenderer()
     {
-
+        Log.d("TimelineRenderer", "regeneratingTimelineRenderer called");
         LoggingManager.LogToToast(this, "Begin prepare for preview!");
-        //refreshPreviewClip();
-
-        // TODO: Tested for dragging back and forth clips. They're doing fine with the extractor SYNC_EXACT
-        //  Limit the time of refreshing entire timeline like this.
+        
+        // Build timeline on background thread to avoid ANR
+        timelineBuildExecutor.execute(() -> {
+            Log.d("TimelineRenderer", "Executing buildTimeline on background thread");
+            // DON'T release old renderers here - buildTimeline() will handle migration and release unused ones
+            // This prevents exoPlayer from being null when trying to migrate
+            runOnUiThread(() -> {
+                // Only remove views, don't release renderers yet
+                previewViewGroup.removeAllViews();
+                
+                // Add black background
+                FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                );
+                View blackBox = new View(this);
+                blackBox.setBackgroundColor(Color.BLACK);
+                previewViewGroup.addView(blackBox, params);
+            });
+            
+            // Build timeline on background thread
         timelineRenderer.buildTimeline(timeline, properties, settings, this, previewViewGroup, textCanvasControllerInfo);
+            
+            // Re-add textureViews of migrated ClipRenderers to previewViewGroup on UI thread
+            runOnUiThread(() -> {
+                if (timelineRenderer != null) {
+                    timelineRenderer.reAddMigratedViews(previewViewGroup);
+                }
+            });
+            
+            // Update preview on UI thread when done
+            runOnUiThread(() -> {
+                if (timelineRenderer != null) {
+                    timelineRenderer.updateTime(currentTime, true);
+                }
+            });
+        });
     }
     private void setCurrentTime(float value)
     {
@@ -1417,7 +1528,7 @@ public class EditingActivity extends AppCompatActivityImpl {
         super.onPause();
 
         if (timelineRenderer != null) {
-            timelineRenderer.release();
+        timelineRenderer.release();
         }
         Timeline.saveTimeline(this, timeline, properties, settings);
     }
@@ -1511,14 +1622,46 @@ public class EditingActivity extends AppCompatActivityImpl {
         //params.topMargin = 4; // 8
         clipView.setX(getTimeInX(data.startTime));
         clipView.setLayoutParams(params);
-        clipView.setFilledImageBitmap(combineThumbnails(extractThumbnail(this, data.getAbsolutePreviewPath(properties), data)));
         clipView.setTag(data);
 
+        // Extract thumbnail on background thread to avoid ANR
+        // Set placeholder first, then update with actual thumbnail when ready
+        String previewPath = data.getAbsolutePreviewPath(properties);
+        String originalPath = data.getAbsolutePath(properties.getProjectPath());
+        
+        importExecutor.execute(() -> {
+            try {
+                // Try preview path first, fallback to original path if preview doesn't exist
+                String thumbnailPath = previewPath;
+                if (!IOHelper.isFileExist(thumbnailPath)) {
+                    thumbnailPath = originalPath;
+                }
+                
+                // Wait for file to be ready (retry up to 5 times with 200ms delay)
+                int retries = 0;
+                while (!IOHelper.isFileExist(thumbnailPath) && retries < 5) {
+                    try {
+                        Thread.sleep(200);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                    retries++;
+                }
+                
+                if (!IOHelper.isFileExist(thumbnailPath)) {
+                    Log.w("Thumbnail", "File not found after retries: " + thumbnailPath);
+                    return; // Skip thumbnail if file doesn't exist
+                }
+                
+                // Extract thumbnails progressively - only 20 seconds before currentTime, render parallel
+                extractThumbnailsProgressively(this, thumbnailPath, data, clipView, currentTime);
+            } catch (Exception e) {
+                Log.e("Thumbnail", "Error extracting thumbnail from " + previewPath + ": " + e.getMessage(), e);
+            }
+        });
 
         data.registerClipHandle(clipView, this, timelineScroll);
-
-
-
 
         clipView.post(() -> {
             updateCurrentClipEnd();
@@ -1527,9 +1670,6 @@ public class EditingActivity extends AppCompatActivityImpl {
                 addKeyframeUi(data, keyframe);
             }
         });
-
-
-
 
         trackLayout.addView(clipView);
         handleClipInteraction(clipView);
@@ -2403,6 +2543,9 @@ public class EditingActivity extends AppCompatActivityImpl {
 
     private static Bitmap combineThumbnails(List<Bitmap> frames)
     {
+        if (frames == null || frames.isEmpty() || frames.get(0) == null) {
+            return null;
+        }
         int totalWidth = frames.size() * frames.get(0).getWidth();
         int height = frames.get(0).getHeight();
 
@@ -2411,11 +2554,272 @@ public class EditingActivity extends AppCompatActivityImpl {
 
         int x = 0;
         for (Bitmap bmp : frames) {
+            if (bmp != null) {
             canvas.drawBitmap(bmp, x, 0, null);
             x += bmp.getWidth();
+            }
         }
 
         return combined;
+    }
+
+    // Extract thumbnails progressively - only 20 seconds before currentTime, render parallel
+    private void extractThumbnailsProgressively(Context context, String filePath, Clip clip, ImageGroupView clipView, float currentTime) {
+        if (clip.type != ClipType.VIDEO) {
+            // For non-video, use normal extraction
+            List<Bitmap> thumbnails = extractThumbnail(context, filePath, clip);
+            if (thumbnails != null && !thumbnails.isEmpty()) {
+                Bitmap thumbnail = combineThumbnails(thumbnails);
+                if (thumbnail != null) {
+                    runOnUiThread(() -> {
+                        if (clipView.getTag() == clip) {
+                            clipView.setFilledImageBitmap(thumbnail);
+                        }
+                    });
+                }
+            }
+            return;
+        }
+
+        try {
+            MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+            retriever.setDataSource(filePath);
+
+            long durationMs = (long) (clip.duration * 1000);
+            int totalFrameCount = (int) Math.max(1, Math.ceil((double) durationMs / 1000)); // 1 thumbnail per second
+            int originalWidth = Integer.parseInt(Objects.requireNonNull(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)));
+            int originalHeight = Integer.parseInt(Objects.requireNonNull(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)));
+
+            int desiredWidth = originalWidth / Constants.SAMPLE_SIZE_PREVIEW_CLIP;
+            int desiredHeight = originalHeight / Constants.SAMPLE_SIZE_PREVIEW_CLIP;
+
+            // Initialize rendered thumbnails set for this clip if not exists
+            renderedThumbnails.putIfAbsent(clip, java.util.concurrent.ConcurrentHashMap.newKeySet());
+            java.util.Set<Integer> renderedFrames = renderedThumbnails.get(clip);
+            
+            // Calculate which frames to render: 20 seconds before and 10 seconds after currentTime
+            // Frame index is calculated from clip.startTime
+            float clipTimeInTimeline = currentTime - clip.startTime;
+            if (clipTimeInTimeline < 0) clipTimeInTimeline = 0;
+            if (clipTimeInTimeline > clip.duration) clipTimeInTimeline = clip.duration;
+            
+            // Calculate frame index for currentTime (0-based, 1 frame per second)
+            int currentFrameIndex = (int) Math.floor(clipTimeInTimeline);
+            
+            // Determine render range: 20 seconds before, 10 seconds after currentTime
+            int secondsBefore = 5;
+            int secondsAfter = 5;
+            int startFrameIndex = Math.max(0, currentFrameIndex - secondsBefore);
+            int endFrameIndex = Math.min(totalFrameCount - 1, currentFrameIndex + secondsAfter);
+            
+            // Determine which frames need to be rendered
+            java.util.List<Integer> framesToRender = new java.util.ArrayList<>();
+            synchronized (renderedFrames) {
+                for (int i = startFrameIndex; i <= endFrameIndex; i++) {
+                    if (!renderedFrames.contains(i)) {
+                        framesToRender.add(i);
+                    }
+                }
+            }
+            
+            if (framesToRender.isEmpty()) {
+                retriever.release();
+                retriever.close();
+                // Even if no new frames to render, ensure bitmap is displayed
+                if (clipView.getFilledImageBitmap() == null) {
+                    // Create empty bitmap if none exists
+                    int frameWidth = desiredWidth;
+                    Bitmap emptyBitmap = Bitmap.createBitmap(frameWidth * totalFrameCount, desiredHeight, Bitmap.Config.ARGB_8888);
+                    runOnUiThread(() -> {
+                        if (clipView.getTag() == clip) {
+                            clipView.setFilledImageBitmap(emptyBitmap);
+                        }
+                    });
+                }
+                return; // All needed frames already rendered
+            }
+            
+            // Create combined bitmap if not exists
+            final int frameWidth = desiredWidth;
+            final int requiredBitmapWidth = frameWidth * totalFrameCount;
+            Bitmap currentCombined = null;
+            
+            // Try to get existing combined bitmap from view
+            if (clipView.getFilledImageBitmap() != null) {
+                Bitmap existingBitmap = clipView.getFilledImageBitmap();
+                // Check if existing bitmap has correct size
+                if (existingBitmap.getWidth() == requiredBitmapWidth && existingBitmap.getHeight() == desiredHeight) {
+                    // Copy to mutable bitmap if size matches
+                    currentCombined = existingBitmap.copy(Bitmap.Config.ARGB_8888, true);
+                } else {
+                    // Size doesn't match, create new bitmap with correct size
+                    currentCombined = Bitmap.createBitmap(requiredBitmapWidth, desiredHeight, Bitmap.Config.ARGB_8888);
+                    Canvas tempCanvas = new Canvas(currentCombined);
+                    // Draw existing bitmap at position 0 if it fits
+                    if (existingBitmap.getWidth() <= requiredBitmapWidth) {
+                        tempCanvas.drawBitmap(existingBitmap, 0, 0, null);
+                    }
+                }
+            } else {
+                // Create new combined bitmap with full size
+                currentCombined = Bitmap.createBitmap(requiredBitmapWidth, desiredHeight, Bitmap.Config.ARGB_8888);
+            }
+            
+            // Create canvas from bitmap (final for lambda)
+            final Bitmap finalCombined = currentCombined.isMutable() ? currentCombined : currentCombined.copy(Bitmap.Config.ARGB_8888, true);
+            final Canvas canvas = new Canvas(finalCombined);
+            
+            // Render frames in parallel
+            // Note: MediaMetadataRetriever is not thread-safe, so we create a new retriever for each thread
+            java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(framesToRender.size());
+            java.util.concurrent.atomic.AtomicInteger renderedCount = new java.util.concurrent.atomic.AtomicInteger(0);
+            
+            for (int frameIndex : framesToRender) {
+                final int finalFrameIndex = frameIndex;
+                thumbnailExecutor.execute(() -> {
+                    MediaMetadataRetriever threadRetriever = null;
+                    try {
+                        // Create a new retriever for this thread (MediaMetadataRetriever is not thread-safe)
+                        threadRetriever = new MediaMetadataRetriever();
+                        threadRetriever.setDataSource(filePath);
+                        
+                        // Calculate time: start from clip.startClipTrim, then each second
+                        long timeUs = (long) (clip.startClipTrim * 1_000_000) + ((durationMs * 1000L * finalFrameIndex) / totalFrameCount);
+                        
+                        Bitmap frame;
+                        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                            frame = threadRetriever.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, desiredWidth, desiredHeight);
+                        } else {
+                            Bitmap originalFrame = threadRetriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+                            if (originalFrame != null) {
+                                frame = Bitmap.createScaledBitmap(originalFrame, desiredWidth, desiredHeight, true);
+                            } else {
+                                frame = null;
+                            }
+                        }
+                        
+                        if (frame != null) {
+                            // Draw frame at its position (thread-safe with synchronized)
+                            synchronized (canvas) {
+                                int x = finalFrameIndex * frameWidth;
+                                canvas.drawBitmap(frame, x, 0, null);
+                            }
+                            
+                            // Mark as rendered
+                            synchronized (renderedFrames) {
+                                renderedFrames.add(finalFrameIndex);
+                            }
+                            
+                            renderedCount.incrementAndGet();
+                            
+                            // Update UI immediately with current progress
+                            final Bitmap combinedCopy;
+                            synchronized (canvas) {
+                                combinedCopy = finalCombined.copy(Bitmap.Config.ARGB_8888, false);
+                            }
+                            if (combinedCopy != null) {
+                                runOnUiThread(() -> {
+                                    if (clipView.getTag() == clip) {
+                                        // Only update if view still exists and tag matches
+                                        clipView.setFilledImageBitmap(combinedCopy);
+                                    }
+                                });
+                            }
+                        }
+                    } catch (Exception e) {
+                        Log.e("Thumbnail", "Error extracting frame " + finalFrameIndex + " for clip " + clip.clipName + ": " + e.getMessage(), e);
+                    } finally {
+                        if (threadRetriever != null) {
+                            try {
+                                threadRetriever.release();
+                                threadRetriever.close();
+                            } catch (Exception e) {
+                                Log.e("Thumbnail", "Error releasing retriever: " + e.getMessage());
+                            }
+                        }
+                        latch.countDown();
+                    }
+                });
+            }
+            
+            // Wait for all frames to be rendered
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            
+            retriever.release();
+            retriever.close();
+            
+            // Final update: ensure the complete bitmap is displayed after all frames are rendered
+            final Bitmap finalBitmapCopy = finalCombined.copy(Bitmap.Config.ARGB_8888, false);
+            if (finalBitmapCopy != null) {
+                runOnUiThread(() -> {
+                    if (clipView.getTag() == clip) {
+                        clipView.setFilledImageBitmap(finalBitmapCopy);
+                    }
+                });
+            }
+            
+            Log.d("Thumbnail", "Rendered " + renderedCount.get() + " thumbnails for clip " + clip.clipName + " (frames " + startFrameIndex + "-" + endFrameIndex + ", currentFrame=" + currentFrameIndex + ", total=" + totalFrameCount + ")");
+        } catch (Exception e) {
+            Log.e("Thumbnail", "Error extracting thumbnails progressively: " + e.getMessage(), e);
+        }
+    }
+    
+    // Trigger thumbnail rendering for visible clips when currentTime changes significantly (debounced)
+    private void triggerThumbnailRenderingDebounced(float newCurrentTime) {
+        // Remove any pending thumbnail trigger
+        thumbnailTriggerHandler.removeCallbacks(thumbnailTriggerRunnable);
+        
+        // Create new runnable with current time
+        final float finalCurrentTime = newCurrentTime;
+        thumbnailTriggerRunnable = () -> {
+            triggerThumbnailRendering(finalCurrentTime);
+        };
+        
+        // Debounce: wait 200ms before triggering to avoid too frequent calls during fast scrolling
+        thumbnailTriggerHandler.postDelayed(thumbnailTriggerRunnable, 200);
+    }
+    
+    // Trigger thumbnail rendering for visible clips when currentTime changes significantly
+    private void triggerThumbnailRendering(float newCurrentTime) {
+        if (timeline == null || timeline.tracks == null) return;
+        
+        Log.d("Thumbnail", "Triggering thumbnail rendering for currentTime: " + newCurrentTime);
+        
+        for (Track track : timeline.tracks) {
+            for (Clip clip : track.clips) {
+                // Check if clip is visible at newCurrentTime
+                if (newCurrentTime >= clip.startTime && newCurrentTime <= clip.startTime + clip.duration) {
+                    if (clip.type == ClipType.VIDEO && clip.viewRef != null) {
+                        // Get clip view
+                        ImageGroupView clipView = clip.viewRef;
+                        if (clipView != null) {
+                            // Trigger thumbnail rendering for this clip
+                            String previewPath = clip.getAbsolutePreviewPath(properties);
+                            String originalPath = clip.getAbsolutePath(properties.getProjectPath());
+                            String thumbnailPath = previewPath;
+                            if (!IOHelper.isFileExist(thumbnailPath)) {
+                                thumbnailPath = originalPath;
+                            }
+                            
+                            if (IOHelper.isFileExist(thumbnailPath)) {
+                                // Make all variables final for lambda
+                                final String finalThumbnailPath = thumbnailPath;
+                                final ImageGroupView finalClipView = clipView;
+                                final Clip finalClip = clip;
+                                final float finalCurrentTime = newCurrentTime;
+                                thumbnailExecutor.execute(() -> {
+                                    extractThumbnailsProgressively(this, finalThumbnailPath, finalClip, finalClipView, finalCurrentTime);
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
 
@@ -3583,25 +3987,20 @@ frameRate = 60;
     }
 
 
+    @UnstableApi
     public static class ClipRenderer {
         public final Clip clip;
 
-        private MediaExtractor videoExtractor;
-        private MediaCodec videoDecoder;
-
-        private MediaExtractor audioExtractor;
-        private AudioTrack audioTrack;
-        public boolean isPlaying;
-
+        private ExoPlayer exoPlayer; // ExoPlayer handles both video and audio
         private TextureView textureView;
         private Context context;
         private EditingActivity editingActivity;
         private FrameLayout previewViewGroupRef;
+        private MainAreaScreen.ProjectData projectData;
 
-        private long lastSeekPtsUs = -1;
-
-        private ExecutorService renderThreadExecutorAudio = Executors.newFixedThreadPool(1);
-        private ExecutorService renderThreadExecutorVideo = Executors.newFixedThreadPool(1);
+        public boolean isPlaying;
+        private boolean isExoPlayerPrepared = false; // Lazy loading flag
+        private Player.Listener exoPlayerListener; // Store listener to remove it later
 
 
 
@@ -3621,12 +4020,16 @@ frameRate = 60;
         private View dragBorderView;
         private android.graphics.drawable.GradientDrawable dragBorderDrawable;
 
+        private long lastSeekPositionMs = -1;
+        private float lastPlayheadTime = -1f;
+
 
         public ClipRenderer(Context context, Clip clip, MainAreaScreen.ProjectData data, VideoSettings settings, EditingActivity editingActivity, FrameLayout previewViewGroup, TextView textCanvasControllerInfo) {
             this.context = context;
             this.clip = clip;
             this.editingActivity = editingActivity;
             this.previewViewGroupRef = previewViewGroup;
+            this.projectData = data;
 
             try
             {
@@ -3651,132 +4054,96 @@ frameRate = 60;
                         textureView.setY(0f);
 
 
-                        textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
-                            @Override
-                            public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
-                                try {
-                                    Surface surface = new Surface(surfaceTexture);
+                        // Initialize ExoPlayer
+                        try {
+                            exoPlayer = new ExoPlayer.Builder(context).build();
+                            if (exoPlayer == null) {
+                                Log.e("ClipRenderer", "Failed to create ExoPlayer for clip: " + clip.clipName);
+                                break;
+                            }
+                            
+                            exoPlayer.setVideoTextureView(textureView);
 
-                                    // Step 1: Extractor setup
-                                    videoExtractor = new MediaExtractor();
-                                    videoExtractor.setDataSource(clip.getAbsolutePreviewPath(data));
+                            // Set audio attributes to ensure audio playback
+                            // Set handleAudioFocus to false to allow multiple videos to play simultaneously
+                            // Each ExoPlayer will use a unique audio session ID
+                            AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                                    .setContentType(C.CONTENT_TYPE_MOVIE)
+                                    .setUsage(C.USAGE_MEDIA)
+                                    .build();
+                            exoPlayer.setAudioAttributes(audioAttributes, false); // false = don't handle audio focus, allow multiple streams
+                            exoPlayer.setVolume(1.0f); // Ensure volume is at maximum
 
-                                    int trackIndex = TimelineUtils.findVideoTrackIndex(videoExtractor);
-                                    videoExtractor.selectTrack(trackIndex);
+                            // Don't prepare ExoPlayer immediately - lazy load when clip becomes visible
+                            // This prevents ANR when importing multiple files
+                            // ExoPlayer will be prepared in ensureExoPlayerPrepared() when clip is first visible
+                            String originalPath = clip.getAbsolutePath(data);
+                            Log.d("ClipRenderer", "Initializing ExoPlayer for clip: " + clip.clipName + ", path: " + originalPath);
+                            
+                            if (originalPath == null || originalPath.isEmpty()) {
+                                Log.e("ClipRenderer", "Invalid path (null or empty) for clip: " + clip.clipName);
+                                exoPlayer.release();
+                                exoPlayer = null;
+                                break;
+                            }
+                            
+                            File file = new File(originalPath);
+                            if (!file.exists()) {
+                                Log.e("ClipRenderer", "File does not exist: " + originalPath + " for clip: " + clip.clipName + ". File size: " + file.length() + ", isDirectory: " + file.isDirectory());
+                                exoPlayer.release();
+                                exoPlayer = null;
+                                break;
+                            }
+                            
+                            Log.d("ClipRenderer", "File exists, size: " + file.length() + " bytes for clip: " + clip.clipName);
+                            
+                            MediaItem mediaItem = MediaItem.fromUri(Uri.fromFile(file));
+                            exoPlayer.setMediaItem(mediaItem);
+                            // Don't call prepare() here - will be called lazily
+                            
+                            Log.d("ClipRenderer", "ExoPlayer initialized successfully for clip: " + clip.clipName);
+                            
+                            // Set initial transformations from clip.videoProperties
+                            float renderScaleX = clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX);
+                            float renderScaleY = clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY);
+                            posX = (EditingActivity.renderToPreviewConversionX(clip.videoProperties.getValue(VideoProperties.ValueType.PosX), settings.videoWidth));
+                            posY = (EditingActivity.renderToPreviewConversionY(clip.videoProperties.getValue(VideoProperties.ValueType.PosY), settings.videoHeight));
+                            scaleX = (EditingActivity.renderToPreviewConversionScalingX(renderScaleX, settings.videoWidth, settings.videoHeight));
+                            scaleY = (EditingActivity.renderToPreviewConversionScalingY(renderScaleY, settings.videoWidth, settings.videoHeight));
+                            rot = (clip.videoProperties.getValue(VideoProperties.ValueType.Rot));
+                            
+                            Log.d("ClipRenderer", "ClipRenderer constructor | clip=" + clip.clipName 
+                                    + " | renderScale=(" + renderScaleX + "," + renderScaleY + ")"
+                                    + " | previewScale=(" + scaleX + "," + scaleY + ")");
 
-                                    MediaFormat format = videoExtractor.getTrackFormat(trackIndex);
-
-                                    // Step 2: Codec setup
-                                    videoDecoder = MediaCodec.createDecoderByType(format.getString(MediaFormat.KEY_MIME));
-                                    videoDecoder.configure(format, surface, null, 0);
-                                    videoDecoder.start();
-
-
-                                    surfaceTexture.setDefaultBufferSize(clip.width, clip.height); // or your target resolution
-
-                                    posX = (EditingActivity.renderToPreviewConversionX(clip.videoProperties.getValue(VideoProperties.ValueType.PosX), settings.videoWidth));
-                                    posY = (EditingActivity.renderToPreviewConversionY(clip.videoProperties.getValue(VideoProperties.ValueType.PosY), settings.videoHeight));
-                                    scaleX = (EditingActivity.renderToPreviewConversionScalingX(clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX), settings.videoWidth, settings.videoHeight));
-                                    scaleY = (EditingActivity.renderToPreviewConversionScalingY(clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY), settings.videoWidth, settings.videoHeight));
-                                    rot = (clip.videoProperties.getValue(VideoProperties.ValueType.Rot));
-
-                                    float clipRatio = (float) clip.width / clip.height;
-                                    float resolutionRatio = (float) settings.videoWidth / settings.videoHeight;
-                                    float previewAvailableRatio = previewAvailableWidth > 0 && previewAvailableHeight > 0 ? (float) previewAvailableWidth / previewAvailableHeight : 0;
-                                    float scaleRatio = scaleX / scaleY;
-                                    float actualWidth = clip.width * scaleX;
-                                    float actualHeight = clip.height * scaleY;
-                                    float actualRatio = actualHeight > 0 ? actualWidth / actualHeight : 0;
-
-                                    Log.e("ClipRatio", "=== VIDEO CLIP RATIO DEBUG ===");
-                                    Log.e("ClipRatio", "Clip: " + clip.clipName);
-                                    Log.e("ClipRatio", "Clip original size: " + clip.width + "x" + clip.height);
-                                    Log.e("ClipRatio", "Clip original ratio: " + clipRatio);
-                                    Log.e("ClipRatio", "Resolution: " + settings.videoWidth + "x" + settings.videoHeight);
-                                    Log.e("ClipRatio", "Resolution ratio: " + resolutionRatio);
-                                    Log.e("ClipRatio", "PreviewAvailable: " + previewAvailableWidth + "x" + previewAvailableHeight);
-                                    Log.e("ClipRatio", "PreviewAvailable ratio: " + previewAvailableRatio);
-                                    Log.e("ClipRatio", "Scale: " + scaleX + "x" + scaleY);
-                                    Log.e("ClipRatio", "Scale ratio: " + scaleRatio);
-                                    Log.e("ClipRatio", "Actual size after scale: " + actualWidth + "x" + actualHeight);
-                                    Log.e("ClipRatio", "Actual ratio after scale: " + actualRatio);
-                                    Log.e("ClipRatio", "Render ScaleX: " + clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX));
-                                    Log.e("ClipRatio", "Render ScaleY: " + clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY));
-                                    Log.e("ClipRatio", "===============================");
-
-                                    applyTransformation();
-                                    applyPostTransformation();
-
+                            applyTransformation();
+                            applyPostTransformation();
                                 } catch (Exception e) {
-                                    LoggingManager.LogExceptionToNoteOverlay(context, e);
+                            Log.e("ClipRenderer", "Error initializing ExoPlayer for VIDEO clip " + clip.clipName + ": " + e.getMessage(), e);
+                            e.printStackTrace();
+                            if (exoPlayer != null) {
+                                try {
+                                    exoPlayer.release();
+                                } catch (Exception releaseEx) {
+                                    Log.e("ClipRenderer", "Error releasing ExoPlayer: " + releaseEx.getMessage());
                                 }
+                                exoPlayer = null;
                             }
-
-                            @Override
-                            public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {
-                                // Handle resize if needed
-                            }
-
-                            @Override
-                            public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
-                                return true; // release resources if needed
-                            }
-
-                            @Override
-                            public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {
-                                // Called every frame
-                            }
-                        });
-
-
-
-
-
-
-
-
-
-
-
-
-                        // AUDIO
-
-                        audioExtractor = new MediaExtractor();
-                        audioExtractor.setDataSource(clip.getAbsolutePreviewPath(data, ".wav"));
-
-                        int audioTrackIndex = TimelineUtils.findVideoTrackIndex(audioExtractor);
-                        audioExtractor.selectTrack(audioTrackIndex);
-
-                        MediaFormat audioFormat = audioExtractor.getTrackFormat(audioTrackIndex);
-
-                        Integer sampleRateValue = audioFormat.containsKey(MediaFormat.KEY_SAMPLE_RATE)
-                                ? audioFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)
-                                : null;
-                        Integer channelCountValue = audioFormat.containsKey(MediaFormat.KEY_CHANNEL_COUNT)
-                                ? audioFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
-                                : null;
-
-                        if (sampleRateValue == null || channelCountValue == null) {
-                            Log.e("ClipRenderer", "Audio format missing sample rate or channel count for clip: " + clip.clipName);
                             break;
                         }
 
-                        int sampleRate = sampleRateValue;
-                        int channelConfig = (channelCountValue == 1)
-                                ? AudioFormat.CHANNEL_OUT_MONO
-                                : AudioFormat.CHANNEL_OUT_STEREO;
-                        int audioFormatPCM = AudioFormat.ENCODING_PCM_16BIT;
-                        int minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormatPCM);
 
-                        audioTrack = new AudioTrack(
-                                AudioManager.STREAM_MUSIC,
-                                sampleRate,
-                                channelConfig,
-                                audioFormatPCM,
-                                minBufferSize,
-                                AudioTrack.MODE_STREAM
-                        );
-                        audioTrack.play();
+
+
+
+
+
+
+
+
+
+
+                        // Audio is handled by ExoPlayer automatically
 
 
                         break;
@@ -3866,30 +4233,24 @@ frameRate = 60;
                     }
                     case AUDIO:
                     {
+                        // Audio-only clips: Use ExoPlayer for audio playback
+                        exoPlayer = new ExoPlayer.Builder(context).build();
+                        
+                        // Set audio attributes to ensure audio playback
+                        // Set handleAudioFocus to false to allow multiple audio streams to play simultaneously
+                        AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                                .setContentType(C.CONTENT_TYPE_MUSIC)
+                                .setUsage(C.USAGE_MEDIA)
+                                .build();
+                        exoPlayer.setAudioAttributes(audioAttributes, false); // false = don't handle audio focus, allow multiple streams
+                        exoPlayer.setVolume(1.0f); // Ensure volume is at maximum
 
-                        audioExtractor = new MediaExtractor();
-                        audioExtractor.setDataSource(clip.getAbsolutePreviewPath(data, ".wav"));
-
-                        int audioTrackIndex = TimelineUtils.findVideoTrackIndex(audioExtractor);
-                        audioExtractor.selectTrack(audioTrackIndex);
-
-                        MediaFormat audioFormat = audioExtractor.getTrackFormat(audioTrackIndex);
-
-                        int sampleRate = audioFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE);
-                        int channelConfig = (audioFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT) == 1) ?
-                                AudioFormat.CHANNEL_OUT_MONO : AudioFormat.CHANNEL_OUT_STEREO;
-                        int audioFormatPCM = AudioFormat.ENCODING_PCM_16BIT;
-                        int minBufferSize = AudioTrack.getMinBufferSize(sampleRate, channelConfig, audioFormatPCM);
-
-                        audioTrack = new AudioTrack(
-                                AudioManager.STREAM_MUSIC,
-                                sampleRate,
-                                channelConfig,
-                                audioFormatPCM,
-                                minBufferSize,
-                                AudioTrack.MODE_STREAM
-                        );
-                        audioTrack.play();
+                        // Load audio media item from original file (not preview)
+                        // Don't prepare immediately - lazy load
+                        String originalPath = clip.getAbsolutePath(data);
+                        MediaItem mediaItem = MediaItem.fromUri(Uri.fromFile(new File(originalPath)));
+                        exoPlayer.setMediaItem(mediaItem);
+                        // Don't call prepare() here - will be called lazily
 
                         break;
                     }
@@ -3906,7 +4267,10 @@ frameRate = 60;
             }
             catch (Exception e)
             {
+                Log.e("ClipRenderer", "Exception in ClipRenderer constructor for clip: " + (clip != null ? clip.clipName : "unknown") + ", type: " + (clip != null ? clip.type : "unknown"), e);
+                e.printStackTrace();
                 LoggingManager.LogExceptionToNoteOverlay(context, e);
+                // Don't set exoPlayer = null here as it might have been set in inner try-catch
             }
         }
 
@@ -3918,84 +4282,157 @@ frameRate = 60;
 
         public void renderFrame(float playheadTime, boolean isSeekingOnly) {
             if (!isVisible(playheadTime)) {
-//                if(surfaceView != null)
-//                {
-//                    Canvas canvas = surfaceHolder.lockCanvas();
-//                    if (canvas != null) {
-//                        canvas.drawColor(Color.BLACK); // Fill canvas with black
-//                        surfaceHolder.unlockCanvasAndPost(canvas);
-//                    }
-//                }
+                // Reset seek position when clip is not visible
+                if (exoPlayer != null && isPlaying) {
+                    exoPlayer.setPlayWhenReady(false);
+                    isPlaying = false;
+                }
+                lastSeekPositionMs = -1;
                 return;
             }
 //            if(isPlaying && !isSeekingOnly) return;
 
+            // Lazy load ExoPlayer - prepare only when clip becomes visible
+            ensureExoPlayerPrepared();
+            
+            // Check if exoPlayer is initialized before calling startPlayingAt
+            // For VIDEO and AUDIO clips, exoPlayer must be initialized
+            if ((clip.type == ClipType.VIDEO || clip.type == ClipType.AUDIO) && exoPlayer == null) {
+                Log.w("ClipRenderer", "exoPlayer is null for " + clip.type + " clip: " + clip.clipName + ", skipping playback");
+                return;
+            }
+
             startPlayingAt(playheadTime, isSeekingOnly);
         }
 
-        private void pumpDecoderVideoSeek(float playheadTime) {
-            if(videoDecoder == null) return;
-            if(textureView == null) return;
-            if(textureView.getVisibility() == View.GONE) return;
-            float clipTime = playheadTime - clip.startTime + clip.startClipTrim;
-            long ptsUs = (long)(clipTime * 1_000_000); // override presentation timestamp
-
-            boolean needsSeek = (lastSeekPtsUs == -1 || Math.abs(ptsUs - lastSeekPtsUs) > 100_000);
-            if (needsSeek) {
-                videoExtractor.seekTo(ptsUs, MediaExtractor.SEEK_TO_PREVIOUS_SYNC);
-                lastSeekPtsUs = ptsUs;
-                MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
-                while (true) {
-                    int outputIndex = videoDecoder.dequeueOutputBuffer(bufferInfo, 0);
-                    if (outputIndex >= 0) {
-                        videoDecoder.releaseOutputBuffer(outputIndex, false);
-                    } else if (outputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                        continue;
-                    } else {
-                        break;
+        private void ensureExoPlayerPrepared() {
+            // If exoPlayer is null, create it first (e.g., after migration)
+            if (exoPlayer == null && (clip.type == ClipType.VIDEO || clip.type == ClipType.AUDIO)) {
+                synchronized (this) {
+                    // Double check after acquiring lock
+                    if (exoPlayer != null) return;
+                    
+                    try {
+                        Log.d("ClipRenderer", "Recreating exoPlayer for migrated clip: " + clip.clipName);
+                        exoPlayer = new ExoPlayer.Builder(context).build();
+                        if (exoPlayer == null) {
+                            Log.e("ClipRenderer", "Failed to recreate ExoPlayer for clip: " + clip.clipName);
+                            return;
+                        }
+                        
+                        // Reattach textureView if it exists
+                        if (textureView != null) {
+                            exoPlayer.setVideoTextureView(textureView);
+                        }
+                        
+                        // Set audio attributes
+                        AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                                .setContentType(C.CONTENT_TYPE_MOVIE)
+                                .setUsage(C.USAGE_MEDIA)
+                                .build();
+                        exoPlayer.setAudioAttributes(audioAttributes, false);
+                        exoPlayer.setVolume(1.0f);
+                        
+                        // Set media item
+                        String originalPath = clip.getAbsolutePath(projectData);
+                        if (originalPath != null && !originalPath.isEmpty()) {
+                            File file = new File(originalPath);
+                            if (file.exists()) {
+                                MediaItem mediaItem = MediaItem.fromUri(Uri.fromFile(file));
+                                exoPlayer.setMediaItem(mediaItem);
+                                Log.d("ClipRenderer", "ExoPlayer recreated successfully for clip: " + clip.clipName);
+                            } else {
+                                Log.e("ClipRenderer", "File does not exist when recreating ExoPlayer: " + originalPath);
+                                exoPlayer.release();
+                                exoPlayer = null;
+                                return;
+                            }
+                        } else {
+                            Log.e("ClipRenderer", "Invalid path when recreating ExoPlayer: " + originalPath);
+                            exoPlayer.release();
+                            exoPlayer = null;
+                            return;
+                        }
+                    } catch (Exception e) {
+                        Log.e("ClipRenderer", "Error recreating ExoPlayer: " + e.getMessage(), e);
+                        if (exoPlayer != null) {
+                            exoPlayer.release();
+                            exoPlayer = null;
+                        }
+                        return;
                     }
                 }
             }
-
-            int inputIndex = videoDecoder.dequeueInputBuffer(0);
-            if (inputIndex >= 0) {
-                ByteBuffer inputBuffer = videoDecoder.getInputBuffer(inputIndex);
-                int sampleSize = videoExtractor.readSampleData(inputBuffer, 0);
-
-                if (sampleSize >= 0) {
-                    long sampleTimeUs = videoExtractor.getSampleTime();
-                    if (sampleTimeUs < 0) {
-                        sampleTimeUs = ptsUs;
-                    }
-                    videoDecoder.queueInputBuffer(inputIndex, 0, sampleSize, sampleTimeUs, 0);
-                } else {
-                    videoDecoder.queueInputBuffer(inputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+            
+            if (isExoPlayerPrepared || exoPlayer == null) return;
+            
+            synchronized (this) {
+                if (isExoPlayerPrepared) return; // Double check
+                
+                try {
+                    // Add listener before prepare
+                    exoPlayerListener = new Player.Listener() {
+                        @Override
+                        public void onTracksChanged(androidx.media3.common.Tracks tracks) {
+                            Log.d("ExoPlayerAudio", "Tracks changed for clip: " + clip.clipName);
+                            boolean hasAudioTrack = false;
+                            for (int i = 0; i < tracks.getGroups().size(); i++) {
+                                androidx.media3.common.Tracks.Group trackGroup = tracks.getGroups().get(i);
+                                for (int j = 0; j < trackGroup.length; j++) {
+                                    androidx.media3.common.Format format = trackGroup.getTrackFormat(j);
+                                    boolean isAudio = format.sampleMimeType != null && format.sampleMimeType.startsWith("audio/");
+                                    boolean isSelected = trackGroup.isTrackSelected(j);
+                                    
+                                    if (isAudio) {
+                                        hasAudioTrack = true;
+                                        if (!isSelected) {
+                                            exoPlayer.setTrackSelectionParameters(
+                                                exoPlayer.getTrackSelectionParameters()
+                                                    .buildUpon()
+                                                    .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
+                                                    .build()
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            if (!hasAudioTrack && clip.isVideoHasAudio) {
+                                String originalPath = clip.getAbsolutePath(projectData);
+                                Log.w("ExoPlayerAudio", "Video has audio flag but no audio track found in file: " + originalPath);
+                            }
+                        }
+                        
+                        @Override
+                        public void onPlayerError(androidx.media3.common.PlaybackException error) {
+                            Log.e("ExoPlayerAudio", "Player error: " + error.getMessage());
+                        }
+                    };
+                    exoPlayer.addListener(exoPlayerListener);
+                    
+                    // Prepare ExoPlayer on main thread (ExoPlayer handles async internally)
+                    // Using Handler to ensure it's on main thread
+                    new Handler(Looper.getMainLooper()).post(() -> {
+                        try {
+                            exoPlayer.prepare();
+                            isExoPlayerPrepared = true;
+                        } catch (Exception e) {
+                            Log.e("ExoPlayerAudio", "Error preparing ExoPlayer: " + e.getMessage());
+                        }
+                    });
+                } catch (Exception e) {
+                    Log.e("ExoPlayerAudio", "Error in ensureExoPlayerPrepared: " + e.getMessage());
                 }
-            }
-
-            MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
-            int outputIndex = videoDecoder.dequeueOutputBuffer(bufferInfo, 0);
-            if (outputIndex >= 0) {
-                videoDecoder.releaseOutputBuffer(outputIndex, true); // true = render to surface
             }
         }
+
+        private void pumpDecoderVideoSeek(float playheadTime) {
+            // This method is no longer used when playing
+            // It's kept for backward compatibility but logic moved to startPlayingAt
+        }
+        
         private void pumpDecoderAudioSeek(float playheadTime) {
-
-            float clipTime = playheadTime - clip.startTime + clip.startClipTrim;
-            long ptsUs = (long)(clipTime * 1_000_000); // override presentation timestamp
-            audioExtractor.seekTo(ptsUs, MediaExtractor.SEEK_TO_PREVIOUS_SYNC);
-
-            ByteBuffer buffer = ByteBuffer.allocate(32768);
-
-            int sampleSize = audioExtractor.readSampleData(buffer, 0);
-            if (sampleSize < 0) return; // End of stream
-
-            byte[] chunk = new byte[sampleSize];
-            buffer.get(chunk, 0, sampleSize);
-            buffer.clear();
-
-            audioTrack.write(chunk, 0, chunk.length, AudioTrack.WRITE_NON_BLOCKING);
-
+            // Audio is handled by ExoPlayer automatically
         }
 
 
@@ -4037,42 +4474,81 @@ frameRate = 60;
                 {
                     case VIDEO:
                     {
-
-//                        if(clip.getLocalClipTime(playheadTime) * 1000 > 0 && clip.getLocalClipTime(playheadTime) * 1000 < clip.duration)
-//                        {
-//                            videoPlayer.seekTo((long) (clip.getTrimmedLocalTime(clip.getLocalClipTime(playheadTime)) * 1000000));
-//                            System.err.println(videoPlayer.getCurrentPosition());
-//                            if(!isSeekingOnly)
-//                            {
-//                                videoPlayer.start();
-//                                isPlaying = true;
-//                            }
-//                        }
-                        renderThreadExecutorVideo.execute(() -> pumpDecoderVideoSeek(playheadTime));
-
-                        if(clip.isVideoHasAudio)
-                            renderThreadExecutorAudio.execute(() -> pumpDecoderAudioSeek(playheadTime));
+                        // Check if exoPlayer is initialized
+                        if (exoPlayer == null) {
+                            Log.w("ClipRenderer", "exoPlayer is null for VIDEO clip: " + clip.clipName);
+                            break;
+                        }
+                        
+                        // Control playback state first
+                        if (!isSeekingOnly) {
+                            // When playing, let ExoPlayer run continuously
+                            if (!isPlaying) {
+                                // Initial seek to start position
+                                float clipTime = playheadTime - clip.startTime + clip.startClipTrim;
+                                if (clipTime < 0) clipTime = 0;
+                                long positionMs = (long)(clipTime * 1000);
+                                exoPlayer.seekTo(positionMs);
+                                lastSeekPositionMs = positionMs;
+                                
+                                exoPlayer.setPlayWhenReady(true);
+                                exoPlayer.setPlaybackParameters(
+                                    new PlaybackParameters(editingActivity.playbackSpeed)
+                                );
+                                isPlaying = true;
+                            }
+                            // When already playing, do NOT seek - let ExoPlayer run freely
+                            // This prevents stuttering and frame drops
+                        } else {
+                            // When seeking (scrubbing), pause and seek to exact position
+                            if (isPlaying) {
+                                exoPlayer.setPlayWhenReady(false);
+                                isPlaying = false;
+                            }
+                            // Always seek when scrubbing to show exact frame
+                            float clipTime = playheadTime - clip.startTime + clip.startClipTrim;
+                            if (clipTime < 0) clipTime = 0;
+                            long positionMs = (long)(clipTime * 1000);
+                            exoPlayer.seekTo(positionMs);
+                            lastSeekPositionMs = positionMs;
+                        }
                         break;
                     }
                     case AUDIO:
                     {
-//                        if(clip.getLocalClipTime(playheadTime) * 1000 > 0 && clip.getLocalClipTime(playheadTime) * 1000 < clip.duration)
-//                        {
-//                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//                                audioPlayer.seekTo((int) (clip.getTrimmedLocalTime(clip.getLocalClipTime(playheadTime)) * 1000), android.media.MediaPlayer.SEEK_CLOSEST);
-//                            }
-//                            else {
-//                                audioPlayer.seekTo((int) (clip.getTrimmedLocalTime(clip.getLocalClipTime(playheadTime)) * 1000));
-//                            }
-//                            if(!isSeekingOnly)
-//                            {
-//                                audioPlayer.start();
-//                                isPlaying = true;
-//                            }
-//                        }
-
-
-                        renderThreadExecutorAudio.execute(() -> pumpDecoderAudioSeek(playheadTime));
+                        // Audio-only clips: Control playback with ExoPlayer
+                        if (exoPlayer == null) break;
+                        
+                        if (!isSeekingOnly) {
+                            // When playing, let ExoPlayer run continuously
+                            if (!isPlaying) {
+                                // Initial seek to start position
+                                float clipTime = playheadTime - clip.startTime + clip.startClipTrim;
+                                if (clipTime < 0) clipTime = 0;
+                                long positionMs = (long)(clipTime * 1000);
+                                exoPlayer.seekTo(positionMs);
+                                lastSeekPositionMs = positionMs;
+                                
+                                exoPlayer.setPlayWhenReady(true);
+                                exoPlayer.setPlaybackParameters(
+                                    new PlaybackParameters(editingActivity.playbackSpeed)
+                                );
+                                isPlaying = true;
+                            }
+                            // When already playing, do NOT seek - let ExoPlayer run freely
+                        } else {
+                            // When seeking (scrubbing), pause and seek to exact position
+                            if (isPlaying) {
+                                exoPlayer.setPlayWhenReady(false);
+                                isPlaying = false;
+                            }
+                            // Always seek when scrubbing to show exact frame
+                            float clipTime = playheadTime - clip.startTime + clip.startClipTrim;
+                            if (clipTime < 0) clipTime = 0;
+                            long positionMs = (long)(clipTime * 1000);
+                            exoPlayer.seekTo(positionMs);
+                            lastSeekPositionMs = positionMs;
+                        }
                         break;
                     }
 
@@ -4100,6 +4576,10 @@ frameRate = 60;
 
 
         EditMode currentMode = EditMode.NONE;
+        
+        // Use raw coordinates for stable dragging (not affected by view position changes)
+        private float lastRawX = 0f;
+        private float lastRawY = 0f;
 
 
         private void attachGestureControls(TextureView tv, Clip clip, VideoSettings settings, EditingActivity editingActivity, TextView textCanvasControllerInfo) {
@@ -4109,16 +4589,29 @@ frameRate = 60;
                     initialPosY = posY;
                     startTouchX = e.getX();
                     startTouchY = e.getY();
+                    lastRawX = e.getRawX();
+                    lastRawY = e.getRawY();
                     return true;
                 }
                 @Override public boolean onScroll(MotionEvent e1, MotionEvent e2, float dx, float dy) {
-                    if(EditingActivity.selectedClip != clip) {
+                    // Use raw coordinates to calculate delta (stable, not affected by view movement)
+                    float rawX = e2.getRawX();
+                    float rawY = e2.getRawY();
+                    float deltaX = rawX - lastRawX;
+                    float deltaY = rawY - lastRawY;
+                    lastRawX = rawX;
+                    lastRawY = rawY;
+                    
+                    if (EditingActivity.selectedClip != clip) {
                         editingActivity.selectingClip(clip);
                     }
-                    if(currentMode != EditMode.NONE && currentMode != EditMode.MOVE) return true;
+                    if (currentMode != EditMode.NONE && currentMode != EditMode.MOVE) {
+                        return true;
+                    }
                     currentMode = EditMode.MOVE;
 
-                    if(dragBorderDrawable == null) {
+                    // Show drag border
+                    if (dragBorderDrawable == null) {
                         dragBorderDrawable = new android.graphics.drawable.GradientDrawable();
                         dragBorderDrawable.setColor(android.graphics.Color.TRANSPARENT);
                         dragBorderDrawable.setStroke(
@@ -4131,50 +4624,28 @@ frameRate = 60;
                         FrameLayout.LayoutParams borderParams =
                                 new FrameLayout.LayoutParams(textureView.getWidth(), textureView.getHeight());
                         previewViewGroupRef.addView(dragBorderView, borderParams);
-                        dragBorderView.setX(textureView.getX());
-                        dragBorderView.setY(textureView.getY());
                     }
                     dragBorderView.setBackground(dragBorderDrawable);
                     dragBorderView.setVisibility(View.VISIBLE);
 
-                    float deltaX = (e2.getX() - startTouchX) * CANVAS_DRAG_SENSITIVITY;
-                    float deltaY = (e2.getY() - startTouchY) * CANVAS_DRAG_SENSITIVITY;
+                    // Calculate new position
+                    float newPosX = posX + deltaX * CANVAS_DRAG_SENSITIVITY;
+                    float newPosY = posY + deltaY * CANVAS_DRAG_SENSITIVITY;
 
-                    float newPosX = initialPosX + deltaX;
-                    float newPosY = initialPosY + deltaY;
-
+                    // Clamp to preview bounds
                     float clipDisplayWidth = textureView.getWidth() * scaleX;
                     float clipDisplayHeight = textureView.getHeight() * scaleY;
-
                     float previewWidth = previewViewGroupRef != null ? previewViewGroupRef.getWidth() : EditingActivity.previewAvailableWidth;
                     float previewHeight = previewViewGroupRef != null ? previewViewGroupRef.getHeight() : EditingActivity.previewAvailableHeight;
 
                     if (previewWidth > 0 && previewHeight > 0) {
-                        float minX = 0f;
-                        float maxX = previewWidth - clipDisplayWidth;
-                        float minY = 0f;
-                        float maxY = previewHeight - clipDisplayHeight;
-
-                        newPosX = Math.max(minX, Math.min(maxX, newPosX));
-                        newPosY = Math.max(minY, Math.min(maxY, newPosY));
-
-                        Log.d("ClipDragDebug",
-                                "onScroll clamp"
-                                        + " | clip=" + clip.clipName
-                                        + " | touch=(" + e2.getX() + "," + e2.getY() + ")"
-                                        + " | delta=(" + deltaX + "," + deltaY + ")"
-                                        + " | scale=(" + scaleX + "," + scaleY + ")"
-                                        + " | preview=(" + previewWidth + "," + previewHeight + ")"
-                                        + " | clipDisplay=(" + clipDisplayWidth + "," + clipDisplayHeight + ")"
-                                        + " | pos=(" + newPosX + "," + newPosY + ")"
-                                        + " | boundsX=[" + minX + "," + maxX + "]"
-                                        + " | boundsY=[" + minY + "," + maxY + "]"
-                        );
+                        newPosX = Math.max(0f, Math.min(previewWidth - clipDisplayWidth, newPosX));
+                        newPosY = Math.max(0f, Math.min(previewHeight - clipDisplayHeight, newPosY));
                     }
 
                     posX = newPosX;
                     posY = newPosY;
-
+                    
                     applyPostTransformation();
 
                     // Sync model
@@ -4190,104 +4661,105 @@ frameRate = 60;
                 }
             });
 
-            final ScaleGestureDetector scaler = new ScaleGestureDetector(tv.getContext(), new ScaleGestureDetector.SimpleOnScaleGestureListener() {
-                @Override public boolean onScale(ScaleGestureDetector detector) {
-                    if(EditingActivity.selectedClip != clip) {
-                        editingActivity.selectingClip(clip);
-                    }
-                    if(currentMode != EditMode.NONE && currentMode != EditMode.SCALE && currentMode != EditMode.ROTATE) return true;
-                    currentMode = EditMode.SCALE;
-
-                    scaleX *= detector.getScaleFactor();
-                    scaleY *= detector.getScaleFactor();
-
-                    applyPostTransformation();
-
-                    // TODO: Before we going further. Let calculate first the aspect ratio of video
-                    //  only after that we based on the width and height of the following aspect ratio
-                    //  and use it for preview scaling inside the screen that smaller than the video. (Clamping)
-                    // Sync model
-                    clip.videoProperties.setValue(EditingActivity.previewToRenderConversionScalingX(scaleX, settings.videoWidth), VideoProperties.ValueType.ScaleX);
-                    clip.videoProperties.setValue(EditingActivity.previewToRenderConversionScalingY(scaleY, settings.videoHeight), VideoProperties.ValueType.ScaleY);
-
-                    setPivot();
-
-                    textCanvasControllerInfo.setText(
-                                    "Scale X: " + clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX) +
-                                    " | Scale Y: " + clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY) +
-                                    "\n" + "Rot: " + clip.videoProperties.getValue(VideoProperties.ValueType.Rot)
-                    );
-
-                    return true;
-                }
-            });
-
-            // Simple rotation detector
+            // Manual scale and rotation tracking
+            final float[] lastSpanManual = { -1f };
             final float[] lastAngle = { Float.NaN };
+            
             tv.setOnTouchListener((v, event) -> {
-                tapDrag.onTouchEvent(event);
-                scaler.onTouchEvent(event);
-
-
-                switch (event.getActionMasked()) {
-                    case MotionEvent.ACTION_POINTER_DOWN:
-                    case MotionEvent.ACTION_MOVE:
+                // Handle 2-finger gestures (scale + rotate)
                         if (event.getPointerCount() >= 2) {
-                            if(EditingActivity.selectedClip != clip) {
-                                editingActivity.selectingClip(clip);
-                            }
-                            if(currentMode != EditMode.NONE && currentMode != EditMode.ROTATE && currentMode != EditMode.SCALE) break;
-                            currentMode = EditMode.ROTATE;
-
-                            float ax = event.getX(0), ay = event.getY(0);
-                            float bx = event.getX(1), by = event.getY(1);
-                            float angle = (float) Math.toDegrees(Math.atan2(by - ay, bx - ax)); // [-180,180]
-                            if (Float.isNaN(lastAngle[0])) {
+                    float x0 = event.getX(0);
+                    float y0 = event.getY(0);
+                    float x1 = event.getX(1);
+                    float y1 = event.getY(1);
+                    
+                    // Calculate span (distance between 2 fingers) for scale
+                    float currentSpan = (float) Math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
+                    
+                    // Calculate angle for rotation
+                    float angle = (float) Math.toDegrees(Math.atan2(y1 - y0, x1 - x0));
+                    
+                    if (event.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN) {
+                        // Start of 2-finger gesture
+                        lastSpanManual[0] = currentSpan;
                                 lastAngle[0] = angle;
-                            } else {
-                                float delta = normalizeAngle(angle - lastAngle[0]);
-                                rot += delta;
-
-                                // Normalize to [-360, 360]
+                    currentMode = EditMode.SCALE;
+                        if (EditingActivity.selectedClip != clip) {
+                            editingActivity.selectingClip(clip);
+                        }
+                    } else if (event.getActionMasked() == MotionEvent.ACTION_MOVE && lastSpanManual[0] > 0) {
+                        // Scale
+                        float scaleFactor = currentSpan / lastSpanManual[0];
+                        scaleX *= scaleFactor;
+                        scaleY *= scaleFactor;
+                        scaleX = Math.max(0.1f, Math.min(5f, scaleX));
+                        scaleY = Math.max(0.1f, Math.min(5f, scaleY));
+                        lastSpanManual[0] = currentSpan;
+                        
+                        // Rotate
+                        if (!Float.isNaN(lastAngle[0])) {
+                            float deltaAngle = normalizeAngle(angle - lastAngle[0]);
+                            rot += deltaAngle;
                                 rot = ((rot + 360f) % 720f) - 360f;
 
-                                // Snap to nearest multiple of 90
+                            // Snap to nearest 90 degrees
                                 float nearest = Math.round(rot / Constants.CANVAS_ROTATE_SNAP_DEGREE) * Constants.CANVAS_ROTATE_SNAP_DEGREE;
                                 if (Math.abs(rot - nearest) <= Constants.CANVAS_ROTATE_SNAP_THRESHOLD_DEGREE) {
                                     rot = nearest;
                                 }
-
-                                applyPostTransformation();
-                                clip.videoProperties.setValue(rot, VideoProperties.ValueType.Rot);
+                        }
+                        lastAngle[0] = angle;
+                        
+                        // Apply transformations directly
+                        textureView.setScaleX(scaleX);
+                        textureView.setScaleY(scaleY);
+                        textureView.setRotation(rot);
+                        
+                    // Sync model - convert preview scale back to render scale
+                    float renderScaleX = EditingActivity.previewToRenderConversionScalingX(scaleX, settings.videoWidth);
+                    float renderScaleY = EditingActivity.previewToRenderConversionScalingY(scaleY, settings.videoHeight);
+                    clip.videoProperties.setValue(renderScaleX, VideoProperties.ValueType.ScaleX);
+                    clip.videoProperties.setValue(renderScaleY, VideoProperties.ValueType.ScaleY);
+                    clip.videoProperties.setValue(rot, VideoProperties.ValueType.Rot);
+                    
+                    Log.d("ClipZoomDebug", "Scale sync | clip=" + clip.clipName 
+                            + " | previewScale=(" + scaleX + "," + scaleY + ")"
+                            + " | renderScale=(" + renderScaleX + "," + renderScaleY + ")");
 
                                 textCanvasControllerInfo.setText(
-                                        "Scale X: " + clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX) +
-                                                " | Scale Y: " + clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY) +
-                                                "\n" + "Rot: " + clip.videoProperties.getValue(VideoProperties.ValueType.Rot)
-                                );
-
-                                lastAngle[0] = angle;
-                            }
-                        }
-                        break;
-                    case MotionEvent.ACTION_POINTER_UP:
-                    case MotionEvent.ACTION_UP:
-                    case MotionEvent.ACTION_CANCEL:
+                                "Scale: " + String.format("%.2f", scaleX) +
+                                " | Rot: " + String.format("%.1f", rot) + "°"
+                        );
+                    } else if (event.getActionMasked() == MotionEvent.ACTION_POINTER_UP) {
+                        // End of 2-finger gesture
+                        lastSpanManual[0] = -1f;
                         lastAngle[0] = Float.NaN;
-                        currentMode = EditMode.NONE;
-                        initialPosX = posX;
-                        initialPosY = posY;
                         applyPostTransformation();
-                        if (dragBorderView != null) {
-                            dragBorderView.setVisibility(View.GONE);
-                        }
-                        break;
+                    }
+                }
+                
+                // Handle single finger gestures (drag)
+                if (event.getPointerCount() == 1 && currentMode != EditMode.SCALE) {
+                    tapDrag.onTouchEvent(event);
+                }
+
+                // Handle gesture end
+                if (event.getActionMasked() == MotionEvent.ACTION_UP || 
+                    event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+                        lastAngle[0] = Float.NaN;
+                    lastSpanManual[0] = -1f;
+                        currentMode = EditMode.NONE;
+                    initialPosX = posX;
+                    initialPosY = posY;
+                        applyPostTransformation();
+                    if (dragBorderView != null) {
+                        dragBorderView.setVisibility(View.GONE);
+                    }
                 }
                 return true;
             });
         }
 
-        // TODO: Isn't handling scale properly yet.
         private void applyTransformation() {
             matrix.reset();
             matrix.postScale(scaleMatrixX, scaleMatrixY);
@@ -4299,71 +4771,53 @@ frameRate = 60;
         }
         private void applyPostTransformation() {
             textureView.post(() -> {
-                matrix.reset();
-
-                float pivotX = 0f;
-                float pivotY = 0f;
-
-                // Scale và rotate quanh góc trên trái để posX/posY = 0 trùng top-left preview.
-                matrix.postScale(scaleX, scaleY, pivotX, pivotY);
-                matrix.postRotate(rot, pivotX, pivotY);
-                matrix.postTranslate(posX, posY);
-
+                // Sử dụng View properties (setScaleX/Y, setRotation, setX/Y) thay vì matrix transform
+                // để hit-area của view luôn trùng với vùng hiển thị
+                
+                // Pivot ở góc trên trái (0,0) để scale/rotate từ góc
                 textureView.setPivotX(0f);
                 textureView.setPivotY(0f);
-                textureView.setTransform(matrix);
-                textureView.invalidate();
+                
+                // Áp dụng scale và rotation qua View properties
+                // Điều này đảm bảo hit-area được scale theo
+                textureView.setScaleX(scaleX);
+                textureView.setScaleY(scaleY);
+                textureView.setRotation(rot);
+                
+                // Đặt vị trí
+                textureView.setX(posX);
+                textureView.setY(posY);
+                
+            textureView.invalidate();
 
-                // Tính bounding box thực tế sau transform để xem clip đang nằm ở đâu.
-                android.graphics.RectF mapped = new android.graphics.RectF(0, 0, textureView.getWidth(), textureView.getHeight());
-                matrix.mapRect(mapped);
-
-                if (dragBorderView != null && dragBorderView.getVisibility() == View.VISIBLE) {
-                    FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) dragBorderView.getLayoutParams();
-                    lp.width = Math.round(mapped.width());
-                    lp.height = Math.round(mapped.height());
-                    dragBorderView.setLayoutParams(lp);
-                    dragBorderView.setTranslationX(mapped.left);
-                    dragBorderView.setTranslationY(mapped.top);
-                    dragBorderView.setRotation(rot);
-                    dragBorderView.setScaleX(1f);
-                    dragBorderView.setScaleY(1f);
-                }
-
+                // Tính bounding box thực tế sau transform
                 float actualDisplayWidth = textureView.getWidth() * scaleX;
                 float actualDisplayHeight = textureView.getHeight() * scaleY;
                 float actualDisplayRatio = actualDisplayHeight > 0 ? actualDisplayWidth / actualDisplayHeight : 0;
 
-                int[] loc = new int[2];
-                previewViewGroupRef.getLocationOnScreen(loc);
-                int[] texLoc = new int[2];
-                textureView.getLocationOnScreen(texLoc);
-
-                Log.d("ClipDragDebug",
-                        "applyPostTransformation"
-                                + " | clip=" + clip.clipName
-                                + " | pos=(" + posX + "," + posY + ")"
-                                + " | scale=(" + scaleX + "," + scaleY + ")"
-                                + " | rot=" + rot
-                                + " | texSize=(" + textureView.getWidth() + "," + textureView.getHeight() + ")"
-                                + " | texXY=(" + textureView.getX() + "," + textureView.getY() + ")"
-                                + " | texScreen=(" + texLoc[0] + "," + texLoc[1] + ")"
-                                + " | parentSize=(" + previewViewGroupRef.getWidth() + "," + previewViewGroupRef.getHeight() + ")"
-                                + " | parentScreen=(" + loc[0] + "," + loc[1] + ")"
-                                + " | display=(" + actualDisplayWidth + "," + actualDisplayHeight + ")"
-                                + " | displayRatio=" + actualDisplayRatio
-                                + " | mappedRect=(" + mapped.left + "," + mapped.top + "," + mapped.right + "," + mapped.bottom + ")"
+                // Bounding box trong parent coordinates
+                android.graphics.RectF mapped = new android.graphics.RectF(
+                        posX,
+                        posY,
+                        posX + actualDisplayWidth,
+                        posY + actualDisplayHeight
                 );
-            });
-        }
-        private void applyPostMatrixTransformation() {
-            matrix.reset();
-            matrix.setScale(scaleX, scaleY);
-            matrix.setRotate(rot);
-            matrix.setTranslate(posX, posY);
 
-            textureView.setTransform(matrix);
-            textureView.invalidate();
+                // Sync drag border with textureView
+                if (dragBorderView != null && dragBorderView.getVisibility() == View.VISIBLE) {
+                    FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) dragBorderView.getLayoutParams();
+                    lp.width = textureView.getWidth();
+                    lp.height = textureView.getHeight();
+                    dragBorderView.setLayoutParams(lp);
+                    dragBorderView.setPivotX(0f);
+                    dragBorderView.setPivotY(0f);
+                    dragBorderView.setScaleX(scaleX);
+                    dragBorderView.setScaleY(scaleY);
+                    dragBorderView.setRotation(rot);
+                    dragBorderView.setX(posX);
+                    dragBorderView.setY(posY);
+                }
+            });
         }
 
         private float normalizeAngle(float a) {
@@ -4390,22 +4844,18 @@ frameRate = 60;
 
 
         public void release() {
-            if (audioExtractor != null) {
-                audioExtractor.release();
+            // Remove listener before release to prevent memory leaks
+            if (exoPlayer != null) {
+                if (exoPlayerListener != null) {
+                    exoPlayer.removeListener(exoPlayerListener);
+                    exoPlayerListener = null;
+                }
+                exoPlayer.setPlayWhenReady(false);
+                exoPlayer.stop();
+                exoPlayer.release();
+                exoPlayer = null;
             }
-            if(videoDecoder != null) {
-                videoDecoder.release();
-            }
-            if(videoExtractor != null) {
-                videoExtractor.release();
-            }
-            if(renderThreadExecutorAudio != null) {
-                renderThreadExecutorAudio.shutdownNow();
-            }
-            if(renderThreadExecutorVideo != null) {
-                renderThreadExecutorVideo.shutdownNow();
-            }
-
+            isExoPlayerPrepared = false;
         }
     }
 
@@ -4413,6 +4863,7 @@ frameRate = 60;
     public static class TimelineRenderer {
         private final Context context;
         private List<List<ClipRenderer>> trackLayers = new ArrayList<>();
+        private final Object lock = new Object(); // Lock for synchronization
 
         public TimelineRenderer(Context context) {
             this.context = context;
@@ -4420,32 +4871,38 @@ frameRate = 60;
 
         public void buildTimeline(Timeline timeline, MainAreaScreen.ProjectData properties, VideoSettings settings, EditingActivity editingActivity, FrameLayout previewViewGroup, TextView textCanvasControllerInfo)
         {
-            for (List<ClipRenderer> trackRenderer : trackLayers) {
+            // Build new timeline structure and migrate existing ClipRenderers if clips still exist
+            // Use synchronized to avoid race condition with updateTime()
+            synchronized (lock) {
+                Log.d("TimelineRenderer", "buildTimeline called, current trackLayers size: " + trackLayers.size());
+                
+                // Store old trackLayers reference before creating new one
+                List<List<ClipRenderer>> oldTrackLayers = trackLayers;
+                
+                // Create a map of existing ClipRenderers by clip name for quick lookup
+                // Also store by clip object reference in case updateTime() created new ClipRenderers
+                java.util.Map<String, ClipRenderer> existingRenderersByName = new java.util.HashMap<>();
+                java.util.Set<ClipRenderer> allExistingRenderers = new java.util.HashSet<>();
+                
+                for (List<ClipRenderer> trackRenderer : oldTrackLayers) {
                 for (ClipRenderer clipRenderer : trackRenderer) {
-                    if(clipRenderer != null)
-                    {
-                        clipRenderer.release();
+                        if (clipRenderer != null && clipRenderer.clip != null) {
+                            // Store existing renderer by clip name for potential reuse
+                            existingRenderersByName.put(clipRenderer.clip.clipName, clipRenderer);
+                            allExistingRenderers.add(clipRenderer);
+                        }
                     }
                 }
-            }
-//            for (int i = 0; i < previewViewGroup.getChildCount(); i++) {
-//                SurfaceView view = (SurfaceView) previewViewGroup.getChildAt(i);
-//                view.release?
-//            }
+                Log.d("TimelineRenderer", "Found " + allExistingRenderers.size() + " existing ClipRenderers to potentially migrate");
 
-            previewViewGroup.removeAllViews();
+                // Note: UI operations (removeAllViews, addView) are handled in regeneratingTimelineRenderer() on main thread
+                // Don't manipulate views here as this method runs on background thread
 
-            // Black box for blank video
-            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-            );
-            View blackBox = new View(context);
-            blackBox.setBackgroundColor(Color.BLACK);
-            previewViewGroup.addView(blackBox, params);
+                // Create new trackLayers list
+                List<List<ClipRenderer>> newTrackLayers = new ArrayList<>();
+                java.util.Set<ClipRenderer> migratedRenderers = new java.util.HashSet<>();
 
-            trackLayers = new ArrayList<>();
-
+                // Build new timeline structure and migrate existing ClipRenderers
             for (Track track : timeline.tracks) {
                 List<ClipRenderer> renderers = new ArrayList<>();
                 for (Clip clip : track.clips) {
@@ -4454,48 +4911,223 @@ frameRate = 60;
                         case VIDEO:
                         case AUDIO:
                         case IMAGE:
-                            ClipRenderer clipRenderer = new ClipRenderer(context, clip, properties, settings, editingActivity, previewViewGroup, textCanvasControllerInfo);
-                            renderers.add(clipRenderer);
+                                // Check if we can reuse an existing ClipRenderer for this clip
+                                ClipRenderer existingRenderer = existingRenderersByName.get(clip.clipName);
+                                if (existingRenderer != null && existingRenderer.clip.clipName.equals(clip.clipName)) {
+                                    // Migrate ClipRenderer even if exoPlayer is null - exoPlayer will be created/recreated when needed
+                                    // This preserves scale, position, and other state
+                                    // Note: clip is final in ClipRenderer, so we can't update it, but that's fine
+                                    // since we've already verified clip names match
+                                    renderers.add(existingRenderer);
+                                    migratedRenderers.add(existingRenderer);
+                                    
+                                    Log.d("TimelineRenderer", "Migrating existing ClipRenderer for clip: " + clip.clipName 
+                                            + " | exoPlayer: " + (existingRenderer.exoPlayer != null ? "not null" : "null (will be created when needed)")
+                                            + " | scaleX=" + existingRenderer.scaleX + " | scaleY=" + existingRenderer.scaleY
+                                            + " | clip.videoProperties.ScaleX=" + clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX)
+                                            + " | clip.videoProperties.ScaleY=" + clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY));
+                                } else {
+                                    // New clip or clip changed - create null placeholder
+                                    // ClipRenderer will be created lazily in updateTime() when clip becomes visible
+                                    renderers.add(null);
+                                }
                             break;
                     }
                 }
-                trackLayers.add(renderers);
+                    newTrackLayers.add(renderers);
+                }
+                
+                // Release ClipRenderers that are no longer in the new timeline
+                // Note: We don't release ClipRenderers just because exoPlayer is null - exoPlayer will be created when needed
+                int releasedCount = 0;
+                for (ClipRenderer clipRenderer : allExistingRenderers) {
+                    if (!migratedRenderers.contains(clipRenderer)) {
+                        // Clip no longer exists in timeline - release it
+                        releasedCount++;
+                        Log.d("TimelineRenderer", "Releasing ClipRenderer for clip that no longer exists: " + (clipRenderer.clip != null ? clipRenderer.clip.clipName : "unknown"));
+                        clipRenderer.release();
+                    }
+                }
+                Log.d("TimelineRenderer", "Released " + releasedCount + " ClipRenderers, migrated " + migratedRenderers.size() + " ClipRenderers");
+                
+                // Store migrated renderers for re-adding their views later
+                this.lastMigratedRenderers = new java.util.HashSet<>(migratedRenderers);
+                
+                // Only update trackLayers after creating new structure to avoid race condition
+                trackLayers = newTrackLayers;
+                
+                // Store references for lazy creation
+                this.timeline = timeline;
+                this.properties = properties;
+                this.settings = settings;
+                this.editingActivity = editingActivity;
+                this.previewViewGroup = previewViewGroup;
+                this.textCanvasControllerInfo = textCanvasControllerInfo;
             }
         }
+        
+        private Timeline timeline;
+        private MainAreaScreen.ProjectData properties;
+        private VideoSettings settings;
+        private EditingActivity editingActivity;
+        private FrameLayout previewViewGroup;
+        private TextView textCanvasControllerInfo;
+        private java.util.Set<ClipRenderer> lastMigratedRenderers = new java.util.HashSet<>();
+        
+        // Re-add textureViews of migrated ClipRenderers to previewViewGroup
+        public void reAddMigratedViews(FrameLayout previewViewGroup) {
+            synchronized (lock) {
+                for (ClipRenderer cr : lastMigratedRenderers) {
+                    if (cr != null && cr.textureView != null) {
+                        // Update previewViewGroupRef to new previewViewGroup
+                        cr.previewViewGroupRef = previewViewGroup;
+                        
+                        // Remove from parent if already attached
+                        if (cr.textureView.getParent() != null) {
+                            ((android.view.ViewGroup) cr.textureView.getParent()).removeView(cr.textureView);
+                        }
+                        // Add to previewViewGroup with FrameLayout.LayoutParams (not RelativeLayout)
+                        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(cr.clip.width, cr.clip.height);
+                        previewViewGroup.addView(cr.textureView, lp);
+                        
+                        // Also re-add dragBorderView if exists
+                        if (cr.dragBorderView != null) {
+                            if (cr.dragBorderView.getParent() != null) {
+                                ((android.view.ViewGroup) cr.dragBorderView.getParent()).removeView(cr.dragBorderView);
+                            }
+                            FrameLayout.LayoutParams borderLp = new FrameLayout.LayoutParams(
+                                    cr.textureView.getWidth(), cr.textureView.getHeight());
+                            previewViewGroup.addView(cr.dragBorderView, borderLp);
+                        }
+                        
+                        // Don't sync scale/position from clip.videoProperties when migrating
+                        // ClipRenderer instance already has correct preview coordinates
+                        // Syncing would cause conversion errors due to non-symmetric conversion functions
+                        // (previewToRenderConversionX uses 1:1 mapping, but renderToPreviewConversionX uses ratio)
+                        
+                        // Just re-apply current transformations to ensure view is correctly positioned
+                        // The ClipRenderer instance already has the correct scale, position, and rotation
+                        Log.d("TimelineRenderer", "Re-add clip: " + cr.clip.clipName 
+                                + " | keeping current previewPos=(" + cr.posX + "," + cr.posY + ")"
+                                + " | keeping current previewScale=(" + cr.scaleX + "," + cr.scaleY + ")"
+                                + " | rot=" + cr.rot);
+                        
+                        // Re-apply transformations (no sync needed, just re-apply to view)
+                        cr.applyPostTransformation();
+                    }
+                }
+            }
+        }
+        
         public void updateTime(float time, boolean isSeekingOnly)
         {
+            // Lazy create ClipRenderer when clip becomes visible
+            // Use synchronized to avoid race condition with buildTimeline()
+            synchronized (lock) {
+                Log.d("TimelineRenderer", "updateTime called with time: " + time + ", isSeekingOnly: " + isSeekingOnly + ", trackLayers size: " + trackLayers.size());
+                int trackIndex = 0;
             for (List<ClipRenderer> trackRenderer : trackLayers) {
-                for (ClipRenderer clipRenderer : trackRenderer) {
-                    if(clipRenderer != null)
-                    {
-                        if(clipRenderer.isVisible(time))
-                        {
-                            if(clipRenderer.textureView != null)
-                                clipRenderer.textureView.setVisibility(View.VISIBLE);
+                    if (trackIndex >= timeline.tracks.size()) break;
+                    Track track = timeline.tracks.get(trackIndex);
+                    
+                    // Use index-based loop to avoid issues with concurrent modification
+                    for (int clipIndex = 0; clipIndex < trackRenderer.size() && clipIndex < track.clips.size(); clipIndex++) {
+                        Clip clip = track.clips.get(clipIndex);
+                        ClipRenderer clipRenderer = trackRenderer.get(clipIndex);
+                        
+                        // Check if clip is visible
+                        boolean isVisible = time >= clip.startTime && time <= clip.startTime + clip.duration;
+                        
+                        if (clipRenderer == null && isVisible) {
+                            // Lazy create ClipRenderer when clip becomes visible
+                            // Double check after acquiring lock to avoid creating multiple instances
+                            if (clipIndex < trackRenderer.size() && trackRenderer.get(clipIndex) == null) {
+                                try {
+                                    Log.d("TimelineRenderer", "Creating ClipRenderer in updateTime for clip: " + clip.clipName 
+                                            + " | type: " + clip.type
+                                            + " | clip.videoProperties.ScaleX=" + clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX)
+                                            + " | clip.videoProperties.ScaleY=" + clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY));
+                                    clipRenderer = new ClipRenderer(context, clip, properties, settings, editingActivity, previewViewGroup, textCanvasControllerInfo);
+                                    trackRenderer.set(clipIndex, clipRenderer);
+                                    Log.d("TimelineRenderer", "ClipRenderer created in updateTime for clip: " + clip.clipName 
+                                            + " | exoPlayer: " + (clipRenderer.exoPlayer != null ? "not null" : "null")
+                                            + " | scaleX=" + clipRenderer.scaleX + " | scaleY=" + clipRenderer.scaleY
+                                            + " | hashCode: " + clipRenderer.hashCode());
+                                } catch (Exception e) {
+                                    Log.e("TimelineRenderer", "Error creating ClipRenderer in updateTime for clip: " + clip.clipName + ": " + e.getMessage(), e);
+                                    e.printStackTrace();
+                                }
+                            } else {
+                                // Another thread already created it, get the existing one
+                                clipRenderer = clipIndex < trackRenderer.size() ? trackRenderer.get(clipIndex) : null;
+                                if (clipRenderer != null) {
+                                    Log.d("TimelineRenderer", "Using existing ClipRenderer for clip: " + clip.clipName + ", exoPlayer: " + (clipRenderer.exoPlayer != null ? "not null" : "null") + ", hashCode: " + clipRenderer.hashCode());
+                                }
+                            }
                         }
-                        else {
-                            if(clipRenderer.textureView != null)
+                        
+                        if (clipRenderer != null) {
+                            if (clipRenderer.isVisible(time)) {
+                                if (clipRenderer.textureView != null)
+                                clipRenderer.textureView.setVisibility(View.VISIBLE);
+                                // Log before renderFrame to check exoPlayer state
+                                if (clip.type == ClipType.VIDEO && clipRenderer.exoPlayer == null) {
+                                    Log.w("TimelineRenderer", "exoPlayer is null before renderFrame for clip: " + clip.clipName + ", ClipRenderer hashCode: " + clipRenderer.hashCode());
+                        }
+                                clipRenderer.renderFrame(time, isSeekingOnly);
+                            } else {
+                                if (clipRenderer.textureView != null)
                                 clipRenderer.textureView.setVisibility(View.GONE);
                             clipRenderer.isPlaying = false;
                         }
-                        clipRenderer.renderFrame(time, isSeekingOnly);
                     }
+                    }
+                    trackIndex++;
                 }
             }
         }
 
 
         public void startPlayAt(float playheadTime) {
-
             boolean renderedAny = false;
 
-            for (List<ClipRenderer> track : trackLayers) {
-                for (ClipRenderer clipRenderer : track) {
-                    if (clipRenderer.isVisible(playheadTime)) {
+            // Lazy create ClipRenderer when clip becomes visible
+            int trackIndex = 0;
+            for (List<ClipRenderer> trackRenderer : trackLayers) {
+                if (trackIndex >= timeline.tracks.size()) break;
+                Track track = timeline.tracks.get(trackIndex);
+                int clipIndex = 0;
+                for (ClipRenderer clipRenderer : trackRenderer) {
+                    if (clipIndex >= track.clips.size()) break;
+                    Clip clip = track.clips.get(clipIndex);
+                    
+                    // Check if clip is visible
+                    boolean isVisible = playheadTime >= clip.startTime && playheadTime <= clip.startTime + clip.duration;
+                    
+                    if (clipRenderer == null && isVisible) {
+                        // Lazy create ClipRenderer when clip becomes visible
+                        try {
+                            Log.d("TimelineRenderer", "Creating ClipRenderer in startPlayAt for clip: " + clip.clipName + ", type: " + clip.type);
+                            clipRenderer = new ClipRenderer(context, clip, properties, settings, editingActivity, previewViewGroup, textCanvasControllerInfo);
+                            trackRenderer.set(clipIndex, clipRenderer);
+                            Log.d("TimelineRenderer", "ClipRenderer created in startPlayAt for clip: " + clip.clipName + ", exoPlayer: " + (clipRenderer.exoPlayer != null ? "not null" : "null"));
+                        } catch (Exception e) {
+                            Log.e("TimelineRenderer", "Error creating ClipRenderer in startPlayAt for clip: " + clip.clipName + ": " + e.getMessage(), e);
+                            e.printStackTrace();
+                        }
+                    }
+                    
+                    if (clipRenderer != null && clipRenderer.isVisible(playheadTime)) {
+                        // Log before renderFrame to check exoPlayer state
+                        if (clip.type == ClipType.VIDEO && clipRenderer.exoPlayer == null) {
+                            Log.w("TimelineRenderer", "exoPlayer is null before renderFrame in startPlayAt for clip: " + clip.clipName);
+                        }
                         clipRenderer.renderFrame(playheadTime, false);
                         renderedAny = true;
                     }
+                    clipIndex++;
                 }
+                trackIndex++;
             }
 
             if (!renderedAny) {
@@ -4510,7 +5142,11 @@ frameRate = 60;
 
         public void release() {
             for (List<ClipRenderer> track : trackLayers) {
-                for (ClipRenderer cr : track) cr.release();
+                for (ClipRenderer cr : track) {
+                    if (cr != null) {
+                        cr.release();
+                    }
+                }
             }
         }
     }
