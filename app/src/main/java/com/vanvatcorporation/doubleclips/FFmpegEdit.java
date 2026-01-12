@@ -43,6 +43,14 @@ import com.arthenica.ffmpegkit.Statistics;
 import com.vanvatcorporation.doubleclips.activities.EditingActivity;
 import com.vanvatcorporation.doubleclips.activities.MainActivity;
 import com.vanvatcorporation.doubleclips.activities.main.MainAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.model.Clip;
+import com.vanvatcorporation.doubleclips.activities.model.ClipType;
+import com.vanvatcorporation.doubleclips.activities.model.EasingType;
+import com.vanvatcorporation.doubleclips.activities.model.Keyframe;
+import com.vanvatcorporation.doubleclips.activities.model.Timeline;
+import com.vanvatcorporation.doubleclips.activities.model.Track;
+import com.vanvatcorporation.doubleclips.activities.model.VideoProperties;
+import com.vanvatcorporation.doubleclips.activities.model.VideoSettings;
 import com.vanvatcorporation.doubleclips.constants.Constants;
 import com.vanvatcorporation.doubleclips.helper.IOHelper;
 import com.vanvatcorporation.doubleclips.impl.java.RunnableImpl;
@@ -143,7 +151,7 @@ public class FFmpegEdit {
     }
 
 
-    public static void generateExportVideo(Context context, EditingActivity.Timeline timeline, EditingActivity.VideoSettings settings, MainAreaScreen.ProjectData data, Runnable onSuccess) {
+    public static void generateExportVideo(Context context, Timeline timeline, VideoSettings settings, MainAreaScreen.ProjectData data, Runnable onSuccess) {
         runAnyCommand(context, generateCmdFull(context, settings, timeline, data, false), "Exporting Video", onSuccess, () -> {
         }, new RunnableImpl() {
             @Override
@@ -160,13 +168,13 @@ public class FFmpegEdit {
 
 
 
-    public static String generateExportCmdPartially(Context context, EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainAreaScreen.ProjectData data,
+    public static String generateExportCmdPartially(Context context, VideoSettings settings, Timeline timeline, MainAreaScreen.ProjectData data,
                                                     int clipCount, int clipOffset, int renderingIndex, boolean isFinal, boolean isTemplateCommand) {
-        EditingActivity.Clip[] clips = new EditingActivity.Clip[clipCount];
+        Clip[] clips = new Clip[clipCount];
         int currentClipCount = 0;
-        for (EditingActivity.Track track : timeline.tracks) {
+        for (Track track : timeline.tracks) {
             if(currentClipCount >= clipCount) break;
-            for (EditingActivity.Clip clip : track.clips) {
+            for (Clip clip : track.clips) {
                 if(currentClipCount >= clipCount) break;
 
                 if(clipOffset > 0) {
@@ -181,8 +189,8 @@ public class FFmpegEdit {
         return generateExportCmdPartially(context, settings, timeline, data, clips, renderingIndex, isFinal, isTemplateCommand);
     }
 
-    public static String generateExportCmdPartially(Context context, EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainAreaScreen.ProjectData data,
-                                                    EditingActivity.Clip[] clips, int renderingIndex, boolean isFinal, boolean isTemplateCommand) {
+    public static String generateExportCmdPartially(Context context, VideoSettings settings, Timeline timeline, MainAreaScreen.ProjectData data,
+                                                    Clip[] clips, int renderingIndex, boolean isFinal, boolean isTemplateCommand) {
 
         FfmpegFilterComplexTags tags = new FfmpegFilterComplexTags();
 
@@ -217,7 +225,7 @@ public class FFmpegEdit {
         // --- Inserting file path into -i ---
 
         for (int i = 0; i < clips.length; i++) {
-            EditingActivity.Clip clip = clips[i];
+            Clip clip = clips[i];
 
             String inputPath = isTemplateCommand ? Constants.DEFAULT_TEMPLATE_CLIP_MARK(i) :
                     clip.isLockedForTemplate ? Constants.DEFAULT_TEMPLATE_CLIP_STATIC_MARK(clip.getClipName()) : clip.getAbsolutePath(data);
@@ -233,7 +241,7 @@ public class FFmpegEdit {
                     // some how to behave like a video, that way we can use that as a normal video playback
                     // and working with many more effect like transition
                     String frameFilter =
-                            clip.type == EditingActivity.ClipType.IMAGE ?
+                            clip.type == ClipType.IMAGE ?
                                     "-loop 1 -t " + clip.duration + " -framerate " + settings.getFrameRate() + " " :
                                     "";
 
@@ -260,7 +268,7 @@ public class FFmpegEdit {
         tags.storeTag(baseTag);
         inputIndex++;
 
-        for (EditingActivity.Clip clip : clips) {
+        for (Clip clip : clips) {
 
             String clipLabel = "[video-" + inputIndex + "]";
             String transparentLabel = "[trans-" + inputIndex + "]";
@@ -339,7 +347,7 @@ public class FFmpegEdit {
                     // can just add to it.
                     // Image is just like transparent layer, so we add the raw fillingTransitionDuration
                     String trimFilter =
-                            clip.type == EditingActivity.ClipType.VIDEO ?
+                            clip.type == ClipType.VIDEO ?
                                     "trim=start=" + clip.startClipTrim + ":end=" + (clip.startClipTrim + clip.duration + extendMediaDuration) :
                                     "trim=duration=" + (clip.duration + fillingTransitionDuration);
 
@@ -361,24 +369,41 @@ public class FFmpegEdit {
 
 
 
+                    // Common variables for both animated and non-animated clips
+                    float finalPosX = clip.videoProperties.getValue(VideoProperties.ValueType.PosX);
+                    float finalPosY = clip.videoProperties.getValue(VideoProperties.ValueType.PosY);
+                    boolean useExprPosition = false;
+                    String posXExpr = null;
+                    String posYExpr = null;
+
                     // Detect keyframe after which we write our expr compilation
                     // In this first if expr: We process scaleX, scaleY, rot, opacity, speed
                     if (clip.hasAnimatedProperties()) {
-
+                        useExprPosition = true;
 
                         // TODO: Scale is not applied yet. Research zoompan instead.
-                        String scaleXExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, EditingActivity.VideoProperties.ValueType.ScaleX);
-                        String scaleYExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, EditingActivity.VideoProperties.ValueType.ScaleY);
+                        String scaleXExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, VideoProperties.ValueType.ScaleX);
+                        String scaleYExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, VideoProperties.ValueType.ScaleY);
 
-                        String rotationExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, EditingActivity.VideoProperties.ValueType.RotInRadians);
+                        String rotationExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, VideoProperties.ValueType.RotInRadians);
+
+                        posXExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, VideoProperties.ValueType.PosX);
+                        posYExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, VideoProperties.ValueType.PosY);
+
+                        // Log export transform for debugging
+                        android.util.Log.d("FFmpegExport", "Clip (animated): " + clip.clipName
+                                + " | size=" + clip.width + "x" + clip.height
+                                + " | scaleX=" + scaleXExpr + " | scaleY=" + scaleYExpr
+                                + " | pos=(" + posXExpr + "," + posYExpr + ")"
+                                + " | canvas=" + settings.getVideoWidth() + "x" + settings.getVideoHeight());
 
                         filterComplex
                                 .append("scale='iw*").append(scaleXExpr).append("':'ih*").append(scaleYExpr).append("',")
-                                .append("setsar=1,setdar=").append(settings.getVideoWidth()).append("/").append(settings.getVideoHeight()).append(",")
+                                .append("setsar=1,") // Removed setdar to preserve clip's aspect ratio
                                 .append("rotate='").append(rotationExpr).append("':ow=rotw('").append(rotationExpr).append("'):oh=roth('").append(rotationExpr).append("')")
                                 .append(":fillcolor=0x00000000").append(",")
-                                .append("format=rgba,colorchannelmixer=aa=").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.Opacity)).append(",")
-                                .append("setpts='(PTS-STARTPTS)/").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.Speed)).append("+").append(clip.startTime).append("/TB'").append(",");
+                                .append("format=rgba,colorchannelmixer=aa=").append(clip.videoProperties.getValue(VideoProperties.ValueType.Opacity)).append(",")
+                                .append("setpts='(PTS-STARTPTS)/").append(clip.videoProperties.getValue(VideoProperties.ValueType.Speed)).append("+").append(clip.startTime).append("/TB'").append(",");
                     }
                     else
                     {
@@ -386,16 +411,73 @@ public class FFmpegEdit {
                         clip.mergingVideoPropertiesFromSingleKeyframe();
 
                         // FFmpeg uses radians rotation, so...
-                        double radiansRotation = clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.RotInRadians);
+                        double radiansRotation = clip.videoProperties.getValue(VideoProperties.ValueType.RotInRadians);
                         // And then add to filterComplex no matter
                         // the clip has merge or there are no keyframe to combine
 
-                        filterComplex.append("scale=iw*").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.ScaleX)).append(":ih*").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.ScaleY)).append(",")
-                                .append("setsar=1,setdar=").append(settings.getVideoWidth()).append("/").append(settings.getVideoHeight()).append(",")
+                        float scaleX = clip.videoProperties.getValue(VideoProperties.ValueType.ScaleX);
+                        float scaleY = clip.videoProperties.getValue(VideoProperties.ValueType.ScaleY);
+                        float posX = clip.videoProperties.getValue(VideoProperties.ValueType.PosX);
+                        float posY = clip.videoProperties.getValue(VideoProperties.ValueType.PosY);
+
+                        // IMPORTANT: Ensure uniform scaling to maintain aspect ratio
+                        // If scaleX and scaleY are different, use uniform scale to prevent distortion
+                        float uniformScale = Math.min(scaleX, scaleY);
+                        
+                        // Calculate scaled dimensions
+                        float scaledWidth = clip.width * uniformScale;
+                        float scaledHeight = clip.height * uniformScale;
+                        
+                        // Calculate safe position bounds to prevent clipping
+                        // minPos: clip cannot go beyond left/top edge (position >= 0)
+                        // maxPos: clip cannot go beyond right/bottom edge (position <= canvas - scaledSize)
+                        float minPosX = 0;
+                        float minPosY = 0;
+                        float maxPosX = settings.getVideoWidth() - scaledWidth;
+                        float maxPosY = settings.getVideoHeight() - scaledHeight;
+                        
+                        // Handle case where clip is larger than canvas (shouldn't happen but be safe)
+                        if (maxPosX < minPosX) {
+                            // Clip is wider than canvas - center it
+                            minPosX = maxPosX = (settings.getVideoWidth() - scaledWidth) / 2f;
+                        }
+                        if (maxPosY < minPosY) {
+                            // Clip is taller than canvas - center it
+                            minPosY = maxPosY = (settings.getVideoHeight() - scaledHeight) / 2f;
+                        }
+                        
+                        // Clamp position to safe bounds (keep user's intent but prevent clipping)
+                        finalPosX = Math.max(minPosX, Math.min(maxPosX, posX));
+                        finalPosY = Math.max(minPosY, Math.min(maxPosY, posY));
+                        
+                        // Log if position was clamped
+                        boolean positionClamped = (Math.abs(finalPosX - posX) > 0.1f || Math.abs(finalPosY - posY) > 0.1f);
+                        if (positionClamped) {
+                            android.util.Log.w("FFmpegExport", "Clamped position for clip " + clip.clipName
+                                    + " | originalPos=(" + posX + "," + posY + ")"
+                                    + " | clampedPos=(" + finalPosX + "," + finalPosY + ")"
+                                    + " | bounds=[(" + minPosX + "," + minPosY + ") - (" + maxPosX + "," + maxPosY + ")]");
+                        }
+
+                        // Log export transform for debugging
+                        android.util.Log.d("FFmpegExport", "Clip: " + clip.clipName
+                                + " | size=" + clip.width + "x" + clip.height
+                                + " | scale=" + uniformScale
+                                + " | scaledSize=" + scaledWidth + "x" + scaledHeight
+                                + " | originalPos=(" + posX + "," + posY + ")"
+                                + " | finalPos=(" + finalPosX + "," + finalPosY + ")"
+                                + " | bounds=[0,0]-[" + maxPosX + "," + maxPosY + "]"
+                                + " | clamped=" + positionClamped
+                                + " | rot=" + Math.toDegrees(radiansRotation) + "deg"
+                                + " | canvas=" + settings.getVideoWidth() + "x" + settings.getVideoHeight());
+
+                        // Use uniform scale for both dimensions to prevent stretching
+                        filterComplex.append("scale=iw*").append(uniformScale).append(":ih*").append(uniformScale).append(",")
+                                .append("setsar=1,") // Removed setdar to preserve clip's aspect ratio
                                 .append("rotate=").append(radiansRotation).append(":ow=rotw(").append(radiansRotation).append("):oh=roth(").append(radiansRotation).append(")")
                                 .append(":fillcolor=0x00000000").append(",")
-                                .append("format=rgba,colorchannelmixer=aa=").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.Opacity)).append(",")
-                                .append("setpts='(PTS-STARTPTS)/").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.Speed)).append("+").append(clip.startTime).append("/TB'").append(",");
+                                .append("format=rgba,colorchannelmixer=aa=").append(clip.videoProperties.getValue(VideoProperties.ValueType.Opacity)).append(",")
+                                .append("setpts='(PTS-STARTPTS)/").append(clip.videoProperties.getValue(VideoProperties.ValueType.Speed)).append("+").append(clip.startTime).append("/TB'").append(",");
                     }
 
 
@@ -421,20 +503,12 @@ public class FFmpegEdit {
                     filterComplex.append(transparentLabel).append(clipLabel);
 
                     // In this second if expr: We process posX, posY
-                    if (clip.hasAnimatedProperties()) {
-
-                        String posXExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, EditingActivity.VideoProperties.ValueType.PosX);
-                        String posYExpr = getKeyframeFFmpegExpr(clip.keyframes.keyframes, clip, 0, EditingActivity.VideoProperties.ValueType.PosY);
-
+                    if (useExprPosition && posXExpr != null && posYExpr != null) {
                         filterComplex.append("overlay='").append(posXExpr).append("':'").append(posYExpr).append("'");
                     }
                     else {
-                        // Because we already merged from the first if expr, we don't have to do it here
-                        //clip.mergingVideoPropertiesFromSingleKeyframe();
-
-
-                        filterComplex.append("overlay=").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.PosX)).append(":").append(clip.videoProperties.getValue(EditingActivity.VideoProperties.ValueType.PosY));
-
+                        // Use final calculated positions (may be recalculated for uniform scaling)
+                        filterComplex.append("overlay=").append(finalPosX).append(":").append(finalPosY);
                     }
 
                     filterComplex.append(":enable='between(t,")
@@ -479,7 +553,7 @@ public class FFmpegEdit {
             }
 
             // 🔊 Handle embedded audio in VIDEO
-            if (clip.type == EditingActivity.ClipType.VIDEO && clip.isVideoHasAudio && !clip.isMute) {
+            if (clip.type == ClipType.VIDEO && clip.isVideoHasAudio && !clip.isMute) {
 
                 // Transition extension: Same for clip
                 int delayMs = (int) (clip.startTime * 1000);
@@ -506,11 +580,11 @@ public class FFmpegEdit {
         }
 
 
-        for (EditingActivity.Track track : timeline.tracks) {
-            List<EditingActivity.Clip> clipList = track.clips;
+        for (Track track : timeline.tracks) {
+            List<Clip> clipList = track.clips;
             for (int i = 0; i < clipList.size() - 1; i++) {
-                EditingActivity.Clip clipA = clipList.get(i);
-                EditingActivity.Clip clipB = clipList.get(i + 1);
+                Clip clipA = clipList.get(i);
+                Clip clipB = clipList.get(i + 1);
 
                 if (clipA.isClipTransitionAvailable())
                     filterComplex.append(FXCommandEmitter.emitTransition(clipA, clipB, clipA.endTransition, tags));
@@ -523,7 +597,7 @@ public class FFmpegEdit {
         FfmpegFilterComplexTags.FilterComplexInfo baseInfo = tags.useTag(baseTag);
         while(tags.tagsMapToUsableTagIndex.size() > 0)
         {
-            EditingActivity.Clip clip = (EditingActivity.Clip) tags.tagsMapToUsableTagIndex.keySet().toArray()[0];
+            Clip clip = (Clip) tags.tagsMapToUsableTagIndex.keySet().toArray()[0];
 
             String prevOutputLabel = "[layer-" + (layer - 1 ) + "]";
             String outputLabel = "[layer-" + layer + "]";
@@ -596,7 +670,7 @@ public class FFmpegEdit {
 
         return cmd.toString();
     }
-    public static String generateCmdFull(Context context, EditingActivity.VideoSettings settings, EditingActivity.Timeline timeline, MainAreaScreen.ProjectData data, boolean isTemplateCommand) {
+    public static String generateCmdFull(Context context, VideoSettings settings, Timeline timeline, MainAreaScreen.ProjectData data, boolean isTemplateCommand) {
 
         int clipCount = timeline.getAllClipCount();
 
@@ -631,18 +705,18 @@ public class FFmpegEdit {
      * @return Expression for FFmpeg in String format.
      *
      */
-    public static String getKeyframeFFmpegExpr(List<EditingActivity.Keyframe> keyframes, EditingActivity.Clip clip, int startIndex, EditingActivity.VideoProperties.ValueType valueType)
+    public static String getKeyframeFFmpegExpr(List<Keyframe> keyframes, Clip clip, int startIndex, VideoProperties.ValueType valueType)
     {
         StringBuilder keyframeExprString = new StringBuilder();
 
         if(startIndex + 1 >= keyframes.size()) return String.valueOf(clip.videoProperties.getValue(valueType)); // Default value
 
-        EditingActivity.Keyframe prevKeyframe = keyframes.get(startIndex);
-        EditingActivity.Keyframe nextKeyframe = keyframes.get(startIndex + 1);
+        Keyframe prevKeyframe = keyframes.get(startIndex);
+        Keyframe nextKeyframe = keyframes.get(startIndex + 1);
 
         // Input time for zoompan expression, time for other.
         String timeUnit =
-                (valueType == EditingActivity.VideoProperties.ValueType.ScaleX || valueType == EditingActivity.VideoProperties.ValueType.ScaleY) ?
+                (valueType == VideoProperties.ValueType.ScaleX || valueType == VideoProperties.ValueType.ScaleY) ?
                         "it" : "t";
 
 
@@ -665,11 +739,11 @@ public class FFmpegEdit {
         return keyframeExprString.toString();
     }
 
-    public static String generateEasing(EditingActivity.Keyframe prevKey, EditingActivity.Keyframe nextKey, EditingActivity.Clip clip, EditingActivity.VideoProperties.ValueType type, String timeUnit)
+    public static String generateEasing(Keyframe prevKey, Keyframe nextKey, Clip clip, VideoProperties.ValueType type, String timeUnit)
     {
         return generateEasing(prevKey.value.getValue(type), nextKey.value.getValue(type), prevKey.getLocalTime(), (nextKey.getLocalTime() - prevKey.getLocalTime()), prevKey.easing, timeUnit);
     }
-    public static String generateEasing(float prevValue, float nextValue, float offset, float duration, EditingActivity.EasingType type, String timeUnit)
+    public static String generateEasing(float prevValue, float nextValue, float offset, float duration, EasingType type, String timeUnit)
     {
         StringBuilder expr = new StringBuilder();
         switch (type)
@@ -735,8 +809,8 @@ public class FFmpegEdit {
 
     public static class FfmpegFilterComplexTags {
         private final ArrayList<String> usableTag = new ArrayList<>();
-        private final Map<EditingActivity.Clip, String> tagsMapToUsableTagIndex = new HashMap<>();
-        private final Map<EditingActivity.Clip, EditingActivity.Clip> tagsMergedClipMap = new HashMap<>();
+        private final Map<Clip, String> tagsMapToUsableTagIndex = new HashMap<>();
+        private final Map<Clip, Clip> tagsMergedClipMap = new HashMap<>();
 
         public int getTagCount()
         {
@@ -770,7 +844,7 @@ public class FFmpegEdit {
         }
 
 
-        public FilterComplexInfo useTag(EditingActivity.Clip key) {
+        public FilterComplexInfo useTag(Clip key) {
             if(usableTag.contains(tagsMapToUsableTagIndex.get(key)))
             {
                 String retrieveTag = tagsMapToUsableTagIndex.get(key);
@@ -788,7 +862,7 @@ public class FFmpegEdit {
 //            }
             return null;
         }
-        public FilterComplexInfo useTag(EditingActivity.Clip key, EditingActivity.Clip mergingKey) {
+        public FilterComplexInfo useTag(Clip key, Clip mergingKey) {
             if(usableTag.contains(tagsMapToUsableTagIndex.get(key)))
             {
                 String retrieveTag = tagsMapToUsableTagIndex.get(key);
@@ -803,12 +877,12 @@ public class FFmpegEdit {
             }
             return null;
         }
-        public void storeTag(EditingActivity.Clip key, String tag) {
+        public void storeTag(Clip key, String tag) {
             usableTag.add(tag);
 
             tagsMapToUsableTagIndex.put(key, tag);
         }
-        public void storeTag(EditingActivity.Clip key, String tag, int index) {
+        public void storeTag(Clip key, String tag, int index) {
             if(index < 0) index = 0;
             if(index >= usableTag.size()) index = usableTag.size() - 1;
             usableTag.add(index, tag);
@@ -817,9 +891,9 @@ public class FFmpegEdit {
         }
 
 
-        public EditingActivity.Clip getKeyFromTag(String tag)
+        public Clip getKeyFromTag(String tag)
         {
-            for (Map.Entry<EditingActivity.Clip, String> entry : tagsMapToUsableTagIndex.entrySet()) {
+            for (Map.Entry<Clip, String> entry : tagsMapToUsableTagIndex.entrySet()) {
                 if (entry.getValue().equals(tag)) {
                     return entry.getKey();
                 }
@@ -828,7 +902,7 @@ public class FFmpegEdit {
         }
 
 
-        public EditingActivity.Clip getValidMapKey(EditingActivity.Clip clipKey)
+        public Clip getValidMapKey(Clip clipKey)
         {
             if(tagsMapToUsableTagIndex.containsKey(clipKey))
                 return clipKey;

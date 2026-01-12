@@ -35,6 +35,9 @@ import com.vanvatcorporation.doubleclips.activities.DebugActivity;
 import com.vanvatcorporation.doubleclips.activities.EditingActivity;
 import com.vanvatcorporation.doubleclips.activities.MainActivity;
 import com.vanvatcorporation.doubleclips.activities.editing.BaseEditSpecificAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.model.Timeline;
+import com.vanvatcorporation.doubleclips.activities.model.TimelineHelper;
+import com.vanvatcorporation.doubleclips.activities.model.VideoSettings;
 import com.vanvatcorporation.doubleclips.constants.Constants;
 import com.vanvatcorporation.doubleclips.ext.rajawali.RajawaliExample;
 import com.vanvatcorporation.doubleclips.helper.CompressionHelper;
@@ -438,10 +441,10 @@ public class MainAreaScreen extends BaseAreaScreen {
                     else if(item.getItemId() == R.id.action_share)
                     {
                         // Add ffmpeg cmd for ready-to-use rendering in other platform. Can be made into template
-                        EditingActivity.VideoSettings videoSettings = new EditingActivity.VideoSettings(1920, 1080, 30, 18, Integer.MAX_VALUE,
-                                EditingActivity.VideoSettings.FfmpegPreset.MEDIUM,
-                                EditingActivity.VideoSettings.FfmpegTune.ZEROLATENCY);
-                        EditingActivity.Timeline timeline = EditingActivity.Timeline.loadRawTimeline(context, projectItem);
+                        VideoSettings videoSettings = new VideoSettings(1920, 1080, 30, 18, Integer.MAX_VALUE,
+                                VideoSettings.FfmpegPreset.MEDIUM,
+                                VideoSettings.FfmpegTune.ZEROLATENCY);
+                        Timeline timeline = TimelineHelper.loadRawTimeline(context, projectItem);
                         String ffmpegCmdPath = IOHelper.CombinePath(projectItem.getProjectPath(), "ffmpegCmd.txt");
                         IOHelper.writeToFile(context, ffmpegCmdPath, FFmpegEdit.generateCmdFull(context, videoSettings, timeline, projectItem, false));
 

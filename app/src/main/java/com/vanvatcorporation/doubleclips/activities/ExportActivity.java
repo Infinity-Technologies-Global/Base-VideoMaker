@@ -39,6 +39,8 @@ import com.vanvatcorporation.doubleclips.FFmpegEdit;
 import com.vanvatcorporation.doubleclips.R;
 import com.vanvatcorporation.doubleclips.activities.export.VideoPropertiesExportSpecificAreaScreen;
 import com.vanvatcorporation.doubleclips.activities.main.MainAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.model.Timeline;
+import com.vanvatcorporation.doubleclips.activities.model.VideoSettings;
 import com.vanvatcorporation.doubleclips.constants.Constants;
 import com.vanvatcorporation.doubleclips.helper.IOHelper;
 import com.vanvatcorporation.doubleclips.helper.ParserHelper;
@@ -67,9 +69,9 @@ import javax.net.ssl.HttpsURLConnection;
 
 public class ExportActivity extends AppCompatActivityImpl {
 
-    EditingActivity.Timeline timeline;
+    Timeline timeline;
     MainAreaScreen.ProjectData properties;
-    EditingActivity.VideoSettings settings;
+    VideoSettings settings;
 
 
     private VideoPropertiesExportSpecificAreaScreen videoPropertiesExportSpecificAreaScreen;
@@ -143,8 +145,8 @@ public class ExportActivity extends AppCompatActivityImpl {
         setContentView(R.layout.layout_export);
 
         properties = (MainAreaScreen.ProjectData) createrBundle.getSerializable("ProjectProperties");
-        timeline = (EditingActivity.Timeline) createrBundle.getSerializable("ProjectTimeline");
-        settings = (EditingActivity.VideoSettings) createrBundle.getSerializable("ProjectSettings");
+        timeline = (Timeline) createrBundle.getSerializable("ProjectTimeline");
+        settings = (VideoSettings) createrBundle.getSerializable("ProjectSettings");
 
 
         findViewById(R.id.backButton).setOnClickListener(v -> {

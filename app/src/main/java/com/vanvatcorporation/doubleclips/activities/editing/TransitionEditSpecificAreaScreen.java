@@ -13,6 +13,7 @@ import android.widget.Spinner;
 import com.vanvatcorporation.doubleclips.FXCommandEmitter;
 import com.vanvatcorporation.doubleclips.R;
 import com.vanvatcorporation.doubleclips.activities.EditingActivity;
+import com.vanvatcorporation.doubleclips.activities.model.TransitionClip;
 
 public class TransitionEditSpecificAreaScreen extends BaseEditSpecificAreaScreen {
 
@@ -50,7 +51,7 @@ public class TransitionEditSpecificAreaScreen extends BaseEditSpecificAreaScreen
         transitionModeEditContent = findViewById(R.id.transitionModeContent);
 
         transitionEditContent.setAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, FXCommandEmitter.FXRegistry.transitionFXMap.values().toArray(new String[0])));
-        transitionModeEditContent.setAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, EditingActivity.TransitionClip.TransitionMode.values()));
+        transitionModeEditContent.setAdapter(new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, TransitionClip.TransitionMode.values()));
 
 
         onClose.add(() -> {

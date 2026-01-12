@@ -12,6 +12,8 @@ import android.widget.TextView;
 
 import com.vanvatcorporation.doubleclips.R;
 import com.vanvatcorporation.doubleclips.activities.EditingActivity;
+import com.vanvatcorporation.doubleclips.activities.model.Clip;
+import com.vanvatcorporation.doubleclips.activities.model.Keyframe;
 
 public class ClipEditSpecificAreaScreen extends BaseEditSpecificAreaScreen {
 
@@ -71,7 +73,7 @@ public class ClipEditSpecificAreaScreen extends BaseEditSpecificAreaScreen {
         });
     }
 
-    public void createKeyframeElement(EditingActivity.Clip clip, EditingActivity.Keyframe keyframe, Runnable onClickKeyframe, Runnable onLongClickKeyframe)
+    public void createKeyframeElement(Clip clip, Keyframe keyframe, Runnable onClickKeyframe, Runnable onLongClickKeyframe)
     {
         LinearLayout layout = new LinearLayout(getContext());
         layout.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));

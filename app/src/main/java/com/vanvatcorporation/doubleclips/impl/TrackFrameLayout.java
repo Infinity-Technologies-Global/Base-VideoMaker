@@ -8,10 +8,11 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.vanvatcorporation.doubleclips.activities.EditingActivity;
+import com.vanvatcorporation.doubleclips.activities.model.Track;
 
 public class TrackFrameLayout extends FrameLayout {
 
-    public EditingActivity.Track trackInfo;
+    public Track trackInfo;
 
 
     public TrackFrameLayout(@NonNull Context context) {

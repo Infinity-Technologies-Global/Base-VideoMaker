@@ -105,10 +105,21 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
-                <ImageView
+                <ImageButton
+                    android:id="@+id/undoButton"
                     android:layout_width="50dp"
                     android:layout_height="50dp"
-                    android:layout_margin="5dp"/>
+                    android:layout_margin="5dp"
+                    android:src="@android:drawable/ic_menu_revert"
+                    android:contentDescription="Undo"/>
+                <ImageButton
+                    android:id="@+id/redoButton"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:layout_margin="5dp"
+                    android:src="@android:drawable/ic_menu_revert"
+                    android:scaleX="-1"
+                    android:contentDescription="Redo"/>
                 <ImageView
                     android:layout_width="50dp"
                     android:layout_height="50dp"

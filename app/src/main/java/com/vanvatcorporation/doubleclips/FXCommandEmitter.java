@@ -1,13 +1,16 @@
 package com.vanvatcorporation.doubleclips;
 
 import com.vanvatcorporation.doubleclips.activities.EditingActivity;
+import com.vanvatcorporation.doubleclips.activities.model.Clip;
+import com.vanvatcorporation.doubleclips.activities.model.EffectTemplate;
+import com.vanvatcorporation.doubleclips.activities.model.TransitionClip;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 public class FXCommandEmitter {
-//    public static String emit(EditingActivity.EffectTemplate fx, int inputIndex) {
+//    public static String emit(EffectTemplate fx, int inputIndex) {
 //        switch (fx.style) {
 //            case "fade":
 //                return "[" + (inputIndex - 1) + "][clip" + inputIndex + "]xfade=transition=fade:duration=" + fx.duration + ":offset=" + fx.offset + "[tmp" + inputIndex + "];";
@@ -18,14 +21,14 @@ public class FXCommandEmitter {
 //        return "";
 //    }
 
-    public static String emit(EditingActivity.Clip clip, FFmpegEdit.FfmpegFilterComplexTags.FilterComplexInfo affectedTags,
+    public static String emit(Clip clip, FFmpegEdit.FfmpegFilterComplexTags.FilterComplexInfo affectedTags,
                               FFmpegEdit.FfmpegFilterComplexTags tags) {
         if(affectedTags == null) return "";
         String outputLabel = "[transition_" +
                 affectedTags.tag.replace("[trans-video-", "").replace("]", "") + "]";
 
 
-        EditingActivity.EffectTemplate fx = clip.effect;
+        EffectTemplate fx = clip.effect;
 
         switch (fx.style) {
             case "glitch-pulse":
@@ -49,18 +52,18 @@ public class FXCommandEmitter {
         }
         return ""; // If unknown, emit nothing
     }
-    public static String emitTransition(EditingActivity.Clip clipBefore, EditingActivity.Clip clipAfter, EditingActivity.TransitionClip transition,
+    public static String emitTransition(Clip clipBefore, Clip clipAfter, TransitionClip transition,
                                         FFmpegEdit.FfmpegFilterComplexTags tags) {
 
-        EditingActivity.Clip clipA = tags.getValidMapKey(clipBefore);
-        EditingActivity.Clip clipB = tags.getValidMapKey(clipAfter);
+        Clip clipA = tags.getValidMapKey(clipBefore);
+        Clip clipB = tags.getValidMapKey(clipAfter);
         if(clipA == null) return "";
         if(clipB == null) return "";
         if(transition.effect.style.equals("none")) return "";
-        EditingActivity.Clip mergedClip = new EditingActivity.Clip("MERGED", clipA.startTime, clipA.duration + clipB.duration -
+        Clip mergedClip = new Clip("MERGED", clipA.startTime, clipA.duration + clipB.duration -
                 // Overlap mean both the overlap clip lost the transition duration amount of time
                 // (end first clip sooner than half of transition and start second clip sooner than half of transition)
-                (transition.mode == EditingActivity.TransitionClip.TransitionMode.OVERLAP ? transition.duration : 0)
+                (transition.mode == TransitionClip.TransitionMode.OVERLAP ? transition.duration : 0)
                 , clipA.trackIndex, clipA.type, clipA.isVideoHasAudio || clipB.isVideoHasAudio, clipA.width, clipA.height);
 
         FFmpegEdit.FfmpegFilterComplexTags.FilterComplexInfo fromTag = tags.useTag(clipA, mergedClip);

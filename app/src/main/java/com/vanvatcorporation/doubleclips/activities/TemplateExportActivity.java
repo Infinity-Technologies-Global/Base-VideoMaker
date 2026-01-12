@@ -41,6 +41,8 @@ import com.vanvatcorporation.doubleclips.FFmpegEdit;
 import com.vanvatcorporation.doubleclips.R;
 import com.vanvatcorporation.doubleclips.activities.export.VideoPropertiesExportSpecificAreaScreen;
 import com.vanvatcorporation.doubleclips.activities.main.TemplateAreaScreen;
+import com.vanvatcorporation.doubleclips.activities.model.ClipType;
+import com.vanvatcorporation.doubleclips.activities.model.VideoSettings;
 import com.vanvatcorporation.doubleclips.constants.Constants;
 import com.vanvatcorporation.doubleclips.helper.IOHelper;
 import com.vanvatcorporation.doubleclips.helper.IOImageHelper;
@@ -66,7 +68,7 @@ import javax.net.ssl.HttpsURLConnection;
 
 public class TemplateExportActivity extends AppCompatActivityImpl {
     TemplateAreaScreen.TemplateData data;
-    EditingActivity.VideoSettings settings;
+    VideoSettings settings;
 
     public List<ClipReplacementData> clipReplacementList;
     public RecyclerView clipReplacementRecyclerView;
@@ -119,7 +121,7 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
 
 
 
-                clipReplacementList.get(currentlyChosenClipIndex).type = mimeType.startsWith("video/") ? EditingActivity.ClipType.VIDEO : EditingActivity.ClipType.IMAGE;
+                clipReplacementList.get(currentlyChosenClipIndex).type = mimeType.startsWith("video/") ? ClipType.VIDEO : ClipType.IMAGE;
 
                 clipReplacementList.get(currentlyChosenClipIndex).clipThumbnail =
                         mimeType.startsWith("video/") ?
@@ -212,7 +214,8 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
 
         data = (TemplateAreaScreen.TemplateData) createrBundle.getSerializable("TemplateData");
         // Make default video settings at this point
-        settings = new EditingActivity.VideoSettings(1366, 768, 30, 30, 30, EditingActivity.VideoSettings.FfmpegPreset.ULTRAFAST, EditingActivity.VideoSettings.FfmpegTune.ZEROLATENCY);
+        // Đồng bộ với EditingActivity: canvas mặc định 1080x608 (~16:9, full ngang trên device 1080px)
+        settings = new VideoSettings(1080, 608, 30, 30, 30, VideoSettings.FfmpegPreset.ULTRAFAST, VideoSettings.FfmpegTune.ZEROLATENCY);
 
         clipReplacementRecyclerView = findViewById(R.id.clipReplacementRecyclerView);
 
@@ -264,7 +267,7 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
 
 
         for (int i = 0; i < data.getTemplateClipCount(); i++) {
-            clipReplacementList.add(new ClipReplacementData(EditingActivity.ClipType.VIDEO, "", null));
+            clipReplacementList.add(new ClipReplacementData(ClipType.VIDEO, "", null));
         }
         clipReplacementAdapter.notifyDataSetChanged();
 
@@ -408,7 +411,7 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
             ClipReplacementData clipData = clipReplacementList.get(i);
 
             String frameFilter =
-                    clipData.type == EditingActivity.ClipType.IMAGE ?
+                    clipData.type == ClipType.IMAGE ?
                             "-loop 1 -t " + data.getTemplateDuration() + " -framerate " + settings.getFrameRate() + " " :
                             "";
 
@@ -556,18 +559,18 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
 
     public static class ClipReplacementData implements Serializable {
 
-        EditingActivity.ClipType type;
+        ClipType type;
         public String clipPath;
         public Bitmap clipThumbnail;
 
-        public ClipReplacementData(EditingActivity.ClipType type, String clipPath, Bitmap clipThumbnail) {
+        public ClipReplacementData(ClipType type, String clipPath, Bitmap clipThumbnail) {
             this.type = type;
             this.clipPath = clipPath;
             this.clipThumbnail = clipThumbnail;
         }
 
 
-        public EditingActivity.ClipType getType() {
+        public ClipType getType() {
             return type;
         }
         public String getClipPath() {
