@@ -215,7 +215,7 @@ public class TemplateExportActivity extends AppCompatActivityImpl {
         data = (TemplateAreaScreen.TemplateData) createrBundle.getSerializable("TemplateData");
         // Make default video settings at this point
         // Đồng bộ với EditingActivity: canvas mặc định 1080x608 (~16:9, full ngang trên device 1080px)
-        settings = new VideoSettings(1080, 608, 30, 30, 30, VideoSettings.FfmpegPreset.ULTRAFAST, VideoSettings.FfmpegTune.ZEROLATENCY);
+        settings = new VideoSettings(1280, 720, 30, 30, 30, VideoSettings.FfmpegPreset.ULTRAFAST, VideoSettings.FfmpegTune.ZEROLATENCY);
 
         clipReplacementRecyclerView = findViewById(R.id.clipReplacementRecyclerView);
 

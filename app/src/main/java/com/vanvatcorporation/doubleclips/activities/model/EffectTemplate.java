@@ -23,3 +23,5 @@ public class EffectTemplate implements Serializable {
     }
 }
 
+
+

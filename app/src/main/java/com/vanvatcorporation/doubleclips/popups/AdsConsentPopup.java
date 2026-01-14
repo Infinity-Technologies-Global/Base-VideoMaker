@@ -42,11 +42,11 @@ public class AdsConsentPopup extends AlertDialog.Builder {
 
         declineAdsButton.setOnClickListener(vcan -> {
             // Just dismiss the dialog
-            dialog.dismiss();
+//            dialog.dismiss();
         });
 
         // Show the dialog
-        dialog.show();
+//        dialog.show();
     }
 
 

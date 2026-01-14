@@ -617,7 +617,7 @@ public class EditingActivity extends AppCompatActivityImpl implements ClipIntera
 
         if (settings == null) {
             // Default canvas: 1080x608 (~16:9) để full chiều ngang trên thiết bị dọc 1080px
-            settings = new VideoSettings(1080, 608, 30, 30, 30, VideoSettings.FfmpegPreset.MEDIUM, VideoSettings.FfmpegTune.ZEROLATENCY);
+            settings = new VideoSettings(1280, 720, 30, 30, 30, VideoSettings.FfmpegPreset.MEDIUM, VideoSettings.FfmpegTune.ZEROLATENCY);
         }
 
         pixelsPerSecond = basePixelsPerSecond;
@@ -680,6 +680,10 @@ public class EditingActivity extends AppCompatActivityImpl implements ClipIntera
         });
         exportButton = findViewById(R.id.exportButton);
         exportButton.setOnClickListener(v -> {
+            android.util.Log.d("EditResolution", "=== EXPORT BUTTON CLICKED ===");
+            android.util.Log.d("EditResolution", "Settings to pass: " + settings.videoWidth + "x" + settings.videoHeight);
+            android.util.Log.d("EditResolution", "Settings ratio: " + ((float) settings.videoWidth / settings.videoHeight));
+            
             TimelineHelper.saveTimeline(this, timeline, properties, settings);
             Intent intent = new Intent(this, ExportActivity.class);
             intent.putExtra("ProjectProperties", properties);
@@ -1280,11 +1284,17 @@ public class EditingActivity extends AppCompatActivityImpl implements ClipIntera
             settings.videoHeight = ParserHelper.TryParse(videoPropertiesEditSpecificAreaScreen.resolutionYField.getText().toString(), 608);
             settings.crf = ParserHelper.TryParse(videoPropertiesEditSpecificAreaScreen.bitrateField.getText().toString(), 30);
 
+            android.util.Log.d("EditResolution", "=== EDIT DIALOG CLOSED ===");
+            android.util.Log.d("EditResolution", "Settings updated: " + settings.videoWidth + "x" + settings.videoHeight);
+            android.util.Log.d("EditResolution", "Settings ratio: " + ((float) settings.videoWidth / settings.videoHeight));
 
-            ViewGroup.LayoutParams previewViewGroupParams = previewViewGroup.getLayoutParams();
-            previewViewGroupParams.width = settings.videoWidth;
-            previewViewGroupParams.height = settings.videoHeight;
-            previewViewGroup.setLayoutParams(previewViewGroupParams);
+            // Lưu settings vào file để ExportActivity sử dụng đúng resolution
+            settings.saveSettings(this, properties);
+
+            // Refresh container size sau khi đóng dialog, rồi update preview size
+            outerPreviewViewGroup.post(() -> {
+                updatePreviewViewGroupSize();
+            });
         });
         videoPropertiesEditSpecificAreaScreen.onOpen.add(() -> {
             videoPropertiesEditSpecificAreaScreen.resolutionXField.setText(String.valueOf(settings.getVideoWidth()));
@@ -1364,82 +1374,85 @@ public class EditingActivity extends AppCompatActivityImpl implements ClipIntera
         }
     }
 
-    /**
-     * Scale previewViewGroup theo đúng ratio canvas và hành vi:
-     * - Video landscape (width >= height): NGANG full, DỌC căn giữa.
-     * - Video portrait  (width <  height): DỌC full, NGANG căn giữa.
-     * => Preview hiển thị giống export, luôn giữ đúng aspect ratio.
-     */
     private void updatePreviewViewGroupSize() {
         if (previewViewGroup == null || outerPreviewViewGroup == null) return;
-        if (previewAvailableWidth <= 0 || previewAvailableHeight <= 0) return;
         if (settings.videoWidth <= 0 || settings.videoHeight <= 0) return;
+
+        if (outerPreviewViewGroup.getWidth() > 0 && outerPreviewViewGroup.getHeight() > 0) {
+            previewAvailableWidth = outerPreviewViewGroup.getWidth();
+            previewAvailableHeight = outerPreviewViewGroup.getHeight();
+        }
+        if (previewAvailableWidth <= 0 || previewAvailableHeight <= 0) return;
 
         final int canvasW = settings.videoWidth;
         final int canvasH = settings.videoHeight;
 
-        // Tỉ lệ canvas (video)
         float canvasRatio = (float) canvasW / (float) canvasH;
         float containerRatio = (float) previewAvailableWidth / (float) previewAvailableHeight;
 
         float fitScale;
         int previewWidth;
         int previewHeight;
-
-        if (canvasW >= canvasH) {
-            // LANDSCAPE: full chiều ngang
-            fitScale = (float) previewAvailableWidth / canvasW;
-            previewWidth = (int) (canvasW * fitScale);   // ≈ previewAvailableWidth
-            previewHeight = (int) (canvasH * fitScale);  // <= previewAvailableHeight
-        } else {
-            // PORTRAIT: full chiều dọc
+        
+        // Logic theo orientation của canvas:
+        // - Portrait canvas (height > width): FULL HEIGHT để hiển thị đủ nội dung dọc
+        // - Landscape canvas (width >= height): FULL WIDTH để hiển thị đủ nội dung ngang
+        if (canvasH > canvasW) {
+            // PORTRAIT: full height, width theo aspect ratio (căn giữa ngang)
             fitScale = (float) previewAvailableHeight / canvasH;
-            previewHeight = (int) (canvasH * fitScale);  // ≈ previewAvailableHeight
-            previewWidth = (int) (canvasW * fitScale);   // <= previewAvailableWidth
+            previewHeight = previewAvailableHeight;
+            previewWidth = Math.round((float) previewHeight * canvasW / canvasH);
+        } else {
+            // LANDSCAPE: full width, height theo aspect ratio (căn giữa dọc)
+            fitScale = (float) previewAvailableWidth / canvasW;
+            previewWidth = previewAvailableWidth;
+            previewHeight = Math.round((float) previewWidth * canvasH / canvasW);
         }
 
-        // Set kích thước gốc (chưa scale) = canvas resolution
         ViewGroup.LayoutParams params = previewViewGroup.getLayoutParams();
-        params.width = settings.videoWidth;
-        params.height = settings.videoHeight;
+        params.width = previewWidth;
+        params.height = previewHeight;
         previewViewGroup.setLayoutParams(params);
 
-        // Scale đều theo fitScale
-        previewViewGroup.setScaleX(fitScale);
-        previewViewGroup.setScaleY(fitScale);
+        previewViewGroup.setScaleX(1.0f);
+        previewViewGroup.setScaleY(1.0f);
+        previewViewGroup.setTranslationX(0f);
+        previewViewGroup.setTranslationY(0f);
 
-        // Pivot ở góc trên trái để translate dễ hiểu
-        previewViewGroup.setPivotX(0);
-        previewViewGroup.setPivotY(0);
-
-        float offsetX;
-        float offsetY;
-
-        if (canvasW >= canvasH) {
-            // LANDSCAPE: ngang full, dọc căn giữa
-            offsetX = 0f;
-            offsetY = (previewAvailableHeight - previewHeight) / 2f;
-        } else {
-            // PORTRAIT: dọc full, ngang căn giữa
-            offsetX = (previewAvailableWidth - previewWidth) / 2f;
-            offsetY = 0f;
+        if (outerPreviewViewGroup instanceof RelativeLayout) {
+            RelativeLayout.LayoutParams relativeParams = (RelativeLayout.LayoutParams) previewViewGroup.getLayoutParams();
+            relativeParams.addRule(RelativeLayout.CENTER_HORIZONTAL, RelativeLayout.TRUE);
+            relativeParams.addRule(RelativeLayout.CENTER_VERTICAL, RelativeLayout.TRUE);
+            previewViewGroup.setLayoutParams(relativeParams);
         }
-        previewViewGroup.setTranslationX(offsetX);
-        previewViewGroup.setTranslationY(offsetY);
 
+        // Force layout và invalidate để đảm bảo preview được render lại đúng cách
+        previewViewGroup.requestLayout();
+        previewViewGroup.invalidate();
+        outerPreviewViewGroup.requestLayout();
+        outerPreviewViewGroup.invalidate();
+
+        String mode = (canvasH > canvasW) ? "PORTRAIT_FULL_HEIGHT" : "LANDSCAPE_FULL_WIDTH";
+        float actualRatio = (float) previewWidth / previewHeight;
+        float expectedRatio = (float) canvasW / canvasH;
         Log.d("PreviewSize", "Canvas: " + canvasW + "x" + canvasH
                 + " | CanvasRatio: " + canvasRatio
                 + " | Container: " + previewAvailableWidth + "x" + previewAvailableHeight
                 + " | ContainerRatio: " + containerRatio
                 + " | fitScale: " + fitScale
                 + " | PreviewSize: " + previewWidth + "x" + previewHeight
-                + " | Offset: (" + offsetX + "," + offsetY + ")"
-                + " | Mode: " + (canvasW >= canvasH ? "LANDSCAPE_FULL_WIDTH" : "PORTRAIT_FULL_HEIGHT"));
+                + " | ActualRatio: " + actualRatio + " vs ExpectedRatio: " + expectedRatio
+                + " | Offset: (0,0)"
+                + " | Mode: " + mode);
 
-        // Hệ toạ độ logic vẫn là canvas resolution (trước khi apply scale transform).
-        // Conversion giữa preview <-> render sử dụng kích thước canvas.
-        PreviewConversionHelper.previewAvailableWidth = canvasW;
-        PreviewConversionHelper.previewAvailableHeight = canvasH;
+        // CRITICAL: Set previewAvailableWidth/Height to ACTUAL preview size on screen, not canvas resolution!
+        // This is used by PreviewConversionHelper to convert coordinates correctly
+        PreviewConversionHelper.previewAvailableWidth = previewWidth;
+        PreviewConversionHelper.previewAvailableHeight = previewHeight;
+        
+        Log.d("PreviewConversion", "Set PreviewConversionHelper: " + PreviewConversionHelper.previewAvailableWidth 
+                + "x" + PreviewConversionHelper.previewAvailableHeight 
+                + " (actual preview size, not canvas " + canvasW + "x" + canvasH + ")");
     }
 
     public void setupTimelinePinchAndZoom() {

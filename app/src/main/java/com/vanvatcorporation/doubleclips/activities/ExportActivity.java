@@ -147,6 +147,10 @@ public class ExportActivity extends AppCompatActivityImpl {
         properties = (MainAreaScreen.ProjectData) createrBundle.getSerializable("ProjectProperties");
         timeline = (Timeline) createrBundle.getSerializable("ProjectTimeline");
         settings = (VideoSettings) createrBundle.getSerializable("ProjectSettings");
+        
+        android.util.Log.d("ExportResolution", "=== EXPORT ACTIVITY CREATED ===");
+        android.util.Log.d("ExportResolution", "Settings from Intent: " + settings.videoWidth + "x" + settings.videoHeight);
+        android.util.Log.d("ExportResolution", "Settings ratio: " + ((float) settings.videoWidth / settings.videoHeight));
 
 
         findViewById(R.id.backButton).setOnClickListener(v -> {
@@ -231,6 +235,10 @@ public class ExportActivity extends AppCompatActivityImpl {
             settings.preset = videoPropertiesExportSpecificAreaScreen.presetSpinner.getSelectedItem().toString();
             settings.tune = videoPropertiesExportSpecificAreaScreen.tuneSpinner.getSelectedItem().toString();
 
+            android.util.Log.d("ExportResolution", "=== EXPORT DIALOG CLOSED ===");
+            android.util.Log.d("ExportResolution", "Settings updated: " + settings.videoWidth + "x" + settings.videoHeight);
+            android.util.Log.d("ExportResolution", "Settings ratio: " + ((float) settings.videoWidth / settings.videoHeight));
+
             settings.saveSettings(this, properties);
 
 
@@ -274,8 +282,12 @@ public class ExportActivity extends AppCompatActivityImpl {
     }
 
     private void generateCommand() {
+        android.util.Log.d("ExportResolution", "=== GENERATE COMMAND ===");
+        android.util.Log.d("ExportResolution", "Settings resolution: " + settings.videoWidth + "x" + settings.videoHeight);
+        android.util.Log.d("ExportResolution", "Settings ratio: " + ((float) settings.videoWidth / settings.videoHeight));
         String cmd = generateCmdFull(this, settings, timeline, properties, false);
         commandText.setText(cmd);
+        android.util.Log.d("ExportResolution", "Generated command preview (first 500 chars): " + cmd.substring(0, Math.min(500, cmd.length())));
     }
     private void generateTemplateCommand() {
         String cmd = generateCmdFull(this, settings, timeline, properties, true);
@@ -288,6 +300,9 @@ public class ExportActivity extends AppCompatActivityImpl {
         // Keep the screen on for rendering process
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        android.util.Log.d("ExportResolution", "=== EXPORT CLIP ===");
+        android.util.Log.d("ExportResolution", "Settings resolution: " + settings.videoWidth + "x" + settings.videoHeight);
+        android.util.Log.d("ExportResolution", "Settings ratio: " + ((float) settings.videoWidth / settings.videoHeight));
 
         logText.post(() -> logText.setTextIsSelectable(false));
         FFmpegKit.cancel();
@@ -296,6 +311,7 @@ public class ExportActivity extends AppCompatActivityImpl {
             generateCommand();
 
         String cmd = commandText.getText().toString();
+        android.util.Log.d("ExportResolution", "Export command contains resolution: " + cmd.contains(settings.videoWidth + "x" + settings.videoHeight));
 
 
         AdsHandler.loadBothAds(this, this);

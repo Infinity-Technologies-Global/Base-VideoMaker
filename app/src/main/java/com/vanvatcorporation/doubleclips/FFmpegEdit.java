@@ -672,6 +672,10 @@ public class FFmpegEdit {
     }
     public static String generateCmdFull(Context context, VideoSettings settings, Timeline timeline, MainAreaScreen.ProjectData data, boolean isTemplateCommand) {
 
+        android.util.Log.d("FFmpegResolution", "=== GENERATE CMD FULL ===");
+        android.util.Log.d("FFmpegResolution", "Settings resolution: " + settings.videoWidth + "x" + settings.videoHeight);
+        android.util.Log.d("FFmpegResolution", "Settings ratio: " + ((float) settings.videoWidth / settings.videoHeight));
+
         int clipCount = timeline.getAllClipCount();
 
         StringBuilder cmd = new StringBuilder();
